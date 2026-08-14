@@ -12,6 +12,7 @@ import { type Disagreement, compareRuns, sizeBuysNothing } from "@/lib/eval-comp
 import { evaluateCriteria, listCriteria } from "@/lib/eval-criteria";
 import { type CellState, MIN_CONTRIBUTION_UNCALIBRATED, decomposeRun } from "@/lib/eval-score";
 import type { Sweep, SweepRun } from "@/lib/eval-sweep";
+import { formatInt } from "@/lib/format-number";
 
 /**
  * `Comparaison` — the same case set, two models (§3 C, §A1.6).
@@ -95,6 +96,7 @@ export async function CompareTab({
       <CostRow
         a={a}
         b={b}
+        locale={locale}
         labels={{
           title: t("compare.cost"),
           subtitle: t("compare.costWhy"),
@@ -199,9 +201,12 @@ function CostRow({
   a,
   b,
   labels,
+  locale,
 }: {
   a: SweepRun;
   b: SweepRun;
+  /** The reader's language — token counts are grouped in it, never in the runtime's. */
+  locale: string;
   labels: {
     title: string;
     subtitle: string;
@@ -231,7 +236,7 @@ function CostRow({
                 <Hash className="h-3.5 w-3.5" />
                 {labels.tokens}
                 <span className="text-[var(--foreground)] tabular-nums">
-                  {(run.cost?.output_tokens ?? 0).toLocaleString()} out
+                  {formatInt(locale, run.cost?.output_tokens ?? 0)} out
                 </span>
               </span>
               <span className="flex items-center gap-1.5 text-[var(--muted-foreground)] text-xs">

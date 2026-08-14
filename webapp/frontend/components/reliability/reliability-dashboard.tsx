@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
+
+import { useIntFormat, useNumberFormat } from "@/lib/format-number";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -54,8 +56,20 @@ const TABS = [
   "capacity",
 ] as const;
 
-const eur = (v: number, d = 2) =>
-  `€${v.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d })}`;
+/** The euro amounts of this page, in the reader's language. A hook, so the currency and the
+ * grouping follow the locale next-intl resolved rather than a hardcoded "fr-FR". */
+function useEur(): (v: number, d?: number) => string {
+  const format = useNumberFormat({ style: "currency", currency: "EUR" });
+  return (v, d = 2) =>
+    format.resolvedOptions().locale
+      ? new Intl.NumberFormat(format.resolvedOptions().locale, {
+          style: "currency",
+          currency: "EUR",
+          minimumFractionDigits: d,
+          maximumFractionDigits: d,
+        }).format(v)
+      : `€${v.toFixed(d)}`;
+}
 const ms = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(2)}s` : `${Math.round(v)}ms`;
 const pct = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
@@ -426,6 +440,8 @@ function mirrorPeriodInUrl(key: string): void {
 }
 
 export function ReliabilityDashboard() {
+  const eur = useEur();
+  const fmtInt = useIntFormat();
   const tr = useTranslations("reliability");
   const locale = useLocale();
   const sharedPeriod = useWindowStore((state) => state.period);
@@ -587,8 +603,8 @@ export function ReliabilityDashboard() {
         icon={Boxes}
         label={tr("kpi.requests")}
         infoKey="requests"
-        value={`${(d.n_requests ?? 0).toLocaleString("fr-FR")}`}
-        sub={`${(d.total_tokens ?? 0).toLocaleString("fr-FR")} ${tr("kpi.tokens")}`}
+        value={fmtInt(d.n_requests ?? 0)}
+        sub={`${fmtInt(d.total_tokens ?? 0)} ${tr("kpi.tokens")}`}
         series={d.volume_series}
         delta={d.volume_delta}
         deltaUnit="%"
@@ -1043,6 +1059,7 @@ export function ReliabilityDashboard() {
 }
 
 function ModelRow({ m }: { m: ReliabilityCostRow }) {
+  const eur = useEur();
   return (
     <tr className="border-b border-[var(--border)]/50">
       <td className="py-1 pr-2 font-mono text-[0.68rem]">{m.model}</td>

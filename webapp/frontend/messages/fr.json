@@ -414,8 +414,8 @@
         "source": "Journal des décisions de gouvernance."
       },
       "traces": {
-        "what": "Le volume de traces d'exécution et les latences p50/p95 observées.",
-        "how": "Lu depuis la pile Langfuse (traces OpenTelemetry émises par l'agent)."
+        "what": "Le volume de traces d'exécution CONSERVÉES et les latences p50/p95 observées. Ce n'est pas un cumul depuis toujours : le store n'en garde que les 15 derniers jours, donc ce nombre se stabilise au lieu de croître, et une baisse peut venir de la purge autant que d'une baisse d'activité.",
+        "how": "Lu depuis la pile Langfuse (traces OpenTelemetry). L'essentiel du volume est l'auto-instrumentation de la plateforme — ses propres lectures de stores —, pas des conversations."
       },
       "rightIncidents": {
         "what": "Les incidents de sécurité et qualité actifs.",
@@ -504,7 +504,7 @@
     },
     "traces": {
       "title": "Observabilité · traces",
-      "traces": "Traces",
+      "traces": "Traces conservées",
       "unavailable": "Stack d’observabilité injoignable"
     },
     "signals": {

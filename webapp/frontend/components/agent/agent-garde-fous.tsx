@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CardInfo } from "@/components/cockpit/card-info";
@@ -974,6 +976,7 @@ function Reasons({ data }: { data: Data }) {
 
 /** Enforcement-mode distribution, derived from the real policy mechanisms. */
 function ModeDistribution({ data }: { data: Data }) {
+  const fmtInt = useIntFormat();
   const m = data.mode_distribution;
   if (!m) return null;
   return (
@@ -991,7 +994,7 @@ function ModeDistribution({ data }: { data: Data }) {
                 </span>
               </span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">
-                {it.decisions.toLocaleString("fr-FR")} déc.
+                {fmtInt(it.decisions)} déc.
               </span>
             </div>
             <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">

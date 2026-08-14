@@ -1,0 +1,114 @@
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+/**
+ * A number is formatted for its READER, not for the machine that rendered it.
+ *
+ * Two symmetric defects lived here, and only one of them was ever visible:
+ *
+ *  · `n.toLocaleString()` — no locale — asks the RUNTIME. Server-rendered, that runtime is Node,
+ *    whose default is en-US, so a French page served `2,061,605`. That is the reading that
+ *    reached the operator, on the overview's trace counter. Client-rendered, the same call
+ *    follows the visitor's browser instead, so one screen can print two shapes of the same
+ *    number.
+ *  · `n.toLocaleString("fr-FR")` — hardcoded — is the mirror image, and it is the dangerous one
+ *    precisely because it always looks right: it is wrong only for the German or English
+ *    operator, who is not the person reading the demo.
+ *
+ * Both are refused here. The replacement is `lib/format-number` (`useIntFormat` /
+ * `useNumberFormat` in client components, `formatInt(locale, …)` on the server), which reads the
+ * locale next-intl already resolved for the page.
+ *
+ * DATES ARE OUT OF SCOPE: `new Date(x).toLocaleString()` is left to next-intl's
+ * `useFormatter().dateTime()`, and mixing the two paths is how two dates on one screen come to
+ * disagree. This witness says so rather than silently ignoring them.
+ */
+
+const ROOT = process.cwd();
+const NUMERIC_CALL = /(?<!new Date\([^)]*\))\.toLocaleString\(/;
+const BARE = /\.toLocaleString\(\s*\)/;
+const HARDCODED_LOCALE = /\.toLocaleString\(\s*["'][a-z]{2}-[A-Z]{2}["']/;
+
+/**
+ * Files that still format in a hardcoded language. Each entry is a debt with a reason, and the
+ * list may only SHRINK.
+ *
+ * Both survivors are Server Components whose helper is shared by many functions — 17 call sites
+ * across 7 components in one of them. Threading the locale through every signature is a real
+ * refactor, and doing it blind (no render test on those tables) is how a formatting fix becomes
+ * a layout regression. They are French-only surfaces today; the cost is a German operator
+ * reading French grouping, not a wrong number.
+ */
+const FROZEN_HARDCODED: Record<string, string> = {
+  "components/agent/agent-breakdown.tsx":
+    "server component: fmtInt is shared by 7 functions / 17 call sites — needs the locale threaded through, not a sed",
+  "app/[locale]/agents/page.tsx":
+    "server page: same helper, 4 call sites — moves with agent-breakdown",
+};
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir)) {
+    if (entry === "node_modules" || entry === ".next" || entry.startsWith(".")) continue;
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) walk(full, out);
+    else if (/\.tsx?$/.test(entry) && !entry.includes(".test.")) out.push(full);
+  }
+  return out;
+}
+
+function scan() {
+  const scanned: string[] = [];
+  const bare: string[] = [];
+  const hardcoded: string[] = [];
+  for (const dir of ["app", "components", "lib"]) {
+    for (const file of walk(join(ROOT, dir))) {
+      const rel = file.slice(ROOT.length + 1);
+      // The module that OWNS the replacement necessarily names the pattern it replaces.
+      if (rel === "lib/format-number.ts") continue;
+      scanned.push(rel);
+      const text = readFileSync(file, "utf8");
+      for (const line of text.split("\n")) {
+        if (!NUMERIC_CALL.test(line) || line.includes("new Date")) continue;
+        if (BARE.test(line)) bare.push(rel);
+        if (HARDCODED_LOCALE.test(line)) hardcoded.push(rel);
+      }
+    }
+  }
+  return { scanned, bare: [...new Set(bare)], hardcoded: [...new Set(hardcoded)] };
+}
+
+describe("a number is formatted for its reader", () => {
+  const { scanned, bare, hardcoded } = scan();
+
+  it("can still see — the positive control", () => {
+    // Without this, a moved directory or a renamed extension would empty every list below and
+    // read as a clean sweep. A zero that cannot tell "none" from "did not look" is not a
+    // measurement (ADR 0026).
+    expect(scanned.length).toBeGreaterThan(150);
+  });
+
+  it("detects both shapes — the negative control", () => {
+    expect(BARE.test("const s = n.toLocaleString();")).toBe(true);
+    expect(HARDCODED_LOCALE.test('const s = n.toLocaleString("fr-FR");')).toBe(true);
+    // …and leaves the compliant form alone.
+    expect(BARE.test("const s = fmtInt(n);")).toBe(false);
+    expect(HARDCODED_LOCALE.test("const s = format.format(n);")).toBe(false);
+  });
+
+  it("has no number formatted by the RUNTIME's locale", () => {
+    // Not frozen, deliberately: this is the shape that served `2,061,605` on a French page, and
+    // it is now empty. An exemption list here would be a licence to reintroduce it.
+    expect(bare).toEqual([]);
+  });
+
+  it("has no NEW file formatting in a hardcoded language", () => {
+    expect(hardcoded.filter((f) => !(f in FROZEN_HARDCODED))).toEqual([]);
+  });
+
+  it("keeps the frozen list honest — an entry that no longer offends must go", () => {
+    const stale = Object.keys(FROZEN_HARDCODED).filter((f) => !hardcoded.includes(f));
+    expect(stale).toEqual([]);
+  });
+});

@@ -30,6 +30,8 @@ import {
   Users,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { useSearchParams } from "next/navigation";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
@@ -1045,6 +1047,7 @@ function HistoryView({ t, data }: { t: T; data: Data }) {
 }
 
 function GrowthCard({ t, source }: { t: T; source: Row }) {
+  const fmtInt = useIntFormat();
   const total = source.growth.reduce((sum, d) => sum + d.count, 0);
   const first = source.growth.at(0)?.day ?? "";
   const last = source.growth.at(-1)?.day ?? "";
@@ -1057,9 +1060,7 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
         </span>
         <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
           {t("view.total")}:{" "}
-          <span className="tabular-nums text-[var(--tessera-text-strong)]">
-            {total.toLocaleString("fr-FR")}
-          </span>
+          <span className="tabular-nums text-[var(--tessera-text-strong)]">{fmtInt(total)}</span>
         </span>
       </div>
       <MetricSparkline
@@ -1081,6 +1082,7 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
 // wide area curve (the normative's prominent time-series). No fabricated axis -
 // the corpus has none, but the memory tables span weeks of real created_at.
 function ActivityArea({ t, data }: { t: T; data: Data }) {
+  const fmtInt = useIntFormat();
   const byDay = new Map<string, number>();
   for (const s of data.sources) {
     for (const d of s.growth) byDay.set(d.day, (byDay.get(d.day) ?? 0) + d.count);
@@ -1094,7 +1096,7 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
   const pts = days.map(([, n], i) => [i * step, H - (n / max) * (H - 8)] as const);
   const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const area = `M0,${H} L${line.replaceAll(" ", " L")} L${W},${H} Z`;
-  const fmtMax = max.toLocaleString("fr-FR");
+  const fmtMax = fmtInt(max);
   return (
     <Panel title={t("view.activity")}>
       <div className="flex gap-2">

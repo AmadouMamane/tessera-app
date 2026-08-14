@@ -2,6 +2,8 @@
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { useEffect, useRef, useState } from "react";
 
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
@@ -10,7 +12,6 @@ import { fetchFleet } from "@/lib/api/client";
 import type { Fleet } from "@/lib/api/schemas";
 import { COL_IDENTITY, COL_VERDICT, TABLE_BREAKDOWN } from "@/lib/breakdown-columns";
 
-const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
 const fmtSecs = (ms: number | null) =>
   ms === null ? "—" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
@@ -116,6 +117,7 @@ export function MonitoringFleetTable({
   onRetry?: () => void;
   retrying?: boolean;
 }) {
+  const fmtInt = useIntFormat();
   const t = useTranslations("agentScope");
   const agents = fleet?.agents ?? [];
 
@@ -233,6 +235,7 @@ function DedupFooter({
   seenShared: number;
   handoffGap: number;
 }) {
+  const fmtInt = useIntFormat();
   const t = useTranslations("agentScope");
   const total = fmtInt(fleet.org?.conversations ?? 0);
 

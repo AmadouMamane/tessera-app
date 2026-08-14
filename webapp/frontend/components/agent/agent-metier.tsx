@@ -15,6 +15,8 @@ import {
   Target,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { useSearchParams } from "next/navigation";
 import { type KeyboardEvent, useCallback, useMemo } from "react";
 
@@ -52,10 +54,6 @@ const LEVEL_ORDER = ["runtime", "human_action"];
 function pct(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
-}
-
-function count(value: number | null | undefined): string {
-  return value === null || value === undefined ? "—" : value.toLocaleString("fr-FR");
 }
 
 function trendIcon(direction: string) {
@@ -567,6 +565,7 @@ function CapabilitiesTable({
   selectedCapabilityId: string | null;
   onSelect: (capabilityId: string) => void;
 }) {
+  const count = useIntFormat();
   const t = useTranslations("agentMetier");
   const tCapability = useTranslations("capability");
   return (

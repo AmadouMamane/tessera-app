@@ -1,5 +1,6 @@
 "use client";
 
+import { useIntFormat } from "@/lib/format-number";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
@@ -263,6 +264,7 @@ function KpiValue({
  * question; they stay because their drill-downs are real, but as detail, not as the headline.
  */
 function ServiceCard() {
+  const fmtInt = useIntFormat();
   const t = useTranslations("health");
   const tAuth = useTranslations("auth");
   // Budget/cost is an admin-only surface (ADR 0009): gate the query and the row.
@@ -365,8 +367,7 @@ function ServiceCard() {
                   € {budget.data.estimated_cost_eur.toFixed(2)}
                 </span>
                 <span className="text-[0.66rem] text-[var(--muted-foreground)]">
-                  {budget.data.input_tokens.toLocaleString()} in ·{" "}
-                  {budget.data.output_tokens.toLocaleString()} out
+                  {fmtInt(budget.data.input_tokens)} in · {fmtInt(budget.data.output_tokens)} out
                 </span>
                 <CircleDollarSign
                   className="h-3 w-3 self-center text-[var(--muted-foreground)]"

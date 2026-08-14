@@ -36,7 +36,7 @@ SHELL := /bin/bash
         eval-calibrate-weak seed generate-corpus ingest-regulations reindex-embeddings \
         bootstrap run run-on-prem \
         precommit check ci help hooks land memory-check \
-        obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets dev-secrets \
+        obs-up obs-up-core obs-down obs-logs obs-guard obs-secrets obs-retention dev-secrets \
         obs-verify obs-realign obs-wait eval-regrade eval-regrade-noise \
         gate gate-twice gate-checks gate-py gate-web tooling \
         claim release whoowns session landed
@@ -918,6 +918,72 @@ obs-down:
 
 obs-logs:
 	$(OBS_COMPOSE) logs -f otel-collector phoenix prometheus grafana
+
+# ── Trace retention: bound what grows without bound ─────────────────────────
+#
+# Measured 2026-08-14, after the operator asked "why 2 million rows?": the trace
+# store had **no TTL at all**, while Prometheus next door already kept 15 days.
+# ~140 000 traces land per DAY and almost none of them are conversations — the
+# top operations are `store.read prometheus.instant`, `store.read
+# business_events.rows`, `store.read audit_ledger.head_seq`: the platform
+# instrumenting its own reads. Two months had accumulated 2.06 M traces and
+# 2.44 M observations.
+#
+# TWO DECISIONS, measured rather than assumed:
+#
+#  · **15 days, to match Prometheus.** Two observability stores with different
+#    memories make every cross-reading beyond the shorter one silently wrong.
+#  · **`scores` is EXCLUDED.** All 2 435 of them are older than 15 days, so a
+#    uniform TTL would have deleted 100 % of the judged signal to reclaim 25 %
+#    of the noise — and they weigh 172 KiB. Retention bounds what grows without
+#    bound; it must not erase what is rare and expensive to reproduce.
+#
+# Retention lives in the STORE, never in the view — this repo learned that from
+# the GDPR purge that filtered at read time while the rows lived on for ever
+# (docs/status/overnight-security-run.md, A5). Idempotent, so it is safe to
+# re-run, and it MUST be re-run after any Langfuse migration that rewrites the
+# schema; `make obs-retention CHECK=1` asks without writing.
+#
+# Verdicts: 0 = TTL in place · 1 = missing/refused · 2 = CANNOT SAY (blind).
+OBS_TRACE_RETENTION_DAYS ?= 15
+obs-retention:
+	@ch="tessera-claude-clickhouse"; days="$(OBS_TRACE_RETENTION_DAYS)"; \
+	if ! docker info >/dev/null 2>&1; then \
+	  echo "[obs-retention] [CANNOT SAY] docker is not answering — no TTL was read or written."; \
+	  exit 2; \
+	fi; \
+	if [ -z "$$(docker ps -q -f name="^$$ch$$")" ]; then \
+	  echo "[obs-retention] [CANNOT SAY] $$ch is not running — the store could not be asked."; \
+	  exit 2; \
+	fi; \
+	if [ -z "$(CHECK)" ]; then \
+	  docker exec "$$ch" clickhouse-client -q \
+	    "ALTER TABLE default.traces MODIFY TTL toDateTime(timestamp) + INTERVAL $$days DAY" || exit 1; \
+	  docker exec "$$ch" clickhouse-client -q \
+	    "ALTER TABLE default.observations MODIFY TTL toDateTime(start_time) + INTERVAL $$days DAY" || exit 1; \
+	fi; \
+	missing=""; \
+	for t in traces observations; do \
+	  ttl=$$(docker exec "$$ch" clickhouse-client -q \
+	    "SELECT extractAll(create_table_query, 'toIntervalDay\\(([0-9]+)\\)')[1] FROM system.tables WHERE database='default' AND name='$$t'" 2>/dev/null); \
+	  if [ -z "$$ttl" ]; then missing="$$missing $$t"; \
+	  else echo "[obs-retention] [OK] default.$$t keeps $$ttl days."; fi; \
+	done; \
+	scored=$$(docker exec "$$ch" clickhouse-client -q \
+	  "SELECT position(create_table_query, ' TTL ') FROM system.tables WHERE database='default' AND name='scores'" 2>/dev/null); \
+	if [ -z "$$scored" ]; then \
+	  echo "[obs-retention] [CANNOT SAY] default.scores could not be read — its TTL is unknown."; \
+	  exit 2; \
+	fi; \
+	if [ "$$scored" != "0" ]; then \
+	  echo "[obs-retention] [REFUSED] default.scores carries a TTL — the judged signal must not expire."; \
+	  exit 1; \
+	fi; \
+	echo "[obs-retention] [OK] default.scores has no TTL, deliberately: it is the judged signal, not the volume."; \
+	if [ -n "$$missing" ]; then \
+	  echo "[obs-retention] [MISSING]$$missing — re-run 'make obs-retention' (a Langfuse migration may have rewritten the schema)."; \
+	  exit 1; \
+	fi
 
 # ── Local development ───────────────────────────────────────────────────────
 

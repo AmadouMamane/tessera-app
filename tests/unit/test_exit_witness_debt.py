@@ -250,6 +250,13 @@ _EXIT_WITNESSES: dict[str, str] = {
     # Its verdict lives in the printed tag (OK / NOT OK / CANNOT SAY): make collapses every
     # failing recipe to exit 2, so the code only separates green from not-green.
     "Makefile::obs-verify": "VERDICT",
+    # An ACT that also reports: it writes a 15-day TTL onto the trace tables, then asks the store
+    # what TTL it actually carries. Both halves matter — a retention nobody verified is the GDPR
+    # purge that filtered at read time while the rows lived on for ever. The verdict is the
+    # printed tag (OK / MISSING / REFUSED / CANNOT SAY), never the code: make collapses every
+    # failing recipe to 2, so "the store could not be asked" and "the TTL is gone" arrive as the
+    # same integer through the target. `CHECK=1` runs the asking half alone.
+    "Makefile::obs-retention": "VERDICT",
     # It REWRITES a stored database password to match the environment. An act, deliberately not
     # wired into anything — `obs-verify` names it in its refusal and never runs it, for the same
     # reason `obs-guard` may not depend on `obs-secrets`.

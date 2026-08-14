@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -1043,6 +1045,7 @@ function Donut({
   labelOf: (key: string) => string;
   showCount?: boolean;
 }) {
+  const fmtInt = useIntFormat();
   const sum = slices.reduce((s, x) => s + x.count, 0) || 1;
   const R = 39;
   const C = 2 * Math.PI * R;
@@ -1097,7 +1100,7 @@ function Donut({
               </Truncate>
             </span>
             <span className="pl-2.5 tabular-nums text-[var(--tessera-text-muted)]">
-              {showCount ? `${s.count.toLocaleString("fr-FR")} · ` : ""}
+              {showCount ? `${fmtInt(s.count)} · ` : ""}
               {s.pct}%
             </span>
           </li>

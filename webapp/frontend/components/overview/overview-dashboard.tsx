@@ -99,6 +99,7 @@ import {
   readControlSeries,
   readControls,
 } from "@/lib/control-registry";
+import { useIntFormat } from "@/lib/format-number";
 import {
   type OverviewTone,
   dotBg,
@@ -163,6 +164,7 @@ export function OverviewDashboard({
 }) {
   const t = useTranslations("overview");
   const locale = useLocale();
+  const fmtInt = useIntFormat();
   // Global agent scope (?agent=) — the same filter the GOUVERNER/PLATEFORME surfaces
   // carry (lib/agent-scope). It descends into the score-/bundle-/audit-backed queries
   // so the whole dashboard reads ONE agent's own signals, not just the "Vue par agent"
@@ -532,7 +534,7 @@ export function OverviewDashboard({
           delta={
             cost.data
               ? t("kpi.costDelta", {
-                  tokens: cost.data.total_tokens.toLocaleString(),
+                  tokens: fmtInt(cost.data.total_tokens),
                 })
               : ""
           }
@@ -1559,6 +1561,7 @@ function ObservabilityTracesCard({
   provTag: TimeTagKind | null;
 }) {
   const t = useTranslations("overview.traces");
+  const fmtInt = useIntFormat();
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
@@ -1583,7 +1586,7 @@ function ObservabilityTracesCard({
               <div>
                 <p className="text-xs text-[var(--muted-foreground)]">{t("traces")}</p>
                 <p className="font-serif text-2xl font-semibold tabular-nums">
-                  {data.total.toLocaleString()}
+                  {fmtInt(data.total)}
                 </p>
               </div>
               <div className="flex items-center gap-3 text-right">

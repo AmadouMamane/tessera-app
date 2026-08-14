@@ -25,6 +25,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -1640,6 +1642,7 @@ function Chip({ children, tone }: { children: ReactNode; tone?: string }) {
 /** The Debug panel: all eight live introspection surfaces. Honest awaiting
  *  state before a turn; each surface shows only real per-turn data. */
 function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
+  const fmtInt = useIntFormat();
   if (!debug) return <Awaiting text={t("debugAwaiting")} />;
   const { prompt, memory, routing, usage, reviewer, language, draft, config } = debug;
   return (
@@ -1678,7 +1681,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
       {prompt ? (
         <DebugSection title={prompt.title}>
           <p className="mb-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
-            {prompt.message_count} messages · {prompt.char_count.toLocaleString("fr-FR")} caractères
+            {prompt.message_count} messages · {fmtInt(prompt.char_count)} caractères
           </p>
           <div className="flex flex-col gap-1.5">
             {prompt.messages.map((m, i) => (

@@ -414,8 +414,8 @@
         "source": "Protokoll der Steuerungsentscheidungen."
       },
       "traces": {
-        "what": "Das Volumen der Ausführungs-Traces und die beobachteten p50/p95-Latenzen.",
-        "how": "Aus dem Langfuse-Stack gelesen (vom Agenten gesendete OpenTelemetry-Traces)."
+        "what": "Das Volumen der AUFBEWAHRTEN Ausführungs-Traces und die beobachteten p50/p95-Latenzen. Kein Gesamtwert seit jeher: der Store hält nur die letzten 15 Tage, die Zahl pendelt sich also ein statt zu wachsen, und ein Rückgang kann ebenso von der Bereinigung wie von weniger Aktivität kommen.",
+        "how": "Aus dem Langfuse-Stack gelesen (OpenTelemetry-Traces). Der Großteil des Volumens ist die Selbstinstrumentierung der Plattform — ihre eigenen Store-Lesezugriffe —, keine Konversationen."
       },
       "rightIncidents": {
         "what": "Die aktiven Sicherheits- und Qualitätsvorfälle.",
@@ -504,7 +504,7 @@
     },
     "traces": {
       "title": "Observability · Traces",
-      "traces": "Traces",
+      "traces": "Aufbewahrte Traces",
       "unavailable": "Observability-Stack nicht erreichbar"
     },
     "signals": {

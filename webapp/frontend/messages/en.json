@@ -414,8 +414,8 @@
         "source": "Governance decision log."
       },
       "traces": {
-        "what": "The volume of execution traces and the observed p50/p95 latencies.",
-        "how": "Read from the Langfuse stack (OpenTelemetry traces the agent emits)."
+        "what": "The volume of execution traces RETAINED and the observed p50/p95 latencies. This is not an all-time total: the store keeps only the last 15 days, so the number settles instead of growing, and a drop can come from the purge as much as from less activity.",
+        "how": "Read from the Langfuse stack (OpenTelemetry traces). Most of the volume is the platform instrumenting its own store reads, not conversations."
       },
       "rightIncidents": {
         "what": "The active security and quality incidents.",
@@ -504,7 +504,7 @@
     },
     "traces": {
       "title": "Observability · traces",
-      "traces": "Traces",
+      "traces": "Traces retained",
       "unavailable": "Observability stack unreachable"
     },
     "signals": {

@@ -18,6 +18,8 @@ import {
   Workflow,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+
+import { useIntFormat } from "@/lib/format-number";
 import { type ReactNode, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
@@ -459,6 +461,7 @@ export function RunsKpis({
   skewQuery: EmbeddingSkewQueryState;
 }) {
   const tq = useTranslations("quality");
+  const fmtInt = useIntFormat();
   const tes = useTranslations("observability.embeddingSkew");
   const [skewOpen, setSkewOpen] = useState(false);
   const win = windowRuns(registry);
@@ -522,7 +525,7 @@ export function RunsKpis({
         icon={<Database className="h-3 w-3" />}
         label={tq("runs.kpi.cases")}
         explainKey="runCases"
-        value={cases.toLocaleString("fr-FR")}
+        value={fmtInt(cases)}
         sub={tq("runs.kpi.casesSub", { n: registry?.catalogue_cases ?? 0 })}
       />
       <Kpi
@@ -1389,6 +1392,7 @@ export function RunsCharts({
   datasets: QualityDatasetsReport | undefined;
 }) {
   const tq = useTranslations("quality");
+  const fmtInt = useIntFormat();
   const themeLabel = (key: string) => tq(`runs.theme.${key}`);
 
   // 1. Pass-rate of the most recent full-catalogue runs, oldest→newest.
@@ -1439,7 +1443,7 @@ export function RunsCharts({
         <DriftBars items={drift} />
       </ChartCard>
       <ChartCard title={tq("runs.charts.distribution")} explainKey="runChDistribution">
-        <MiniDonut items={caseDist} center={totalCases.toLocaleString("fr-FR")} />
+        <MiniDonut items={caseDist} center={fmtInt(totalCases)} />
       </ChartCard>
       <ChartCard title={tq("runs.charts.costQuality")} explainKey="runChCostQuality">
         <DualLine labels={costLabels} costs={costs} rates={rates} />
