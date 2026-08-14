@@ -9275,6 +9275,7 @@
     "burn": "Fehlerrate ×{x} · {bad} von {n} Antworten unter dem Ziel",
     "breachedShort": "{metric} — {rate} der Antworten auf dem geforderten Niveau, unter dem Ziel von {threshold}",
     "okShort": "{metric} — {rate} der Antworten auf dem geforderten Niveau, Ziel von {threshold} erreicht",
+    "unmeasured": "{metric} — keine Antworten im Zeitraum beobachtet: das Ziel von {threshold} ist weder erreicht noch verfehlt, es ist ungemessen",
     "burnRate": "Fehlerrate ×{x}",
     "burnBad": "{bad} von {n} Antworten unter dem Ziel",
     "stopPulse": "Als gesehen markieren",

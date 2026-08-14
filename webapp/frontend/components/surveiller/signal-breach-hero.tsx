@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Flame, ShieldCheck, TriangleAlert } from "lucide-react";
+import { EyeOff, Flame, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 
@@ -75,6 +75,37 @@ export function SignalBreachHero({
   const pctTight = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
   const metricKey = METRIC_KEY[data.metric as keyof typeof METRIC_KEY];
   const metric = metricKey ? t(metricKey) : data.metric;
+
+  // NOTHING MEASURED is not a target met — and it is not a 0 % one either.
+  //
+  // `compute_slo` is honest on an empty window: every field is zero and `breaching` is false
+  // ("no evidence of a breach"). The fact carrying the truth is `n`. This component read the
+  // other two and printed the payload's two most misleading halves side by side: "0,0 % of
+  // responses at the required level" — which reads as a catastrophe — next to "95,0 % target
+  // met", which reads as all-clear. Both false, in opposite directions, from the same absence.
+  //
+  // It was seen in production the minute the agent was restarted: live scores are a RING
+  // BUFFER, so every deployment starts with an empty window — the worst possible moment for a
+  // banner to reassure. The dashboard's own tile, reading the SAME endpoint, already guarded
+  // this (`n > 0 ? … : null`); the ribbon above it did not, so one screen said "—" and "target
+  // met" at once. A witness that cannot see may never report "ok" (ADR 0026).
+  if (data.n === 0) {
+    const unmeasured = t("unmeasured", { metric, threshold: pct(data.target) });
+    if (variant === "slim") {
+      return <AlertRibbon variant="slim" severity="info" icon={EyeOff} title={unmeasured} />;
+    }
+    // No gauge: a needle at zero over nothing observed is the same fabricated number in a
+    // second notation.
+    return (
+      <AlertRibbon
+        variant="gauge"
+        severity="info"
+        icon={EyeOff}
+        eyebrow={t("title")}
+        title={unmeasured}
+      />
+    );
+  }
 
   if (!data.breaching) {
     const okTitle = t("okShort", {

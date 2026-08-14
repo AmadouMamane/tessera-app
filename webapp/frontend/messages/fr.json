@@ -9275,6 +9275,7 @@
     "burn": "Rythme d'erreur ×{x} · {bad} réponses sur {n} sous l'objectif",
     "breachedShort": "{metric} — {rate} des réponses au niveau exigé, sous l'objectif de {threshold}",
     "okShort": "{metric} — {rate} des réponses au niveau exigé, objectif de {threshold} tenu",
+    "unmeasured": "{metric} — aucune réponse observée sur la période : l'objectif de {threshold} n'est ni tenu ni manqué, il n'est pas mesuré",
     "burnRate": "Rythme d'erreur ×{x}",
     "burnBad": "{bad} réponses sur {n} sous l'objectif",
     "stopPulse": "Marquer comme vu",

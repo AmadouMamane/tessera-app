@@ -9275,6 +9275,7 @@
     "burn": "Error rate ×{x} · {bad} of {n} responses below target",
     "breachedShort": "{metric} — {rate} of responses at the required level, below the {threshold} target",
     "okShort": "{metric} — {rate} of responses at the required level, {threshold} target met",
+    "unmeasured": "{metric} — no responses observed in this window: the {threshold} target is neither met nor missed, it is unmeasured",
     "burnRate": "Error rate ×{x}",
     "burnBad": "{bad} of {n} responses below target",
     "stopPulse": "Acknowledge",
