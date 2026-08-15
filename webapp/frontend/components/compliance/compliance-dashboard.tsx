@@ -39,11 +39,25 @@ import type {
   NonConformity,
 } from "@/lib/api/schemas";
 import { useWindowStore } from "@/lib/stores/window-store";
+import { showNumber, toneFor } from "@/lib/unread-is-not-zero";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
+
+/**
+ * A reading that never arrived wears neither colour.
+ *
+ * A verdict needs a reading. The shape that stood here coalesced an absent one to zero and
+ * compared it to a threshold, so a query that never answered came out on the reassuring side
+ * of the comparison — GREEN for "no non-conformities", "no frozen releases", "no errors".
+ * ADR 0026 — a witness that cannot see may never report "ok". `lib/unread-is-not-zero.ts`
+ * carries the whole account, including why the file-level ratchet could not catch these.
+ */
+const UNREAD = "text-[var(--muted-foreground)]";
+const TONE_BAD = { bad: BAD, good: GOOD, unread: UNREAD };
+const TONE_WARN = { bad: WARN, good: GOOD, unread: UNREAD };
 
 const STATUS_BADGE: Record<string, "success" | "warning" | "danger"> = {
   conformant: "success",
@@ -394,10 +408,10 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                   <Kpi
                     label={tc("kpi.score")}
                     infoKey="score"
-                    value={`${d.score ?? 0}`}
+                    value={showNumber(d.score)}
                     unit="/100"
                     sub={tc("kpi.scoreSub")}
-                    tone={(d.score ?? 0) >= 80 ? GOOD : WARN}
+                    tone={toneFor(d.score, (v) => v < 80, TONE_WARN)}
                     series={trend}
                     delta={d.score_delta}
                     deltaUpIsGood
@@ -438,9 +452,12 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     infoKey="nonConformant"
                     onDrill={() => setActiveTab("evaluations")}
                     drillLabel={tc("tabs.evaluations")}
-                    value={`${d.n_non_conformant ?? 0}`}
-                    sub={`${Math.round(((d.n_non_conformant ?? 0) / (d.n_controls || 1)) * 100)}%`}
-                    tone={(d.n_non_conformant ?? 0) > 0 ? BAD : GOOD}
+                    value={showNumber(d.n_non_conformant)}
+                    sub={showNumber(
+                      d.n_non_conformant,
+                      (v) => `${Math.round((v / (d.n_controls || 1)) * 100)}%`,
+                    )}
+                    tone={toneFor(d.n_non_conformant, (v) => v > 0, TONE_BAD)}
                   />
                   <Kpi
                     label={tc("kpi.residual")}
@@ -454,9 +471,9 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     infoKey="deadlines"
                     onDrill={() => setActiveTab("obligations")}
                     drillLabel={tc("tabs.obligations")}
-                    value={`${d.n_critical_deadlines ?? 0}`}
+                    value={showNumber(d.n_critical_deadlines)}
                     sub={tc("kpi.deadlinesSub")}
-                    tone={(d.n_critical_deadlines ?? 0) > 0 ? BAD : GOOD}
+                    tone={toneFor(d.n_critical_deadlines, (v) => v > 0, TONE_BAD)}
                   />
                 </div>
               </Zone>

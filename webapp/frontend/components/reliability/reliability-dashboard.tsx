@@ -15,6 +15,7 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useIntFormat, useNumberFormat } from "@/lib/format-number";
+import { toneFor } from "@/lib/unread-is-not-zero";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -37,6 +38,18 @@ import { useUrlBackedView } from "@/lib/use-url-backed-view";
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
+
+/**
+ * A reading that never arrived wears neither colour.
+ *
+ * A verdict needs a reading. The shape that stood here coalesced an absent one to zero and
+ * compared it to a threshold, so a query that never answered came out on the reassuring side
+ * of the comparison — GREEN for "no non-conformities", "no frozen releases", "no errors".
+ * ADR 0026 — a witness that cannot see may never report "ok". `lib/unread-is-not-zero.ts`
+ * carries the whole account, including why the file-level ratchet could not catch these.
+ */
+const UNREAD = "text-[var(--muted-foreground)]";
+const TONE_WARN = { bad: WARN, good: GOOD, unread: UNREAD };
 
 const ERR_COLOR: Record<string, string> = {
   token_spike: "var(--tessera-cat-1)",
@@ -507,7 +520,7 @@ export function ReliabilityDashboard() {
         infoKey="availability"
         href="/agir/incidents-playbooks"
         value={pct(d.availability, 2)}
-        tone={(d.availability ?? 0) >= 0.99 ? GOOD : WARN}
+        tone={toneFor(d.availability, (v) => v < 0.99, TONE_WARN)}
         sub={tr("kpi.sla")}
         series={availLine}
         delta={d.availability_delta}
@@ -523,7 +536,7 @@ export function ReliabilityDashboard() {
         infoKey="errorRate"
         href="/agir/incidents-playbooks"
         value={pct(d.error_rate, 2)}
-        tone={(d.error_rate ?? 0) < 0.01 ? GOOD : WARN}
+        tone={toneFor(d.error_rate, (v) => v >= 0.01, TONE_WARN)}
         series={errLine}
         delta={d.error_rate_delta}
         deltaUnit="pts"
@@ -563,7 +576,7 @@ export function ReliabilityDashboard() {
         infoKey="toolSuccess"
         href="/configurer/integrations"
         value={pct(d.tool_success, 2)}
-        tone={(d.tool_success ?? 0) >= 0.95 ? GOOD : WARN}
+        tone={toneFor(d.tool_success, (v) => v < 0.95, TONE_WARN)}
         delta={d.tool_success_delta}
         deltaUnit="pts"
         deltaUpIsGood

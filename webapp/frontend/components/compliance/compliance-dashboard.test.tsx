@@ -63,12 +63,18 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 import { ComplianceDashboard } from "@/components/compliance/compliance-dashboard";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function wrap(node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return (
     <NextIntlClientProvider locale="fr" messages={messages as unknown as AbstractIntlMessages}>
-      <QueryClientProvider client={client}>{node}</QueryClientProvider>
+      {/* The FULLY drawn page mounts ⓘ tooltips; the "unavailable" case above returns before
+          reaching any of them, which is why this provider was not needed until a test rendered
+          the healthy layout. Supplied by the app shell in production. */}
+      <TooltipProvider>
+        <QueryClientProvider client={client}>{node}</QueryClientProvider>
+      </TooltipProvider>
     </NextIntlClientProvider>
   );
 }
@@ -97,5 +103,45 @@ describe("the unavailable posture does not swallow the per-agent context", () =>
     expect(await screen.findByText(messages.compliance.unavailable)).toBeTruthy();
     // And the per-agent context is still there — it never depended on that read.
     expect(screen.getByTestId("agent-scope-slot")).toBeTruthy();
+  });
+});
+
+describe("a counter the backend could not compute is not a clean bill of health", () => {
+  /**
+   * The static ratchet (`lib/unread-is-not-zero.test.ts`) proves no call site coalesces an
+   * absent reading into a threshold. This proves what the OPERATOR sees when it happens — the
+   * half a source grep structurally cannot reach.
+   *
+   * The posture answers `available: true`, so none of the page's unavailability branches fire:
+   * the read SUCCEEDED and simply could not compute these two figures. That is the case the old
+   * code got wrong, and the one that looks most like health — a fully drawn page, every panel
+   * present, and a green **0 non-conformities** underneath.
+   */
+  it("renders an em dash and a muted tone, never a green zero", async () => {
+    fetchCompliance.mockResolvedValue({
+      available: true,
+      score: 82,
+      n_controls: 40,
+      n_conformant: 30,
+      n_partial: 10,
+      n_non_conformant: null,
+      n_critical_deadlines: null,
+      n_residual_risk: 0,
+    });
+
+    render(wrap(<ComplianceDashboard agentScope={<div />} />));
+
+    const label = await screen.findByText(messages.compliance.kpi.nonConformant);
+    const tile = label.closest("div")?.parentElement;
+    expect(tile, "the non-conformant KPI tile").toBeTruthy();
+    const text = tile?.textContent ?? "";
+    // The figure: an absence, not a zero.
+    expect(text).toContain("—");
+    expect(text).not.toMatch(/\b0\b/);
+    // The colour: never the green that says "conformant".
+    expect(tile?.innerHTML ?? "").not.toContain("text-emerald-600");
+    // A neighbouring tile whose value WAS computed still reads normally — this test must fail
+    // on a fabricated zero, not on the page having gone blank.
+    expect(screen.getByText("82")).toBeTruthy();
   });
 });

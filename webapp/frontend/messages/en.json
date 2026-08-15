@@ -3896,6 +3896,7 @@
       "trendNote": "proxy: hallucination failure rate over the window",
       "regression": "Security regression predictor",
       "regression7d": "7-day probability",
+      "regressionUnread": "Regression risk not measured — the probe did not answer. That is not a low risk; it is an absent reading.",
       "erasure": "GDPR erasure",
       "conversations": "Conversations",
       "bundles": "Erased bundles",

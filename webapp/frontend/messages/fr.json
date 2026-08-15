@@ -3896,6 +3896,7 @@
       "trendNote": "proxy : taux d'échec hallucination sur la fenêtre",
       "regression": "Prédicteur de régression sécurité",
       "regression7d": "Probabilité 7 j",
+      "regressionUnread": "Risque de régression non mesuré — la sonde n'a pas répondu. Ce n'est pas un risque faible : c'est une absence de lecture.",
       "erasure": "Effacement GDPR",
       "conversations": "Conversations",
       "bundles": "Lots effacés",

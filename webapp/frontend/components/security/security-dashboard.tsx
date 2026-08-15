@@ -62,12 +62,27 @@ import type {
 import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
 import { panelOf, signalOf } from "@/lib/overview-snapshot";
 import { useWindowStore } from "@/lib/stores/window-store";
+import { showNumber, toneFor } from "@/lib/unread-is-not-zero";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
 const MUTED = "text-[var(--muted-foreground)]";
+
+/**
+ * The third answer, and the one this screen was missing.
+ *
+ * Ten tiles here read `(x ?? 0) > 0 ? BAD : GOOD`. On a query that does not answer — 401, 403,
+ * backend down — `x` is `undefined`, `?? 0` makes it zero, and the SECURITY dashboard prints a
+ * green **0 cross-tenant leaks**: the most reassuring sentence on the page, emitted by knowing
+ * nothing at all. Green is a claim; absence of a reading does not earn it (ADR 0026).
+ *
+ * `failed-read-is-not-an-empty-result` could not catch them, and says so in its own docstring:
+ * its granularity is the FILE, and one `isAccessDenied` four hundred lines up cleared all ten.
+ */
+const TONE_BAD = { bad: BAD, good: GOOD, unread: MUTED };
+const TONE_WARN = { bad: WARN, good: GOOD, unread: MUTED };
 
 type Tone = "ok" | "warn" | "crit" | "high";
 const TONE_BADGE: Record<Tone, "success" | "warning" | "danger" | "neutral"> = {
@@ -621,7 +636,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const inventoryDenied = isAccessDenied(inventory.error);
   const inventoryExpiring = inventoryDenied
     ? ts("accessDenied")
-    : `${inventory.data?.n_expiring_soon ?? 0}`;
+    : `${showNumber(inventory.data?.n_expiring_soon)}`;
   const regression = panelOf(secBatch, "regression-risk", RegressionRiskSchema);
   const faith = useQuery({
     queryKey: ["score-series", "faithfulness", asOf, scope, period],
@@ -927,7 +942,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           <span className="text-xl font-semibold tabular-nums">{blocked}</span>
           <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
           <span className="ml-auto font-semibold tabular-nums text-[var(--tessera-fg-warning)]">
-            {fw?.false_negative ?? 0} {ts("panel.bypasses")}
+            {showNumber(fw?.false_negative)} {ts("panel.bypasses")}
           </span>
         </div>
         <div className="flex h-[4px] w-full overflow-hidden rounded-full">
@@ -940,7 +955,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           <div style={{ flexGrow: 1, background: "var(--tessera-fg-warning)" }} />
         </div>
         <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
-        <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
+        <KV label={ts("panel.uniqueBypasses")} value={`${showNumber(fw?.false_negative)}`} />
         {/* The recorded campaign history. The numbers above are the FIXED-CORPUS efficacy
             probe, recomputed on every read; these are the runs somebody actually triggered.
             Until 2026-08-04 the endpoint that serves them had no consumer at all and the
@@ -973,9 +988,12 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           tone="var(--tessera-fg-success)"
         />
         <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
-          <KV label={ts("panel.conversations")} value={`${erasure.data?.n_conversations ?? 0}`} />
-          <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
-          <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
+          <KV
+            label={ts("panel.conversations")}
+            value={`${showNumber(erasure.data?.n_conversations)}`}
+          />
+          <KV label={ts("panel.bundles")} value={`${showNumber(erasure.data?.n_bundles)}`} />
+          <KV label={ts("panel.scores")} value={`${showNumber(erasure.data?.n_scores)}`} />
         </div>
       </div>
     </Panel>
@@ -1001,8 +1019,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         <div className="flex flex-col gap-1 text-[0.72rem]">
           <KV
             label={ts("panel.recoverable")}
-            value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
-            tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+            value={`${showNumber(inversion.data?.n_recoverable)}/${showNumber(inversion.data?.n_memories)}`}
+            tone={toneFor(inversion.data?.n_recoverable, (n) => n > 0, TONE_BAD)}
           />
           <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
           <KV label={ts("panel.threshold")} value={inversion.data?.threshold?.toFixed(2) ?? "—"} />
@@ -1010,6 +1028,37 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       )}
     </Panel>
   );
+
+  /**
+   * The regression risk, or the honest absence of it — defined once, mounted in both layouts.
+   *
+   * `{ts(`level.${regression.data?.level ?? "low"}`)}` printed the word **« faible »** when the
+   * probe had not answered: not a colour this time but a verdict in words, and the most
+   * comforting of the four. The gauge under it was pinned at 0 by the same `?? 0`. A risk nobody
+   * measured is not a low risk.
+   */
+  const riskScore = regression.data?.risk_score;
+  const regressionBody =
+    riskScore === null || riskScore === undefined ? (
+      <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+        {ts("panel.regressionUnread")}
+      </p>
+    ) : (
+      <div className="flex items-center gap-3">
+        <Gauge
+          value={riskScore}
+          tone={riskScore >= 0.5 ? "var(--tessera-fg-danger)" : "var(--tessera-fg-warning)"}
+        />
+        <div className="flex flex-col gap-0.5 text-[0.7rem]">
+          <span className={`text-base font-semibold ${riskScore >= 0.5 ? BAD : WARN}`}>
+            {ts(`level.${regression.data?.level ?? "low"}`)}
+          </span>
+          <span className="text-[var(--muted-foreground)]">
+            {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
+          </span>
+        </div>
+      </div>
+    );
 
   const trendPanel = (
     <Panel title={ts("panel.trend")} info={<SecInfo k="trend" title={ts("panel.trend")} />}>
@@ -1038,7 +1087,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("tabx.probes")}
               infoKey="probes"
-              value={`${fw?.n_positive ?? 0}`}
+              value={`${showNumber(fw?.n_positive)}`}
               tone={MUTED}
             />
             <Kpi
@@ -1053,8 +1102,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("tabx.escaped")}
               infoKey="escaped"
-              value={`${fw?.false_negative ?? 0}`}
-              tone={(fw?.false_negative ?? 0) > 0 ? WARN : GOOD}
+              value={`${showNumber(fw?.false_negative)}`}
+              tone={toneFor(fw?.false_negative, (n) => n > 0, TONE_WARN)}
             />
             <Kpi
               icon={ShieldAlert}
@@ -1101,7 +1150,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("tabx.piiTurns")}
               infoKey="piiTurns"
-              value={`${pii.data?.n_with_leak ?? 0}/${pii.data?.n_turns ?? 0}`}
+              value={`${showNumber(pii.data?.n_with_leak)}/${showNumber(pii.data?.n_turns)}`}
               tone={MUTED}
             />
             <Kpi
@@ -1117,7 +1166,9 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               infoKey="sensitiveMemory"
               value={inventoryExpiring}
               tone={
-                inventoryDenied ? WARN : (inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD
+                inventoryDenied
+                  ? WARN
+                  : toneFor(inventory.data?.n_expiring_soon, (n) => n > 0, TONE_WARN)
               }
               href="/configurer/sources-memoire"
               drillLabel={ts("kpi.sensitiveMemory")}
@@ -1197,10 +1248,13 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   <KV
                     label={ts("panel.underRefusal")}
                     value={pct(refusal.data?.under_refusal_rate)}
-                    tone={(refusal.data?.under_refusal_rate ?? 0) > 0.1 ? BAD : GOOD}
+                    tone={toneFor(refusal.data?.under_refusal_rate, (r) => r > 0.1, TONE_BAD)}
                   />
-                  <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
-                  <KV label={ts("panel.forbidden")} value={`${refusal.data?.n_forbidden ?? 0}`} />
+                  <KV label={ts("panel.legit")} value={`${showNumber(refusal.data?.n_legit)}`} />
+                  <KV
+                    label={ts("panel.forbidden")}
+                    value={`${showNumber(refusal.data?.n_forbidden)}`}
+                  />
                 </div>
               </div>
             </Panel>
@@ -1260,7 +1314,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldCheck}
               label={ts("kpi.leastPriv")}
               infoKey="leastPriv"
-              value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
+              value={`${showNumber(lp.data?.n_used)}/${showNumber(lp.data?.n_granted)}`}
               tone={MUTED}
               href="/admin/roles-acces"
               drillLabel={ts("kpi.leastPriv")}
@@ -1269,8 +1323,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("tabx.overProvCount")}
               infoKey="overProvCount"
-              value={`${lp.data?.n_over_provisioned ?? 0}`}
-              tone={(lp.data?.n_over_provisioned ?? 0) > 0 ? WARN : GOOD}
+              value={`${showNumber(lp.data?.n_over_provisioned)}`}
+              tone={toneFor(lp.data?.n_over_provisioned, (n) => n > 0, TONE_WARN)}
             />
             <Kpi
               icon={ShieldAlert}
@@ -1332,7 +1386,9 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               infoKey="sensitiveMemory"
               value={inventoryExpiring}
               tone={
-                inventoryDenied ? WARN : (inventory.data?.n_expiring_soon ?? 0) > 0 ? WARN : GOOD
+                inventoryDenied
+                  ? WARN
+                  : toneFor(inventory.data?.n_expiring_soon, (n) => n > 0, TONE_WARN)
               }
               href="/configurer/sources-memoire"
               drillLabel={ts("kpi.sensitiveMemory")}
@@ -1341,7 +1397,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldCheck}
               label={ts("panel.conversations")}
               infoKey="conversations"
-              value={`${erasure.data?.n_conversations ?? 0}`}
+              value={`${showNumber(erasure.data?.n_conversations)}`}
               tone={MUTED}
             />
             <Kpi
@@ -1355,8 +1411,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldAlert}
               label={ts("panel.recoverable")}
               infoKey="inversion"
-              value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
-              tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+              value={`${showNumber(inversion.data?.n_recoverable)}/${showNumber(inversion.data?.n_memories)}`}
+              tone={toneFor(inversion.data?.n_recoverable, (n) => n > 0, TONE_BAD)}
             />
           </>,
         )}
@@ -1389,15 +1445,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldCheck}
               label={ts("tabx.isolationProbes")}
               infoKey="isolationProbes"
-              value={`${crossTenant.data?.n_turns ?? 0}`}
+              value={`${showNumber(crossTenant.data?.n_turns)}`}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldAlert}
               label={ts("tabx.isolationLeaks")}
               infoKey="isolationLeaks"
-              value={`${crossTenant.data?.n_leaks ?? 0}`}
-              tone={(crossTenant.data?.n_leaks ?? 0) > 0 ? BAD : GOOD}
+              value={`${showNumber(crossTenant.data?.n_leaks)}`}
+              tone={toneFor(crossTenant.data?.n_leaks, (n) => n > 0, TONE_BAD)}
             />
           </>,
         )}
@@ -1441,7 +1497,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={Siren}
               label={ts("tabx.probes")}
               infoKey="probes"
-              value={`${fw?.n_positive ?? 0}`}
+              value={`${showNumber(fw?.n_positive)}`}
               tone={MUTED}
             />
             <Kpi
@@ -1493,26 +1549,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               title={ts("panel.regression")}
               info={<SecInfo k="regression" title={ts("panel.regression")} />}
             >
-              <div className="flex items-center gap-3">
-                <Gauge
-                  value={regression.data?.risk_score ?? 0}
-                  tone={
-                    (regression.data?.risk_score ?? 0) >= 0.5
-                      ? "var(--tessera-fg-danger)"
-                      : "var(--tessera-fg-warning)"
-                  }
-                />
-                <div className="flex flex-col gap-0.5 text-[0.7rem]">
-                  <span
-                    className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
-                  >
-                    {ts(`level.${regression.data?.level ?? "low"}`)}
-                  </span>
-                  <span className="text-[var(--muted-foreground)]">
-                    {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
-                  </span>
-                </div>
-              </div>
+              {regressionBody}
             </Panel>
             {trendPanel}
             {casesPanel([], 8)}
@@ -1622,7 +1659,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   icon={ShieldCheck}
                   label={ts("kpi.leastPriv")}
                   infoKey="leastPriv"
-                  value={`${lp.data?.n_used ?? 0}/${lp.data?.n_granted ?? 0}`}
+                  value={`${showNumber(lp.data?.n_used)}/${showNumber(lp.data?.n_granted)}`}
                   tone={MUTED}
                   hint={ts("kpi.leastPrivHint")}
                   href="/admin/roles-acces"
@@ -1636,9 +1673,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   tone={
                     inventoryDenied
                       ? WARN
-                      : (inventory.data?.n_expiring_soon ?? 0) > 0
-                        ? WARN
-                        : GOOD
+                      : toneFor(inventory.data?.n_expiring_soon, (n) => n > 0, TONE_WARN)
                   }
                   hint={ts("kpi.sensitiveMemoryHint")}
                   href="/configurer/sources-memoire"
@@ -1715,12 +1750,15 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                       <KV
                         label={ts("panel.underRefusal")}
                         value={pct(refusal.data?.under_refusal_rate)}
-                        tone={(refusal.data?.under_refusal_rate ?? 0) > 0.1 ? BAD : GOOD}
+                        tone={toneFor(refusal.data?.under_refusal_rate, (r) => r > 0.1, TONE_BAD)}
                       />
-                      <KV label={ts("panel.legit")} value={`${refusal.data?.n_legit ?? 0}`} />
+                      <KV
+                        label={ts("panel.legit")}
+                        value={`${showNumber(refusal.data?.n_legit)}`}
+                      />
                       <KV
                         label={ts("panel.forbidden")}
-                        value={`${refusal.data?.n_forbidden ?? 0}`}
+                        value={`${showNumber(refusal.data?.n_forbidden)}`}
                       />
                     </div>
                   </div>
@@ -1767,26 +1805,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.regression")}
                   info={<SecInfo k="regression" title={ts("panel.regression")} />}
                 >
-                  <div className="flex items-center gap-3">
-                    <Gauge
-                      value={regression.data?.risk_score ?? 0}
-                      tone={
-                        (regression.data?.risk_score ?? 0) >= 0.5
-                          ? "var(--tessera-fg-danger)"
-                          : "var(--tessera-fg-warning)"
-                      }
-                    />
-                    <div className="flex flex-col gap-0.5 text-[0.7rem]">
-                      <span
-                        className={`text-base font-semibold ${(regression.data?.risk_score ?? 0) >= 0.5 ? BAD : WARN}`}
-                      >
-                        {ts(`level.${regression.data?.level ?? "low"}`)}
-                      </span>
-                      <span className="text-[var(--muted-foreground)]">
-                        {ts("panel.regression7d")}: {pct(regression.data?.probability_7d)}
-                      </span>
-                    </div>
-                  </div>
+                  {regressionBody}
                 </Panel>
                 <Panel
                   title={ts("panel.domainRisk")}
@@ -1836,7 +1855,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                       <span className="text-xl font-semibold tabular-nums">{blocked}</span>
                       <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
                       <span className="ml-auto font-semibold tabular-nums text-[var(--tessera-fg-warning)]">
-                        {fw?.false_negative ?? 0} {ts("panel.bypasses")}
+                        {showNumber(fw?.false_negative)} {ts("panel.bypasses")}
                       </span>
                     </div>
                     <div className="flex h-[4px] w-full overflow-hidden rounded-full">
@@ -1849,7 +1868,10 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                       <div style={{ flexGrow: 1, background: "var(--tessera-fg-warning)" }} />
                     </div>
                     <KV label={ts("panel.blockRate")} value={pct(blockRate)} tone={GOOD} />
-                    <KV label={ts("panel.uniqueBypasses")} value={`${fw?.false_negative ?? 0}`} />
+                    <KV
+                      label={ts("panel.uniqueBypasses")}
+                      value={`${showNumber(fw?.false_negative)}`}
+                    />
                   </div>
                 </Panel>
                 <Panel
@@ -1865,10 +1887,16 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
                       <KV
                         label={ts("panel.conversations")}
-                        value={`${erasure.data?.n_conversations ?? 0}`}
+                        value={`${showNumber(erasure.data?.n_conversations)}`}
                       />
-                      <KV label={ts("panel.bundles")} value={`${erasure.data?.n_bundles ?? 0}`} />
-                      <KV label={ts("panel.scores")} value={`${erasure.data?.n_scores ?? 0}`} />
+                      <KV
+                        label={ts("panel.bundles")}
+                        value={`${showNumber(erasure.data?.n_bundles)}`}
+                      />
+                      <KV
+                        label={ts("panel.scores")}
+                        value={`${showNumber(erasure.data?.n_scores)}`}
+                      />
                     </div>
                   </div>
                   <Button
@@ -1892,8 +1920,8 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     <div className="flex flex-col gap-1 text-[0.72rem]">
                       <KV
                         label={ts("panel.recoverable")}
-                        value={`${inversion.data?.n_recoverable ?? 0}/${inversion.data?.n_memories ?? 0}`}
-                        tone={(inversion.data?.n_recoverable ?? 0) > 0 ? BAD : GOOD}
+                        value={`${showNumber(inversion.data?.n_recoverable)}/${showNumber(inversion.data?.n_memories)}`}
+                        tone={toneFor(inversion.data?.n_recoverable, (n) => n > 0, TONE_BAD)}
                       />
                       <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
                       <KV

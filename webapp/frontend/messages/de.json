@@ -3896,6 +3896,7 @@
       "trendNote": "Proxy: Halluzinations-Fehlerrate im Fenster",
       "regression": "Sicherheits-Regressionsprädiktor",
       "regression7d": "7-Tage-Wahrscheinlichkeit",
+      "regressionUnread": "Regressionsrisiko nicht gemessen — die Sonde hat nicht geantwortet. Das ist kein geringes Risiko, sondern eine fehlende Messung.",
       "erasure": "GDPR-Löschung",
       "conversations": "Konversationen",
       "bundles": "Gelöschte Pakete",

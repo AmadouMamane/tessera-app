@@ -30,11 +30,25 @@ import { Link } from "@/i18n/navigation";
 import { fetchImprovement } from "@/lib/api/client";
 import type { Opportunity } from "@/lib/api/schemas";
 import { useWindowStore } from "@/lib/stores/window-store";
+import { showNumber, toneFor } from "@/lib/unread-is-not-zero";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
 const BAD = "text-red-600 dark:text-red-400";
+
+/**
+ * A reading that never arrived wears neither colour.
+ *
+ * A verdict needs a reading. The shape that stood here coalesced an absent one to zero and
+ * compared it to a threshold, so a query that never answered came out on the reassuring side
+ * of the comparison — GREEN for "no non-conformities", "no frozen releases", "no errors".
+ * ADR 0026 — a witness that cannot see may never report "ok". `lib/unread-is-not-zero.ts`
+ * carries the whole account, including why the file-level ratchet could not catch these.
+ */
+const UNREAD = "text-[var(--muted-foreground)]";
+const TONE_BAD = { bad: BAD, good: GOOD, unread: UNREAD };
+const TONE_WARN = { bad: WARN, good: GOOD, unread: UNREAD };
 
 const LEVEL_BADGE: Record<string, "success" | "warning" | "danger"> = {
   low: "success",
@@ -300,8 +314,8 @@ export function ImprovementDashboard() {
         label={ti("kpi.frozen")}
         infoKey="frozen"
         href="/agir/release-control"
-        value={`${d.n_frozen_releases ?? 0}`}
-        tone={(d.n_frozen_releases ?? 0) > 0 ? BAD : GOOD}
+        value={showNumber(d.n_frozen_releases)}
+        tone={toneFor(d.n_frozen_releases, (v) => v > 0, TONE_BAD)}
       />
     ),
     shadow: (
@@ -321,8 +335,8 @@ export function ImprovementDashboard() {
         label={ti("kpi.coverage")}
         infoKey="coverage"
         href="/agir/curation-eval-set"
-        value={`${Math.round((d.eval_coverage ?? 0) * 100)}%`}
-        tone={(d.eval_coverage ?? 0) >= 0.8 ? GOOD : WARN}
+        value={showNumber(d.eval_coverage, (v) => `${Math.round(v * 100)}%`)}
+        tone={toneFor(d.eval_coverage, (v) => v < 0.8, TONE_WARN)}
       />
     ),
     debt: (
@@ -332,8 +346,8 @@ export function ImprovementDashboard() {
         label={ti("kpi.debt")}
         infoKey="debt"
         href="/configurer/sources-memoire"
-        value={`${d.corpus_debt_days ?? 0} j`}
-        tone={(d.corpus_debt_days ?? 0) > 90 ? WARN : GOOD}
+        value={showNumber(d.corpus_debt_days, (v) => `${v} j`)}
+        tone={toneFor(d.corpus_debt_days, (v) => v > 90, TONE_WARN)}
       />
     ),
     roi: (
@@ -393,9 +407,9 @@ export function ImprovementDashboard() {
     >
       <div className="flex items-end gap-2">
         <span
-          className={`text-2xl font-semibold tabular-nums ${(d.eval_coverage ?? 0) >= 0.8 ? GOOD : WARN}`}
+          className={`text-2xl font-semibold tabular-nums ${toneFor(d.eval_coverage, (v) => v < 0.8, TONE_WARN)}`}
         >
-          {Math.round((d.eval_coverage ?? 0) * 100)}%
+          {showNumber(d.eval_coverage, (v) => `${Math.round(v * 100)}%`)}
         </span>
         <span className="pb-1 text-xs text-[var(--muted-foreground)]">
           {ti("panel.coverageSub")}
@@ -409,7 +423,7 @@ export function ImprovementDashboard() {
       </div>
       <div className="mt-2 flex justify-between text-[0.7rem]">
         <span className="text-[var(--muted-foreground)]">{ti("panel.debt")}</span>
-        <span className="tabular-nums">{d.corpus_debt_days ?? 0} j</span>
+        <span className="tabular-nums">{showNumber(d.corpus_debt_days, (v) => `${v} j`)}</span>
       </div>
       <div className="flex justify-between text-[0.7rem]">
         <span className="text-[var(--muted-foreground)]">{ti("panel.curate")}</span>
