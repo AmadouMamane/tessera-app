@@ -12,7 +12,7 @@ import { type Disagreement, compareRuns, sizeBuysNothing } from "@/lib/eval-comp
 import { evaluateCriteria, listCriteria } from "@/lib/eval-criteria";
 import { type CellState, MIN_CONTRIBUTION_UNCALIBRATED, decomposeRun } from "@/lib/eval-score";
 import type { Sweep, SweepRun } from "@/lib/eval-sweep";
-import { formatInt } from "@/lib/format-number";
+import { formatDecimal, formatInt } from "@/lib/format-number";
 
 /**
  * `Comparaison` — the same case set, two models (§3 C, §A1.6).
@@ -215,8 +215,9 @@ function CostRow({
     notRecorded: string;
   };
 }) {
+  // `toFixed` would print "71.3 min" under a French heading: it emits a `.` in every language.
   const minutes = (ms: number | null) =>
-    ms === null ? labels.notRecorded : `${(ms / 60_000).toFixed(1)} min`;
+    ms === null ? labels.notRecorded : `${formatDecimal(locale, ms / 60_000)} min`;
 
   return (
     <Card>

@@ -1,4 +1,7 @@
-import { type Page, expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { type Locator, type Page, expect, test } from "@playwright/test";
 
 /**
  * The evaluations view of Qualité IA — a screen that had **no e2e at all**.
@@ -33,18 +36,75 @@ async function login(page: Page) {
   await page.waitForURL((url) => !url.pathname.endsWith("/login"), { timeout: 15_000 });
 }
 
-/** The error boundary's own words. If this is on screen, the view did not render at all. */
-const CRASHED = /Cette vue n'a pas pu s'afficher|This view could not be displayed/;
+/**
+ * The error boundary's own words. If this is on screen, the view did not render at all.
+ *
+ * READ FROM THE CATALOGUE, NEVER RETYPED — and that is the whole lesson of 2026-08-15.
+ *
+ * This constant used to be a hand-written literal: `/Cette vue n'a pas pu s'afficher|This view
+ * could not be displayed/`. The catalogue says *"Cette vue n’a pas pu **être affichée**"* — a
+ * different verb, and a typographic apostrophe `’` where the literal had an ASCII `'`. Two
+ * mismatches, either one fatal. Since every URL in this file is a `/fr/` one, the French
+ * alternative was the only one that could ever fire, and it could not: the six
+ * `expect(getByText(CRASHED)).toHaveCount(0)` assertions below were asking a healthy page and a
+ * dead one the same unanswerable question, and getting `0` from both.
+ *
+ * So the Comparaison tab rendered nothing but the error boundary for a day while the file
+ * written to catch exactly that — see the docstring at the top — stayed green. A witness that
+ * cannot see may never report "ok" (ADR 0026); the way to make sure this one can is to give it
+ * no string of its own to get wrong.
+ */
+const ERROR_TITLES = (["fr", "de", "en"] as const).map((locale) => {
+  const catalogue = JSON.parse(
+    readFileSync(resolve(__dirname, "..", "messages", `${locale}.json`), "utf8"),
+  );
+  const title: unknown = catalogue?.errorBoundary?.title;
+  // A missing key would silently build `//`, which matches every page and would turn all six
+  // assertions from vacuously true into permanently false. Fail here instead, naming the key.
+  if (typeof title !== "string" || title.length < 10) {
+    throw new Error(`messages/${locale}.json has no usable errorBoundary.title (got ${title})`);
+  }
+  return title;
+});
+const CRASHED = new RegExp(
+  ERROR_TITLES.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+);
+
+test("the crash detector can see a crash — the positive control", () => {
+  // Cheap, and it is the assertion whose absence cost a day: the detector must match the very
+  // sentence the boundary renders, in the language these tests browse in.
+  for (const title of ERROR_TITLES) expect(CRASHED.test(title)).toBe(true);
+  expect(CRASHED.test("Le jeu de cas · 63 cas")).toBe(false);
+});
+
+/**
+ * The view DREW — proven the only way absence can be proven: by waiting for a presence first.
+ *
+ * `expect(getByText(CRASHED)).toHaveCount(0)` is a web-first assertion, so it retries until the
+ * count MATCHES — and it matches on the first try, because zero is what an empty page has. It
+ * therefore never waits for the failure it is looking for. That is not theory: run this file
+ * against the stack that was serving the broken Comparaison tab and the boundary check passes,
+ * then the marker below times out thirty seconds later with the boundary's own heading sitting
+ * in the snapshot. `app/[locale]/error.tsx` is a CLIENT component; on a server-render failure
+ * Next streams the shell and React paints the boundary only after hydration, which is strictly
+ * later than the moment the old order asked its question.
+ *
+ * So: wait for something the working view alone can produce, THEN check the boundary is absent.
+ * In that order the second assertion is about a settled page and finally means something.
+ */
+async function expectDrawn(page: Page, marker: Locator, timeout = 30_000) {
+  await expect(marker.first()).toBeVisible({ timeout });
+  await expect(page.getByText(CRASHED)).toHaveCount(0);
+}
 
 test("both views render — neither falls into the error boundary", async ({ page }) => {
   await login(page);
 
   for (const url of [SIGNALS, EVALUATIONS]) {
     await page.goto(url);
-    await expect(page.getByText(CRASHED)).toHaveCount(0);
     // The switch is the page's own furniture: present on both, so its absence means the shell
     // rendered and the content did not.
-    await expect(page.getByRole("link", { name: /Suivi continu/ })).toBeVisible();
+    await expectDrawn(page, page.getByRole("link", { name: /Suivi continu/ }));
   }
 });
 
@@ -140,8 +200,7 @@ test("the case set is a versioned artefact with no result on it", async ({ page 
   await login(page);
   await page.goto(`${EVALUATIONS}&tab=cases`);
 
-  await expect(page.getByText(CRASHED)).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: /Le jeu de cas/ })).toBeVisible();
+  await expectDrawn(page, page.getByRole("heading", { name: /Le jeu de cas/ }));
   // The bench states its own holes, and the floor percentage in that sentence is measured, not
   // typed: it must agree with a real number rather than the "70 %" that was frozen in the
   // message catalogue.
@@ -152,10 +211,13 @@ test("the comparison ranks nothing and shows what the two models disagree on", a
   await login(page);
   await page.goto(`${EVALUATIONS}&tab=compare`);
 
-  await expect(page.getByText(CRASHED)).toHaveCount(0);
-  const disagreements = page.getByText(/désaccords?/);
-  const locked = page.getByText(/opérateur/);
-  await expect(disagreements.or(locked).first()).toBeVisible();
+  // A marker only the PANEL can produce, on both branches. The previous pair was
+  // `/désaccords?/ OR /opérateur/`, and the second half is printed by a dozen unrelated strings
+  // in this catalogue — the sidebar's role chip among them — so the refusal branch would have
+  // gone green on a page that never drew the comparison at all.
+  const compared = page.getByRole("heading", { name: /Le coût réel/ });
+  const locked = page.getByText(/Accès opérateur requis/);
+  await expectDrawn(page, compared.or(locked));
 });
 
 /**
@@ -177,19 +239,18 @@ for (const { tab, marker } of CROSSED) {
     await login(page);
     await page.goto(`${EVALUATIONS}&tab=${tab}`);
 
-    await expect(page.getByText(CRASHED)).toHaveCount(0);
-    // The strip RESOLVED this name. `parseTab` falls back to the sweep on anything it does not
-    // know, so an unrecognised tab renders a perfectly healthy WRONG page — same URL, no error,
-    // different screen. Asserting the tab's own link is the current one is what tells the two
-    // apart; counting `aria-current` on the page does not (the sidebar carries one too).
-    await expect(page.locator(`a[href*="tab=${tab}"][aria-current="page"]`)).toHaveCount(1);
     // A marker only the PANEL can produce — never the tab label, never the population sentence.
     // The first version of this check looked for "Exécutions passées" and "juge", which the
     // strip and the sentence above the panel both print: it would have gone green on a panel
     // that never drew, which is precisely the failure this file was written to catch. The
     // judge's calibration is computed server-side over a gold set and can take ten seconds on
     // a cold cache, hence the generous timeout — a slow read is not an absent one.
-    await expect(page.getByText(marker).first()).toBeVisible({ timeout: 30_000 });
+    await expectDrawn(page, page.getByText(marker));
+    // The strip RESOLVED this name. `parseTab` falls back to the sweep on anything it does not
+    // know, so an unrecognised tab renders a perfectly healthy WRONG page — same URL, no error,
+    // different screen. Asserting the tab's own link is the current one is what tells the two
+    // apart; counting `aria-current` on the page does not (the sidebar carries one too).
+    await expect(page.locator(`a[href*="tab=${tab}"][aria-current="page"]`)).toHaveCount(1);
   });
 }
 
@@ -241,9 +302,6 @@ test("the departed tabs are gone from the monitoring strip, and its links follow
   await openCases.click();
   await page.waitForURL(/vue=evaluations/, { timeout: 15_000 });
   await expect(page).toHaveURL(/tab=cases/);
-  await expect(page.getByText(CRASHED)).toHaveCount(0);
   // It arrived at the CONTENT, not merely at the URL.
-  await expect(page.getByRole("heading", { name: /Le jeu de cas/ })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expectDrawn(page, page.getByRole("heading", { name: /Le jeu de cas/ }));
 });

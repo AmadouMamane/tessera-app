@@ -1,10 +1,17 @@
-"use client";
-
 import { useLocale } from "next-intl";
 import { useMemo } from "react";
 
 /**
  * Numbers formatted in the language the page is being read in — one door, not thirty.
+ *
+ * THIS MODULE CARRIES NO `"use client"`, AND THAT IS THE POINT. It carried one for a day, and
+ * the day cost the `Comparaison` tab of Qualité IA: the directive turns every export into a
+ * client REFERENCE, so `formatInt` — the function whose own docstring below says "for Server
+ * Components" — could still be imported by one and threw the moment it was called
+ * (`Attempted to call formatInt() from the server but formatInt is on the client`). The name
+ * said server, the docstring said server, the types said nothing at all, and `tsc` cannot see a
+ * directive. A module without the directive is SHARED: the hooks compile into the bundle of
+ * whichever client component imports them, and the pure function stays callable on both sides.
  *
  * The cockpit had TWO symmetric defects, and only one of them was visible:
  *
@@ -57,4 +64,31 @@ export function useIntFormat(): (value: number | null | undefined) => string {
 export function formatInt(locale: string, value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
+}
+
+/**
+ * A DECIMAL in the reader's language — the third shape of the same defect, and the one still
+ * largely unfixed.
+ *
+ * `n.toFixed(1)` always emits a `.`, whatever the page's language: "71.3 min" under a French
+ * heading. The cockpit's usual workaround, `.toFixed(1).replace(".", ",")`, is the exact mirror
+ * image of the hardcoded `toLocaleString("fr-FR")` this module already replaced — right in
+ * French, wrong in English and German, and silent in both.
+ *
+ * MEASURED 2026-08-15, not estimated: 11 sites use the hardcoded-comma form and 126 render a
+ * bare `toFixed`. Converting them is its own pass — a percentage's separator is entangled with
+ * its unit, its width in a `tabular-nums` column and, in several charts, with an SVG label — so
+ * this door is opened here and used where the number is already being repaired, rather than
+ * swept in behind an unrelated fix.
+ */
+export function formatDecimal(
+  locale: string,
+  value: number | null | undefined,
+  digits = 1,
+): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
 }
