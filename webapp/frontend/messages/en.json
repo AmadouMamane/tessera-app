@@ -1338,7 +1338,8 @@
         "langfuse-worker": "Langfuse ingestion",
         "langfuse-db": "Langfuse's own Postgres",
         "langfuse-redis": "Langfuse's own queue",
-        "minio": "large trace storage"
+        "minio": "large trace storage",
+        "public-canonical": "what a visitor actually reaches"
       },
       "asks": {
         "tcp": "open a TCP connection",

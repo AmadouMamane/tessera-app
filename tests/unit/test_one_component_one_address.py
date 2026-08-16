@@ -61,6 +61,18 @@ def _banned_forms() -> dict[str, str]:
     """Every address literal that belongs to a declared component, mapped to that component."""
     forms: dict[str, str] = {}
     for component in STACK_COMPONENTS:
+        if not component.default_address:
+            # NO DECLARED ADDRESS, NOTHING TO POLICE — and the empty string is a substring of
+            # every line in the repository, so without this guard the scan below reports the
+            # entire codebase as a redeclaration of it. Found the moment `public-canonical`
+            # arrived (ADR 0052 §Amendment 2): its host is deliberately undeclared here, because
+            # no domain is baked into the image.
+            #
+            # This leaves a HOLE, recorded as one in the companion test below rather than
+            # implied: a private copy of the public hostname would pass this scan unseen. There
+            # is no declaration for it to duplicate, and creating one — a hostname in the code —
+            # is exactly what the design refuses.
+            continue
         forms[component.default_address] = component.key
         if component.default_ui:
             netloc = urllib.parse.urlsplit(component.default_ui).netloc
@@ -136,6 +148,13 @@ def test_the_ratchet_names_what_it_cannot_see() -> None:
         "langfuse-worker",
         "otel-collector",
         "postgres",
+        # The public edge is doorless HERE and not in the running cockpit, which is the whole
+        # point: `default_ui` is a literal, and a literal is where a hostname would have to be
+        # written. `make fulllocal-up` exports TESSERA_STACK_UI_PUBLIC_CANONICAL from
+        # `targets.yaml`, so `ui_url()` gives the operator a live link to the actual public URL
+        # while nothing about a domain is compiled in. The cost is stated above: this scan
+        # cannot police a private copy of that hostname.
+        "public-canonical",
         "redis",
     ], (
         "the set of components whose published address this ratchet cannot police has changed; "

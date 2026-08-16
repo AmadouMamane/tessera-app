@@ -57,6 +57,19 @@ services:
       # the DECLARED address, so this line is belt-and-braces; it stays because an address
       # spelled next to its siblings is how the next omission gets noticed.
       LANGFUSE_HOST: http://langfuse-web:3000
+      # The public edge — the thirteenth probed component, and the ONLY one asked from a
+      # visitor's side of the wire. Passed THROUGH, never baked: the fulllocal overlay states
+      # that no domain belongs in the image, so `make fulllocal-up` reads the host from
+      # `infra/deploy/targets.yaml` — the file that already owns it — and exports it here.
+      #
+      # Empty is a supported answer, not a misconfiguration: a laptop or a CI run publishes
+      # nothing, and the probe then reports BLIND ("no address declared") rather than claiming
+      # a public URL is up, or inventing an outage on a deployment that has none.
+      TESSERA_STACK_PUBLIC_CANONICAL: ${TESSERA_STACK_PUBLIC_CANONICAL:-}
+      # …and the door an operator clicks. Separate from the address on purpose, as for every
+      # other component: the probe's address and the browser's are two vantage points, and the
+      # one place they happen to coincide is here. Empty ⇒ the row simply carries no link.
+      TESSERA_STACK_UI_PUBLIC_CANONICAL: ${TESSERA_STACK_UI_PUBLIC_CANONICAL:-}
       TESSERA_OBSERVABILITY__OTEL_COLLECTOR_ENDPOINT: http://otel-collector:4318
       TESSERA_OLLAMA__HOST: http://host.docker.internal:11434
       # The base compose turns metrics OFF; the cutover needs them on (turn-evidence

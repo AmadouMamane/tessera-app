@@ -1338,7 +1338,8 @@
         "langfuse-worker": "ingestion Langfuse",
         "langfuse-db": "le Postgres propre à Langfuse",
         "langfuse-redis": "la file propre à Langfuse",
-        "minio": "stockage des traces volumineuses"
+        "minio": "stockage des traces volumineuses",
+        "public-canonical": "ce qu'un visiteur atteint vraiment"
       },
       "asks": {
         "tcp": "ouvrir une connexion TCP",

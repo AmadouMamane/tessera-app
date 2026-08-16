@@ -147,7 +147,7 @@ def probe_for_scheduler() -> float:
     """One scheduler beat: ensure a fresh stack observation exists, then stamp liveness.
 
     Runs through the same cache as the page's own reads, so a beat landing just after a page
-    poll reuses its observation instead of opening twelve more sockets — and the journal write
+    poll reuses its observation instead of opening a second round of sockets — and the journal write
     stays where it belongs, on the actual probe. The stamp is written on every beat regardless:
     it vouches for the LOOP being alive, which is a different fact from an observation having
     happened, and the history endpoint reports it as such.
@@ -175,7 +175,7 @@ def _probe() -> tuple[float, PreflightReport]:
 
 
 def _stack() -> tuple[float, tuple[StackObservation, ...]]:
-    """The twelve declared stack components, cached on the same TTL as the preconditions."""
+    """The declared stack components, cached on the same TTL as the preconditions."""
     global _stack_cache
     with _stack_cache_lock:
         cached = _stack_cache
@@ -289,12 +289,12 @@ async def observability_components() -> dict[str, object]:
             "ok": sum(1 for c in every if c.verdict is Verdict.OK),
             "fail": fail,
             "blind": blind,
-            # The operator's twelve, counted on its own: the preconditions are a different
+            # The operator's stack, counted on its own: the preconditions are a different
             # question and folding them together would hide which half moved.
             #
             # Every one of these is published per half, not just `ok`, because a headline that
             # opens "I observe {stack_ok}/{stack_total} STACK components" and then continues
-            # "· {blind} unreadable" from the whole-of-twenty tally is two scopes in one
+            # "· {blind} unreadable" from the whole-of-everything tally is two scopes in one
             # sentence. It read correctly only while every precondition was green — the
             # infalsifiable shape: wrong, and unable to show it until something else moved.
             "stack_total": len(stack),

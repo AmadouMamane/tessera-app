@@ -185,3 +185,57 @@ use, cached on the probe's TTL. Each consequence row names which of its dependen
 read this cycle (`checked_by_read`), so "assurée" over a socket-only check can never be
 mistaken for the stronger claim — and `because` is computed from the same merge as the state,
 so the two cannot disagree.
+
+## Amendment 2 (2026-08-16) — the twelve are asked from inside; a thirteenth is asked from outside
+
+Every component this ADR declares is interrogated over the **private compose network**, from the
+agent container. That is the right vantage point for the question they answer — *is the thing the
+operator runs up?* — and it is structurally incapable of answering the one an operator is
+actually woken by: *can a visitor reach us?*
+
+The two came apart on **2026-08-12**. The front container returned from a host reboot without
+`restart: unless-stopped`, and `https://tessera.<domain>` served **502 for thirty-two hours**.
+Every one of the twelve was green throughout, and correctly so: postgres, ClickHouse, Prometheus,
+the collector, Langfuse and the rest were all up. The outage lived in the one hop none of them
+crosses. It was found by a human opening the site.
+
+The tool to ask already existed — `make deploy-diff` fetches `/api/version` on every declared
+host and refuses on unreachable. What did not exist was anything that asked **without being
+asked**. For thirty-two hours nobody typed it. A witness that only speaks when addressed is a
+manual procedure wearing a witness's clothes.
+
+So the registry gains a thirteenth entry, `public-canonical`, and the existing machinery does the
+rest: the Amendment 1 scheduler probes it on the same cadence, the journal records it, and the
+history divides by decidable time exactly as before.
+
+Four properties, each of which had to be decided rather than defaulted:
+
+- **HTTPS, at `/api/version`.** Not a health path. It traverses the whole browser-facing chain —
+  edge → tunnel → front — and its answer *names the build being served* rather than proving a
+  socket is open. `http://` would be redirected or refused at the edge and journalled as an
+  outage on a component in perfect health.
+- **It identifies itself.** Measured against the live edge on 2026-08-16: the default
+  `Python-urllib/3.x` User-Agent gets **HTTP 403**, `tessera-stack-probe/1.0` gets **200**. Without
+  the header this component would have reported a permanent, confident, entirely false outage —
+  with a status code to back it up. `scripts/deploy_diff.py` carries the same header, learned the
+  same way; that neither of them had told the other is why it is now a module-level constant.
+- **Eight seconds, not three.** Three is generous for a socket on the same host and far too tight
+  for a round trip that leaves the machine, crosses an edge network and returns through a tunnel.
+  A timeout recorded as `unreachable` manufactures outages out of latency, which is worse than not
+  watching: it teaches the operator to ignore the row.
+- **No domain is declared in the code.** `docker-compose.fulllocal.yml` is explicit that the same
+  image must serve `localhost` and a public host unchanged, and `infra/deploy/targets.yaml`
+  already owns the hostname. `make fulllocal-up` reads it from there and exports
+  `TESSERA_STACK_PUBLIC_CANONICAL`. **An undeclared public host makes the row BLIND, never OK** —
+  on a laptop, in CI, or on any deployment that publishes nothing, "we cannot see a public URL
+  because none was declared" is a fact about the observer, and the three wrong answers (`ok`,
+  `fail`, `probe_failed`) each send the reader somewhere different and useless.
+
+**What this still cannot see, stated because ADR 0026 requires it.** The probe runs inside the
+deployment. It catches the outage that actually happened — front down, agent up — and it cannot
+catch one that takes the host with it: no process, no probe, no record. That is not papered over.
+A cycle that does not run leaves a **gap**, and this ADR's history already divides availability by
+**decidable** time, so silence narrows `observed_ratio` instead of accumulating as uptime. An
+operator reading "100 % available, observed 43 % of the window" is being told the truth twice. The
+only vantage point that closes this hole is a prober outside the deployment, which is a decision
+about a third-party service and not one this ADR takes.

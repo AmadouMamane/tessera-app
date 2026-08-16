@@ -1,4 +1,4 @@
-"""The twelve components of the stack, each interrogated where it actually listens.
+"""The twelve components of the stack — plus the public edge — each interrogated where it listens.
 
 The operator's question, asked twice before it was understood: *"pourquoi les 12 composants
 n'apparaissent pas sur `/fr/surveiller/observabilite`"*. The twelve are the **stack** — Redis,
@@ -26,6 +26,13 @@ environment with the compose default as fallback (the seam ``ClickHouseConfig`` 
 2026-08-05). ``langfuse-worker`` publishes no host port at all: from outside the compose
 network it is genuinely un-interrogable, and the honest answer there is BLIND — not "ok", and
 not "down".
+
+**And a thirteenth that is not part of the stack.** All twelve above are asked over the private
+compose network, so all twelve can be green while the public URL serves 502 — which is what
+happened for thirty-two hours on 2026-08-12. ``public-canonical`` asks the visitor's question
+from the visitor's side of the wire. It is the one component whose address is not declared here:
+no domain is baked into the image, so an undeclared public host makes that row BLIND rather than
+"ok" (ADR 0052 §Amendment 2).
 """
 
 from __future__ import annotations
@@ -35,6 +42,11 @@ import os
 import socket
 import urllib.error
 import urllib.parse
+
+# Explicit, though `urlfetch` already pulls it in transitively: relying on another module's
+# import to make `urllib.request` an attribute of `urllib` works until that module stops
+# needing it, and then fails at runtime in a probe rather than at import in a test.
+import urllib.request
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Literal
 
@@ -77,6 +89,10 @@ StackOutcome = Literal[
 ]
 
 _TIMEOUT_S: Final = 3.0
+
+#: Who is knocking. Edges answer 403 to `Python-urllib/3.x` — a bot signature — and a probe
+#: without a real UA reads every proxied host as broken, permanently and confidently.
+_PROBE_USER_AGENT: Final = "tessera-stack-probe/1.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +147,22 @@ class StackComponent:
     #: addresses; conflating them is how a dashboard grows links to closed doors.
     #: ``TESSERA_STACK_UI_<KEY>`` overrides it; empty ⇒ this component has no UI and no link.
     default_ui: str = ""
+    #: For ``http``: which scheme actually reaches it. Every compose-internal component speaks
+    #: plain HTTP on the private network; the public edge speaks HTTPS and nothing else, and a
+    #: probe that assumed ``http://`` there would be redirected or refused and report a
+    #: component that is perfectly healthy as down.
+    scheme: Literal["http", "https"] = "http"
+    #: Seconds before the probe gives up. Three is generous for a socket on the same host and
+    #: far too tight for a round trip that leaves the machine, crosses an edge network and comes
+    #: back through a tunnel: a timeout recorded as ``unreachable`` would manufacture outages
+    #: out of latency, which is worse than not watching at all.
+    timeout_s: float = _TIMEOUT_S
+    #: Whether this component's absence is a fact about the DEPLOYMENT or about the OBSERVER.
+    #: A component with no declared address is not "down" — nobody said where it lives — so the
+    #: probe must go BLIND rather than FAIL. Only the public edge is optional today: no domain
+    #: is baked into the image (see ``docker-compose.fulllocal.yml``), so on a laptop, in CI, or
+    #: on any deployment that publishes nothing, this row must say "not declared here".
+    optional_address: bool = False
 
 
 #: The twelve. Ordered as an operator reads a stack: what the agent stores in, what it measures
@@ -190,6 +222,40 @@ STACK_COMPONENTS: Final[tuple[StackComponent, ...]] = (
         # The CONSOLE (:9001 → 19101), not the S3 API (:9000 → 19100). Opening the API port in
         # a browser yields an XML error, which is a link that works and helps nobody.
         default_ui="http://127.0.0.1:19101",
+    ),
+    # ── and the thirteenth, which is not inside the stack at all ──────────────────────────
+    #
+    # THE ONLY ROW THAT ANSWERS "CAN A VISITOR REACH US". The other twelve are asked over the
+    # private compose network, so all twelve can be green while the public URL serves 502 — and
+    # on 2026-08-12 they were, for thirty-two hours, because the front container came back from
+    # a host reboot without `restart: unless-stopped` and nobody typed `make deploy-diff`. The
+    # tool to ask existed; what did not exist was anything that asked WITHOUT being asked.
+    #
+    # It is probed from inside the deployment, which buys the incident that actually happened
+    # (front down, agent up → the probe runs and records the outage) and cannot buy the one
+    # where the host itself goes away. That limit is not hidden: a probe that does not run
+    # leaves a GAP, and ADR 0052's history divides availability by DECIDABLE time, so silence
+    # narrows `observed_ratio` instead of accumulating as uptime.
+    #
+    # `/api/version` rather than a health path on purpose: it is the endpoint `deploy-diff`
+    # already trusts, it traverses the whole browser-facing path (edge → tunnel → front), and
+    # its answer names the build being served rather than merely proving a socket is open.
+    StackComponent(
+        "public-canonical",
+        "what a visitor actually reaches",
+        # Deliberately EMPTY. `docker-compose.fulllocal.yml` bakes no domain into the image on
+        # purpose — the same image serves localhost and a public host unchanged — so guessing
+        # one here would betray that, and hard-coding one would make this module true for a
+        # single deployment. `make fulllocal-up` injects TESSERA_STACK_PUBLIC_CANONICAL from
+        # `infra/deploy/targets.yaml`, the file that already owns this fact.
+        "",
+        "http",
+        "/api/version",
+        scheme="https",
+        # Measured from the operator's network, the canonical host answers in 0.3 to 1.2 s through
+        # Cloudflare; 3 s would flap on a cold tunnel and print an outage that never happened.
+        timeout_s=8.0,
+        optional_address=True,
     ),
 )
 
@@ -334,9 +400,14 @@ def _probe_tcp(component: StackComponent, address: str) -> StackObservation:
 
 
 def _probe_http(component: StackComponent, address: str) -> StackObservation:
-    url = f"http://{address}{component.path}"
+    url = f"{component.scheme}://{address}{component.path}"
+    # Cloudflare — and most edges — answer 403 to the default `Python-urllib/3.x` User-Agent,
+    # which a probe would faithfully record as `http_error` forever. `deploy_diff` learned this
+    # the same way. Sent to every component, not only the edge: naming the caller is the polite
+    # thing to leave in another service's access log, and none of the twelve care.
+    request = urllib.request.Request(url, headers={"User-Agent": _PROBE_USER_AGENT})  # noqa: S310
     try:
-        with urlopen_http(url, timeout=_TIMEOUT_S) as response:
+        with urlopen_http(request, timeout=component.timeout_s) as response:
             return _seen(
                 component,
                 Verdict.OK,
@@ -405,6 +476,24 @@ def probe_stack_observations(
     seen: list[StackObservation] = []
     for component in components if components is not None else STACK_COMPONENTS:
         address = _address(component)
+        # NOBODY SAID WHERE IT LIVES — a fact about this deployment's configuration, never a
+        # verdict about the component. Probing `https:///api/version` would raise inside the
+        # probe and be caught below as `probe_failed`, which reads as "our probe is broken"
+        # rather than "no public host is declared here": the same colour for two repairs that
+        # have nothing in common.
+        if not address and component.optional_address:
+            seen.append(
+                _seen(
+                    component,
+                    Verdict.BLIND,
+                    "uninterrogable",
+                    "",
+                    f"no address declared for {component.key} "
+                    f"(set TESSERA_STACK_{component.key.upper().replace('-', '_')})",
+                    raw="",
+                )
+            )
+            continue
         try:
             probe = _probe_http if component.kind == "http" else _probe_tcp
             seen.append(probe(component, address))

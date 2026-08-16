@@ -6,7 +6,7 @@ day it shipped — and every availability figure was a true statement about a sl
 published the sliver (``observed_ratio``) rather than hiding it, which was honest and useless
 at the same time: an operator cannot act on "99 % of 18 minutes".
 
-Amendment 1 adds the scheduler: the ADR 0044 leader probes the twelve stack components on a
+Amendment 1 adds the scheduler: the ADR 0044 leader probes the declared components on a
 fixed cadence, so the journal is written even when every cockpit is closed. This module holds
 the parts of that which are not the loop itself (the loop lives with its siblings in
 ``api/main.py``):

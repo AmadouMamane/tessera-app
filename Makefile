@@ -1183,15 +1183,35 @@ FL_COMPOSE = docker compose -f docker-compose.yml -f docker-compose.unix.yml \
 # clean one — which is the correct verdict, not a nuisance.
 BUILD_SHA := $(shell git rev-parse --short=8 HEAD 2>/dev/null || echo unknown)$(shell git diff --quiet HEAD 2>/dev/null || echo -dirty)
 
+# The public host this deployment answers on — read from `infra/deploy/targets.yaml`, which
+# already owns it, and handed to the agent as the address of its thirteenth probed component
+# (ADR 0052 §Amendment 2). The twelve others are asked over the private compose network, so all
+# twelve can be green while the public URL serves 502; on 2026-08-12 they were, for 32 hours.
+#
+# Not baked into any image: `docker-compose.fulllocal.yml` is explicit that the same image must
+# serve localhost and a domain unchanged. Not typed here either — a second copy of a hostname is
+# a second thing to forget when the canonical moves, which is exactly the drift `targets.yaml`
+# exists to end.
+#
+# Failing to EMPTY is deliberate and is not a hole: the probe then reports BLIND ("no address
+# declared"), never OK. A `make` that refused to bring the stack up because a monitoring address
+# would not parse would trade a missing measurement for a real outage.
+PUBLIC_CANONICAL := $(shell uv run python -c "from scripts.deploy_diff import load_targets as t; c = t(); print(f'{c.canonical}.{c.domain}')" 2>/dev/null)
+
 # volume resolves to a different default path, so compose would recreate the running agent onto
 # an empty state dir. Guarded, then the already-running agent's config matches → it is untouched.
 fulllocal-up:
 	@test -f frontend.secret.env || { echo "missing frontend.secret.env — cp frontend.secret.env.example frontend.secret.env and fill it"; exit 2; }
 	@test -n "$(TESSERA_AGENT_STATE)" || { echo "export TESSERA_AGENT_STATE=<durable state dir> first (same value as the cutover), else the agent would be recreated onto an empty volume"; exit 2; }
 	@echo "▶ stamping the pair with $(BUILD_SHA)"
+	@test -n "$(PUBLIC_CANONICAL)" \
+	  && echo "▶ public edge watched at https://$(PUBLIC_CANONICAL)/api/version (13th component)" \
+	  || echo "▶ public edge NOT declared — that row will read BLIND, never ok (targets.yaml unreadable?)"
 	@TESSERA_BUILD_SHA=$(BUILD_SHA) TESSERA_BUILD_TIME=$$(date -u +%Y-%m-%dT%H:%M:%SZ) \
 	  $(FL_COMPOSE) --profile full build agent frontend
-	@$(FL_COMPOSE) --profile full up -d --no-deps agent frontend
+	@TESSERA_STACK_PUBLIC_CANONICAL=$(PUBLIC_CANONICAL) \
+	  TESSERA_STACK_UI_PUBLIC_CANONICAL=$(if $(PUBLIC_CANONICAL),https://$(PUBLIC_CANONICAL),) \
+	  $(FL_COMPOSE) --profile full up -d --no-deps agent frontend
 	@printf 'waiting for the front to report healthy'; \
 	for i in $$(seq 1 40); do \
 	  st=$$(docker inspect -f '{{.State.Health.Status}}' tessera-$(or $(TESSERA_ENV),local)-frontend 2>/dev/null); \

@@ -376,7 +376,7 @@ async def _start_read_cache_warmer() -> asyncio.Task[None] | None:
 
 
 async def _start_stack_probe_scheduler() -> asyncio.Task[None] | None:
-    """LEADER-only loop: probe the twelve stack components on a cadence (ADR 0052 §Amendment 1).
+    """LEADER-only loop: probe the declared stack components on a cadence (ADR 0052 §Amendment 1).
 
     Without it the component journal only knows the minutes a cockpit happened to be open, and
     every availability figure is a true statement about a sliver — 1.3 % of the day, the day the
