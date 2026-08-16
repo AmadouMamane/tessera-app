@@ -15,6 +15,7 @@ import type { Route } from "next";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useIntFormat, useNumberFormat } from "@/lib/format-number";
+import { usePercentFormat } from "@/lib/format-number";
 import { toneFor } from "@/lib/unread-is-not-zero";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
@@ -85,7 +86,15 @@ function useEur(): (v: number, d?: number) => string {
 }
 const ms = (v: number | null) =>
   v == null ? "—" : v >= 1000 ? `${(v / 1000).toFixed(2)}s` : `${Math.round(v)}ms`;
-const pct = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
+/**
+ * A ratio as a percentage, in the reader's language — separator AND the space before the sign,
+ * which French and German have and English does not. See `lib/format-number`.
+ */
+function usePct(): (v: number | null | undefined, d?: number) => string {
+  const one = usePercentFormat(1);
+  const two = usePercentFormat(2);
+  return (v, d = 1) => (d >= 2 ? two : one)(v);
+}
 
 /** Tiny sparkline over a real value series. A flat series reads as a steady mid line. */
 function Spark({ values }: { values: number[] }) {
@@ -453,6 +462,7 @@ function mirrorPeriodInUrl(key: string): void {
 }
 
 export function ReliabilityDashboard() {
+  const pct = usePct();
   const eur = useEur();
   const fmtInt = useIntFormat();
   const tr = useTranslations("reliability");

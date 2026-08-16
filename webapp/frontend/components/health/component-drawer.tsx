@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { fetchComponentHistory } from "@/lib/api/client";
 import type { ComponentCheck, ComponentsResponse } from "@/lib/api/schemas";
+import { usePercentFormat } from "@/lib/format-number";
 
 /**
  * One component, interrogated in full — the drawer behind every table row.
@@ -38,6 +39,7 @@ export function ComponentDrawer({
   data: ComponentsResponse;
   onClose: () => void;
 }) {
+  const pctFmt = usePercentFormat(1);
   const t = useTranslations("health.drawer");
   const tc = useTranslations("health.components");
   const tq = useTranslations("health.consequences");
@@ -201,7 +203,7 @@ export function ComponentDrawer({
                       ok:
                         availability.ok_ratio === null
                           ? t("cannotSay")
-                          : `${(availability.ok_ratio * 100).toFixed(1)} %`,
+                          : pctFmt(availability.ok_ratio),
                       observed: humanSeconds(availability.observed_seconds),
                     })
                   : t("neverObserved")}

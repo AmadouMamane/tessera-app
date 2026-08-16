@@ -5,6 +5,7 @@ import { NewAgentButton } from "@/components/agent/new-agent-button";
 import { MetricInfo } from "@/components/cockpit/metric-info";
 import { Link, redirect } from "@/i18n/navigation";
 import { currentRole, hasCockpitAccess, isOperator } from "@/lib/auth/session";
+import { formatInt } from "@/lib/format-number";
 import { loadFleet } from "@/lib/server/fleet";
 
 interface PageProps {
@@ -12,8 +13,6 @@ interface PageProps {
 }
 
 export const dynamic = "force-dynamic";
-
-const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
 
 // The Flotte — the rich agent directory. Listing every agent is correct HERE
 // (this is the cockpit / control plane); a click opens the agent's governance
@@ -26,6 +25,10 @@ export default async function FleetPage({ params }: PageProps) {
   if (!hasCockpitAccess(role)) redirect({ href: "/produit", locale });
 
   const t = await getTranslations({ locale, namespace: "fleet" });
+  // Grouped in the READER's language. The literal this replaces —
+  // `toLocaleString("fr-FR")` — was right in French and silently wrong for every
+  // other operator; it was frozen with that reason until the shared helper moved.
+  const fmtInt = (n: number) => formatInt(locale, n);
   const data = await loadFleet(locale);
   if (data === null) {
     const te = await getTranslations({ locale, namespace: "queryError" });

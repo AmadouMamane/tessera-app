@@ -320,6 +320,9 @@ export function buildSignalRows(
   d: SignalData,
   td: (key: string, values: Record<string, string>) => string,
   series?: ControlSeries,
+  /** The reader's language, for the numbers the registry formats. Injected like `t`: this
+   *  module is pure and has no React context to read one from. */
+  locale = "fr",
 ): SignalRow[] {
   const rows: RawRow[] = [];
 
@@ -327,6 +330,7 @@ export function buildSignalRows(
     readControls(
       d,
       SHARED.map((s) => s.id),
+      locale,
     ).map((r) => [r.id, r]),
   );
   const pushShared = (id: ControlId) => {

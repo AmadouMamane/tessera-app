@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
+import { usePercentFormat } from "@/lib/format-number";
 
 /**
  * Shared cockpit atoms — the canonical "premium" KPI tile, extracted from the
@@ -23,6 +24,7 @@ export function DeltaBadge({
   /** Text shown when there is no previous period to compare against. */
   noneLabel: string;
 }) {
+  const pctFmt = usePercentFormat(1);
   if (deltaPct == null) {
     return <span className="text-xs text-[var(--tessera-text-muted)]">{noneLabel}</span>;
   }
@@ -36,7 +38,7 @@ export function DeltaBadge({
       )}
     >
       {up ? "+" : ""}
-      {deltaPct.toFixed(1)}%
+      {pctFmt(deltaPct / 100)}
     </span>
   );
 }

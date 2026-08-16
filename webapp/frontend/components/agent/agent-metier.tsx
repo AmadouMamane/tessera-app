@@ -45,15 +45,26 @@ import type {
   BusinessTrend,
 } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { usePercentFormat } from "@/lib/format-number";
 import { metierTemporalMode, resolveMetierAsOf } from "@/lib/metier-temporal";
 import { getTemporalContext } from "@/lib/temporal-context";
 import { useAgentId } from "@/lib/use-agent-id";
 
 const LEVEL_ORDER = ["runtime", "human_action"];
 
-function pct(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "—";
-  return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
+/**
+ * A percentage (already ×100) in the reader's language.
+ *
+ * The old form glued "%" on by hand, which cannot know that French and German put a space
+ * before the sign and English does not. Whole numbers keep no decimals, as before.
+ */
+function usePct(): (value: number | null | undefined) => string {
+  const whole = usePercentFormat(0);
+  const one = usePercentFormat(1);
+  return (value) => {
+    if (value === null || value === undefined) return "—";
+    return (Number.isInteger(value) ? whole : one)(value / 100);
+  };
 }
 
 function trendIcon(direction: string) {
@@ -407,6 +418,7 @@ function agoLabel(iso: string | null | undefined, locale: string): string | null
  *  - **zero data** — nothing observed at all. The dash + reason, untouched, as it must be.
  */
 function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label: string }) {
+  const pct = usePct();
   const t = useTranslations("agentMetier");
   const locale = useLocale();
   const hasValue = typeof signal.value_pct === "number";
@@ -502,6 +514,7 @@ function SignalGroup({
 }
 
 function SignalMetric({ signal, label }: { signal: BusinessSignalValue; label: string }) {
+  const pct = usePct();
   const hasValue = typeof signal.value_pct === "number";
   return (
     <MetricCard
@@ -715,6 +728,7 @@ function PercentCell({
   tone: "conformity" | "blocked" | "neutral";
   className?: string;
 }) {
+  const pct = usePct();
   const known = typeof value === "number";
   const text =
     !known || tone === "neutral"

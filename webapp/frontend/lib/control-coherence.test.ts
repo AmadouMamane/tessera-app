@@ -168,8 +168,21 @@ function scanTree(): TreeScan {
         // The registry declares bars beside `direction`, not beside a state — so the paired
         // scan does not see them. Count the bars alone here: it is the regex that must be
         // proven alive, and the pairing is proven by the teeth test.
+        //
+        // TWO SHAPES SINCE 2026-08-16, and the second is why this control nearly went blind.
+        // A bar used to be a literal (`text: "≤ 10%"`); it is now a function of the reader's
+        // language (`text: (fmt) => \`≤ ${fmt.pct(0.1)}\``), because the separator and the space
+        // before the sign are both part of the language. Matching only the literal form found
+        // TWO bars where there are twenty-one, and this positive control is the thing that
+        // said so — a lowered threshold here would have been the alternative, and it would have
+        // left the whole class unpoliced.
         for (const line of stripComments(source).split("\n")) {
-          if (/\btext:\s*["'`][^"'`\n]{1,32}["'`]/.test(line)) registryBars += 1;
+          if (
+            /\btext:\s*["'`][^"'`\n]{1,32}["'`]/.test(line) ||
+            /\btext:\s*\(fmt\)\s*=>/.test(line)
+          ) {
+            registryBars += 1;
+          }
         }
         continue;
       }

@@ -30,6 +30,7 @@ import {
   CONTROL_IDS,
   type ControlId,
   type ControlPayload,
+  controlFmt,
   metricFor,
   readControl,
   readControls,
@@ -192,11 +193,27 @@ const EMPTY: ControlPayload = {
   inversion: { available: false },
 };
 
-/** Parse a rendered value or bar back to a ratio: `"73%"` → 0.73, `"F1 ≥ 0.90"` → 0.9. */
+/**
+ * Parse a rendered value or bar back to a ratio: `"73 %"` → 0.73, `"F1 ≥ 0,90"` → 0.9.
+ *
+ * IT MUST SPEAK THE NOTATION IT JUDGES. Since 2026-08-16 the registry formats through
+ * `Intl.NumberFormat` in the reader's language, so the French default renders `0,50 %` — a comma
+ * for the decimal and a narrow no-break space (U+202F) before the sign. The previous regex,
+ * built for `0.50%`, found `50 %` inside that string and read **fifty percent** where the screen
+ * said half a percent. The test then reported a state mismatch, which was true of its own
+ * parsing and of nothing else.
+ *
+ * So: strip the spaces the locale uses to group and to precede the sign, then accept either
+ * decimal mark. A parser that only understood one notation would make this whole file a
+ * statement about English rendering.
+ */
 function parseRatio(text: string): number {
-  const percent = /(-?\d+(?:\.\d+)?)\s*%/.exec(text);
+  // U+202F narrow no-break, U+00A0 no-break, plain space — all three are grouping or unit
+  // spacing in one locale or another, and none of them is part of the number.
+  const normalised = text.replace(/[\s  ]/g, "").replace(",", ".");
+  const percent = /(-?\d+(?:\.\d+)?)%/.exec(normalised);
   if (percent) return Number(percent[1]) / 100;
-  const bare = /(-?\d+(?:\.\d+)?)/.exec(text);
+  const bare = /(-?\d+(?:\.\d+)?)/.exec(normalised);
   if (!bare) throw new Error(`unparseable: ${text}`);
   return Number(bare[1]);
 }
@@ -264,8 +281,11 @@ describe("two opposite failures are never one number", () => {
   it("splits refusal into two controls reading two different fields", () => {
     const over = readControl("refusalOver", PAYLOAD);
     const under = readControl("refusalUnder", PAYLOAD);
-    expect(over?.value).toBe("0%"); // no legitimate question was turned away
-    expect(under?.value).toBe("60%"); // six of ten forbidden ones were carried out
+    // The NUMBER is the claim; the notation belongs to the reader's language and is derived
+    // from the same formatter the registry uses. A literal "0%" here would be an assertion
+    // about English rendering wearing the costume of an assertion about refusals.
+    expect(over?.value).toBe(controlFmt("fr").pct(0)); // no legitimate question was turned away
+    expect(under?.value).toBe(controlFmt("fr").pct(0.6)); // six of ten forbidden ones were carried out
     expect(over?.metric).not.toBe(under?.metric);
   });
 
@@ -277,10 +297,10 @@ describe("two opposite failures are never one number", () => {
   it("keeps the two firewall views distinct, and each says which view it is", () => {
     const f1 = readControl("firewall", PAYLOAD);
     const bypass = readControl("injectionBypass", PAYLOAD);
-    expect(f1?.value).toBe("86%");
-    expect(bypass?.value).toBe("24%");
+    expect(f1?.value).toBe(controlFmt("fr").pct(0.86));
+    expect(bypass?.value).toBe(controlFmt("fr").pct(0.24));
     // …and the third number, recall, is still reachable — as DETAIL, not as a rival headline.
-    expect(f1?.detail?.values.recall).toBe("76%");
+    expect(f1?.detail?.values.recall).toBe(controlFmt("fr").pct(0.76));
   });
 });
 

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchInstrumentationCoverage } from "@/lib/api/client";
+import { usePercentFormat } from "@/lib/format-number";
 
 const POLL_MS = 60_000;
 
@@ -31,6 +32,7 @@ const POLL_MS = 60_000;
  * ClickHouse outage into a fleet that instruments nothing.
  */
 export function InstrumentationCoverage() {
+  const pctFmt = usePercentFormat(0);
   const t = useTranslations("health.coverage");
 
   const query = useQuery({
@@ -113,7 +115,7 @@ export function InstrumentationCoverage() {
                         />
                       </span>
                       <span className="tabular-nums text-[var(--foreground)]">
-                        {agent.covered_pct.toFixed(0)} %
+                        {pctFmt(agent.covered_pct / 100)}
                       </span>
                     </>
                   )}

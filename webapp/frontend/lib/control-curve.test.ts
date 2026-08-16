@@ -23,6 +23,7 @@ import { describe, expect, it } from "vitest";
 import {
   type ControlSeriesBucket,
   bucketWidthHours,
+  controlFmt,
   hasDrawableCurve,
   readControl,
   readControlSeries,
@@ -55,7 +56,9 @@ describe("a curve plots the number the row displays", () => {
 
   it("keeps the ratio and the rendered value in step", () => {
     const reading = readControl("pii", piiBucket(0, 100, 2).payload);
-    expect(reading?.value).toBe("2.00%");
+    // Derived, not typed: the registry formats in the reader's language, so a literal here
+    // would pin the test to one locale's notation rather than to the value it means to check.
+    expect(reading?.value).toBe(controlFmt("fr").pct(0.02, 2));
     expect(reading?.ratio).toBe(0.02);
   });
 

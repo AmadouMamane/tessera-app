@@ -84,10 +84,10 @@ export function rateTone(rate: number): OverviewTone {
   return "danger";
 }
 
-/** Format a 0..1 fraction as a percentage string. */
-export function pct(value: number, digits = 0): string {
-  return `${(value * 100).toFixed(digits)}%`;
-}
+// `pct()` lived here and had NO importer — dead since the control registry took over the
+// formatting. Removed with the decimal pass (2026-08-16) rather than converted: a locale-aware
+// twin nobody calls is a second door to keep in step with the first. `lib/format-number`
+// (`usePercentFormat` / `formatPercent`) is the one door.
 
 /** Format a 0..1 score on the conventional /100 cockpit scale. */
 export function score100(value: number): string {

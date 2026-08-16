@@ -19,14 +19,56 @@ import type { Fleet } from "@/lib/api/schemas";
 import { COL_IDENTITY, COL_VERDICT, TABLE_BREAKDOWN } from "@/lib/breakdown-columns";
 import { fmtRunDay } from "@/lib/eval-score";
 
-const fmtInt = (n: number) => n.toLocaleString("fr-FR").replace(/ /g, " ");
-const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
-const fmtSecs = (ms: number | null) =>
-  ms === null ? "—" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
-/** A 0..1 rate as a percentage ("71,6 %"). */
-const fmtRate = (r: number) => fmtPct(r * 100);
-/** A signed percentage-point distance ("−23,4 pt" / "+1,2 pt"). */
-const fmtPp = (pp: number) => `${pp > 0 ? "+" : ""}${pp.toFixed(1).replace(".", ",")} pt`;
+/**
+ * This table's numbers, in the language the page is being read in.
+ *
+ * Frozen for a day in `number-format-follows-the-reader.test.ts` with an honest reason: one
+ * `fmtInt` shared by seven functions over seventeen call sites, and threading a locale through
+ * every signature is a refactor rather than a sed. It is that refactor. Every helper is now
+ * built ONCE per render from the locale the route already carries, and passed down as a single
+ * `fmt` object — so twelve signatures gain one parameter instead of five.
+ *
+ * What was wrong: `toLocaleString("fr-FR")` and `.toFixed(1).replace(".", ",")` are the same
+ * defect twice. Both are right in French and silently wrong for the German or English operator —
+ * and the percentage sign moves too, which hand-gluing " %" cannot know (French and German space
+ * it, English does not).
+ */
+interface Fmt {
+  int: (n: number) => string;
+  pct: (n: number) => string;
+  secs: (ms: number | null) => string;
+  rate: (r: number) => string;
+  pp: (pp: number) => string;
+}
+
+function formatters(locale: string): Fmt {
+  const int = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
+  const one = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  const percent = new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  return {
+    int: (n) => int.format(n),
+    // Takes a percentage (71.6), not a ratio, because that is what the callers hold; `rate`
+    // below is the ratio door and goes through Intl's percent style, which places the sign.
+    pct: (n) => percent.format(n / 100),
+    secs: (ms) => (ms === null ? "—" : `${one.format(ms / 1000)} s`),
+    rate: (r) => percent.format(r),
+    // `signDisplay` rather than a hand-written "+": the minus sign is locale-dependent too, and
+    // the previous version emitted a hard "+" beside an ASCII "-".
+    pp: (v) =>
+      `${new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+        signDisplay: "exceptZero",
+      }).format(v)} pt`,
+  };
+}
 
 const RELEASE_TONE: Record<string, string> = {
   good: "text-[var(--tessera-fg-success)]",
@@ -93,6 +135,8 @@ export async function AgentBreakdown({
   lens?: BreakdownLens;
 }) {
   const t = await getTranslations({ locale, namespace: "agentScope" });
+  // Built once per render from the route's locale, then threaded like `t`.
+  const fmt = formatters(locale);
   const agents = fleet?.agents ?? [];
   // Handoff reconciliation — the S1 journal's claim vs what the conversation store can see.
   // `shared_conversations` alone reads 0 with composure when handed-off journeys never share
@@ -148,19 +192,41 @@ export async function AgentBreakdown({
       </div>
       <div className="overflow-x-auto">
         {lens.kind === "alarm" ? (
-          <AlarmTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+          <AlarmTable fmt={fmt} lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "quality" ? (
-          <QualityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+          <QualityTable fmt={fmt} lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "security" ? (
-          <SecurityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+          <SecurityTable fmt={fmt} lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
         ) : lens.kind === "compliance" || lens.kind === "proof" ? (
-          <ComplianceTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+          <ComplianceTable
+            fmt={fmt}
+            lens={lens}
+            agents={agents}
+            scope={scope}
+            t={t}
+            fleet={fleet}
+          />
         ) : lens.kind === "reliability" ? (
-          <ReliabilityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+          <ReliabilityTable
+            fmt={fmt}
+            lens={lens}
+            agents={agents}
+            scope={scope}
+            t={t}
+            fleet={fleet}
+          />
         ) : lens.kind === "observability" ? (
-          <ObservabilityTable lens={lens} agents={agents} scope={scope} t={t} fleet={fleet} />
+          <ObservabilityTable
+            fmt={fmt}
+            lens={lens}
+            agents={agents}
+            scope={scope}
+            t={t}
+            fleet={fleet}
+          />
         ) : (
           <MonitoringTable
+            fmt={fmt}
             agents={agents}
             scope={scope}
             t={t}
@@ -189,6 +255,7 @@ function MonitoringTable({
   attested,
   seenShared,
   handoffGap,
+  fmt,
 }: {
   agents: FleetAgent[];
   scope: string;
@@ -197,6 +264,7 @@ function MonitoringTable({
   attested: number;
   seenShared: number;
   handoffGap: number;
+  fmt: Fmt;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -219,9 +287,9 @@ function MonitoringTable({
             return (
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
-                <td className="py-1.5 text-center tabular-nums">{fmtInt(a.conversations)}</td>
-                <td className="py-1.5 text-center tabular-nums">{fmtPct(a.escalation_rate)}</td>
-                <td className="py-1.5 text-center tabular-nums">{fmtSecs(a.latency_ms)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmt.int(a.conversations)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmt.pct(a.escalation_rate)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmt.secs(a.latency_ms)}</td>
                 <td className="py-1.5 text-center tabular-nums">
                   {a.handoffs_in} / {a.handoffs_out}
                 </td>
@@ -242,13 +310,14 @@ function MonitoringTable({
               data-testid="fleet-org-total"
               className="py-2 text-center font-semibold tabular-nums text-[var(--tessera-fg-accent)]"
             >
-              {fmtInt(fleet.org?.conversations ?? 0)}
+              {fmt.int(fleet.org?.conversations ?? 0)}
             </td>
             <td
               colSpan={4}
               className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
+                fmt={fmt}
                 fleet={fleet}
                 t={t}
                 attested={attested}
@@ -270,14 +339,16 @@ function DedupFooter({
   attested,
   seenShared,
   handoffGap,
+  fmt,
 }: {
   fleet: Fleet;
   t: Translator;
   attested: number;
   seenShared: number;
   handoffGap: number;
+  fmt: Fmt;
 }) {
-  const total = fmtInt(fleet.org?.conversations ?? 0);
+  const total = fmt.int(fleet.org?.conversations ?? 0);
 
   if (attested === 0) {
     return <span className="block">{t("noHandoffSummary", { total })}</span>;
@@ -287,9 +358,9 @@ function DedupFooter({
     return (
       <span className="block text-[var(--tessera-fg-warning)]/90">
         {t("handoffGap", {
-          events: fmtInt(fleet.handoff_events ?? 0),
-          attested: fmtInt(attested),
-          seen: fmtInt(seenShared),
+          events: fmt.int(fleet.handoff_events ?? 0),
+          attested: fmt.int(attested),
+          seen: fmt.int(seenShared),
         })}
       </span>
     );
@@ -298,7 +369,7 @@ function DedupFooter({
   return (
     <span className="block">
       {t(`handoffSummary.${attested === 1 ? "one" : "many"}`, {
-        attested: fmtInt(attested),
+        attested: fmt.int(attested),
         total,
       })}
     </span>
@@ -315,12 +386,14 @@ function AlarmTable({
   scope,
   t,
   fleet,
+  fmt,
 }: {
   lens: AlarmLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;
   fleet: Fleet;
+  fmt: Fmt;
 }) {
   const byId = new Map(agents.map((a) => [a.id, a]));
   const attested = fleet.handoff_conversations ?? 0;
@@ -363,7 +436,7 @@ function AlarmTable({
                   {row.value === null ? (
                     <EmptyCell reason={row.refusal} t={t} />
                   ) : (
-                    fmtRate(row.value)
+                    fmt.rate(row.value)
                   )}
                 </td>
                 <td
@@ -371,13 +444,17 @@ function AlarmTable({
                     row.gapPp !== null && row.gapPp < 0 ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
-                  {row.gapPp === null ? <EmptyCell reason={row.refusal} t={t} /> : fmtPp(row.gapPp)}
+                  {row.gapPp === null ? (
+                    <EmptyCell reason={row.refusal} t={t} />
+                  ) : (
+                    fmt.pp(row.gapPp)
+                  )}
                 </td>
                 <td className="py-1.5 text-center tabular-nums">
                   {row.nBad === null ? (
                     <EmptyCell reason={row.refusal} t={t} />
                   ) : (
-                    `${fmtInt(row.nBad)} / ${fmtInt(row.n ?? 0)}`
+                    `${fmt.int(row.nBad)} / ${fmt.int(row.n ?? 0)}`
                   )}
                 </td>
                 <td className="py-1.5 pr-2 text-right">
@@ -396,7 +473,7 @@ function AlarmTable({
             <td className="py-2 text-center font-semibold tabular-nums text-[var(--tessera-fg-accent)]">
               {lens.orgNBad === null || lens.orgN === null
                 ? "—"
-                : `${fmtInt(lens.orgNBad)} / ${fmtInt(lens.orgN)}`}
+                : `${fmt.int(lens.orgNBad)} / ${fmt.int(lens.orgN)}`}
             </td>
             <td className="py-2" />
           </tr>
@@ -413,19 +490,20 @@ function AlarmTable({
                 lens.sumNBad === lens.orgNBad ? (
                   <span className="block">
                     {t("contribReconciled", {
-                      sum: fmtInt(lens.sumNBad),
-                      org: fmtInt(lens.orgNBad),
+                      sum: fmt.int(lens.sumNBad),
+                      org: fmt.int(lens.orgNBad),
                     })}
                   </span>
                 ) : (
                   <span className="block text-[var(--tessera-fg-warning)]/90">
-                    {t("contribGap", { sum: fmtInt(lens.sumNBad), org: fmtInt(lens.orgNBad) })}
+                    {t("contribGap", { sum: fmt.int(lens.sumNBad), org: fmt.int(lens.orgNBad) })}
                   </span>
                 )
               ) : (
                 <span className="block">{t("contribUnknown")}</span>
               )}
               <DedupFooter
+                fmt={fmt}
                 fleet={fleet}
                 t={t}
                 attested={attested}
@@ -447,12 +525,14 @@ function QualityTable({
   scope,
   t,
   fleet,
+  fmt,
 }: {
   lens: QualityLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;
   fleet: Fleet;
+  fmt: Fmt;
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   const attested = fleet.handoff_conversations ?? 0;
@@ -494,14 +574,14 @@ function QualityTable({
                   {row?.faithfulness == null ? (
                     <EmptyCell reason={row?.faithfulnessRefusal ?? "absent"} t={t} />
                   ) : (
-                    fmtRate(row.faithfulness)
+                    fmt.rate(row.faithfulness)
                   )}
                 </td>
                 <td className="py-1.5 text-center tabular-nums">
                   {row?.hallucination == null ? (
                     <EmptyCell reason={row?.hallucinationRefusal ?? "absent"} t={t} />
                   ) : (
-                    fmtRate(row.hallucination)
+                    fmt.rate(row.hallucination)
                   )}
                 </td>
                 <td
@@ -509,11 +589,11 @@ function QualityTable({
                     rel && rel.blocking_t1 > 0 ? "text-[var(--tessera-fg-danger)]" : ""
                   }`}
                 >
-                  {rel ? fmtInt(rel.blocking_t1) : "—"}
+                  {rel ? fmt.int(rel.blocking_t1) : "—"}
                 </td>
                 <td className="py-1.5 text-center tabular-nums">
                   {rel && rel.summary_passed != null && rel.summary_total != null
-                    ? `${fmtInt(rel.summary_passed)}/${fmtInt(rel.summary_total)}`
+                    ? `${fmt.int(rel.summary_passed)}/${fmt.int(rel.summary_total)}`
                     : "—"}
                 </td>
                 <td
@@ -541,6 +621,7 @@ function QualityTable({
               className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
+                fmt={fmt}
                 fleet={fleet}
                 t={t}
                 attested={attested}
@@ -561,16 +642,18 @@ function PairCell({
   outOf,
   reason,
   t,
+  fmt,
 }: {
   found: number | null;
   outOf: number | null;
   reason: CellEmpty | null;
   t: Translator;
+  fmt: Fmt;
 }) {
   if (found === null || outOf === null) return <EmptyCell reason={reason ?? "absent"} t={t} />;
   return (
     <>
-      {fmtInt(found)} / {fmtInt(outOf)}
+      {fmt.int(found)} / {fmt.int(outOf)}
     </>
   );
 }
@@ -580,17 +663,24 @@ function CountCell({
   value,
   reason,
   t,
+  fmt,
 }: {
   value: number | null;
   reason: CellEmpty | null;
   t: Translator;
+  fmt: Fmt;
 }) {
   if (value === null) return <EmptyCell reason={reason ?? "absent"} t={t} />;
-  return <>{fmtInt(value)}</>;
+  return <>{fmt.int(value)}</>;
 }
 
 /** The shared tfoot of the domain lens tables: org total + the dedup/handoff reconciliation. */
-function DomainFoot({ fleet, t, span }: { fleet: Fleet; t: Translator; span: number }) {
+function DomainFoot({
+  fleet,
+  t,
+  span,
+  fmt,
+}: { fleet: Fleet; t: Translator; span: number; fmt: Fmt }) {
   const attested = fleet.handoff_conversations ?? 0;
   const seenShared = fleet.handoff_conversations_seen_shared ?? 0;
   return (
@@ -602,6 +692,7 @@ function DomainFoot({ fleet, t, span }: { fleet: Fleet; t: Translator; span: num
           className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
         >
           <DedupFooter
+            fmt={fmt}
             fleet={fleet}
             t={t}
             attested={attested}
@@ -625,12 +716,14 @@ function SecurityTable({
   scope,
   t,
   fleet,
+  fmt,
 }: {
   lens: SecurityLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;
   fleet: Fleet;
+  fmt: Fmt;
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
@@ -659,6 +752,7 @@ function SecurityTable({
                   }`}
                 >
                   <PairCell
+                    fmt={fmt}
                     found={row?.piiLeaks ?? null}
                     outOf={row?.piiN ?? null}
                     reason={row?.piiRefusal ?? null}
@@ -671,6 +765,7 @@ function SecurityTable({
                   }`}
                 >
                   <PairCell
+                    fmt={fmt}
                     found={row?.toxCount ?? null}
                     outOf={row?.toxN ?? null}
                     reason={row?.toxRefusal ?? null}
@@ -679,6 +774,7 @@ function SecurityTable({
                 </td>
                 <td className="py-1.5 text-center tabular-nums">
                   <PairCell
+                    fmt={fmt}
                     found={row?.guardDenied ?? null}
                     outOf={row?.guardTotal ?? null}
                     reason={row?.guardRefusal ?? null}
@@ -692,7 +788,7 @@ function SecurityTable({
             );
           })}
         </tbody>
-        <DomainFoot fleet={fleet} t={t} span={4} />
+        <DomainFoot fmt={fmt} fleet={fleet} t={t} span={4} />
       </table>
     </div>
   );
@@ -710,12 +806,14 @@ function ComplianceTable({
   scope,
   t,
   fleet,
+  fmt,
 }: {
   lens: ComplianceLens | ProofLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;
   fleet: Fleet;
+  fmt: Fmt;
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
@@ -740,6 +838,7 @@ function ComplianceTable({
                 <td className="py-1.5 pr-3 font-medium">{a.name}</td>
                 <td className="py-1.5 text-center tabular-nums">
                   <CountCell
+                    fmt={fmt}
                     value={row?.governedActs ?? null}
                     reason={row?.governedRefusal ?? null}
                     t={t}
@@ -747,12 +846,13 @@ function ComplianceTable({
                 </td>
                 <td className="py-1.5 text-center tabular-nums">
                   <CountCell
+                    fmt={fmt}
                     value={row?.ledgerEntries ?? null}
                     reason={row?.ledgerRefusal ?? null}
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 text-center tabular-nums">{fmtPct(a.escalation_rate)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmt.pct(a.escalation_rate)}</td>
                 <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
@@ -760,7 +860,7 @@ function ComplianceTable({
             );
           })}
         </tbody>
-        <DomainFoot fleet={fleet} t={t} span={4} />
+        <DomainFoot fmt={fmt} fleet={fleet} t={t} span={4} />
       </table>
     </div>
   );
@@ -778,12 +878,14 @@ function ObservabilityTable({
   scope,
   t,
   fleet,
+  fmt,
 }: {
   lens: ObservabilityLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;
   fleet: Fleet;
+  fmt: Fmt;
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
@@ -811,6 +913,7 @@ function ObservabilityTable({
                   }`}
                 >
                   <PairCell
+                    fmt={fmt}
                     found={row?.anomalous ?? null}
                     outOf={row?.sessions ?? null}
                     reason={row?.anomaliesRefusal ?? null}
@@ -823,6 +926,7 @@ function ObservabilityTable({
                   }`}
                 >
                   <PairCell
+                    fmt={fmt}
                     found={row?.violations ?? null}
                     outOf={row?.calls ?? null}
                     reason={row?.conformanceRefusal ?? null}
@@ -836,7 +940,7 @@ function ObservabilityTable({
             );
           })}
         </tbody>
-        <DomainFoot fleet={fleet} t={t} span={3} />
+        <DomainFoot fmt={fmt} fleet={fleet} t={t} span={3} />
       </table>
     </div>
   );
@@ -853,12 +957,14 @@ function ReliabilityTable({
   scope,
   t,
   fleet,
+  fmt,
 }: {
   lens: ReliabilityLens;
   agents: FleetAgent[];
   scope: string;
   t: Translator;
   fleet: Fleet;
+  fmt: Fmt;
 }) {
   const byId = new Map(lens.rows.map((r) => [r.agentId, r]));
   return (
@@ -887,22 +993,24 @@ function ReliabilityTable({
                   }`}
                 >
                   <PairCell
+                    fmt={fmt}
                     found={row?.toolErrors ?? null}
                     outOf={row?.toolTotal ?? null}
                     reason={row?.toolRefusal ?? null}
                     t={t}
                   />
                 </td>
-                <td className="py-1.5 text-center tabular-nums">{fmtSecs(a.latency_ms)}</td>
+                <td className="py-1.5 text-center tabular-nums">{fmt.secs(a.latency_ms)}</td>
                 <td
                   className="py-1.5 text-center tabular-nums"
                   title={
                     row?.meanTokens != null
-                      ? t("costMeanTitle", { mean: fmtInt(Math.round(row.meanTokens)) })
+                      ? t("costMeanTitle", { mean: fmt.int(Math.round(row.meanTokens)) })
                       : undefined
                   }
                 >
                   <CountCell
+                    fmt={fmt}
                     value={row?.totalTokens ?? null}
                     reason={row?.costRefusal ?? null}
                     t={t}
@@ -915,7 +1023,7 @@ function ReliabilityTable({
             );
           })}
         </tbody>
-        <DomainFoot fleet={fleet} t={t} span={4} />
+        <DomainFoot fmt={fmt} fleet={fleet} t={t} span={4} />
       </table>
     </div>
   );

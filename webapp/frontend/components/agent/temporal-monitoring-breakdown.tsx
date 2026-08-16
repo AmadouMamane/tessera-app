@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { useIntFormat } from "@/lib/format-number";
+import { useDecimalFormat, useIntFormat, usePercentFormat } from "@/lib/format-number";
 import { useEffect, useRef, useState } from "react";
 
 import { QueryErrorState } from "@/components/cockpit/query-error-state";
@@ -12,9 +12,22 @@ import { fetchFleet } from "@/lib/api/client";
 import type { Fleet } from "@/lib/api/schemas";
 import { COL_IDENTITY, COL_VERDICT, TABLE_BREAKDOWN } from "@/lib/breakdown-columns";
 
-const fmtPct = (n: number) => `${n.toFixed(1).replace(".", ",")} %`;
-const fmtSecs = (ms: number | null) =>
-  ms === null ? "—" : `${(ms / 1000).toFixed(1).replace(".", ",")} s`;
+/**
+ * Percentages and durations in the reader's language.
+ *
+ * `.toFixed(1).replace(".", ",")` was right in French and silently wrong for every other
+ * operator — and the percent SIGN moves too: French and German space it, English does not, which
+ * gluing " %" on by hand cannot know. `pct` takes a percentage (71.6) because that is what the
+ * callers hold; Intl wants a ratio, hence the division.
+ */
+function useFmt() {
+  const percent = usePercentFormat(1);
+  const decimal = useDecimalFormat(1);
+  return {
+    pct: (n: number) => percent(n / 100),
+    secs: (ms: number | null) => (ms === null ? "—" : `${decimal(ms / 1000)} s`),
+  };
+}
 
 const RELEASE_TONE: Record<string, string> = {
   good: "text-[var(--tessera-fg-success)]",
@@ -118,6 +131,7 @@ export function MonitoringFleetTable({
   retrying?: boolean;
 }) {
   const fmtInt = useIntFormat();
+  const { pct: fmtPct, secs: fmtSecs } = useFmt();
   const t = useTranslations("agentScope");
   const agents = fleet?.agents ?? [];
 

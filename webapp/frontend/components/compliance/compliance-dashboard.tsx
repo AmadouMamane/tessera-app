@@ -38,6 +38,7 @@ import type {
   ComplianceObligation,
   NonConformity,
 } from "@/lib/api/schemas";
+import { useDecimalFormat } from "@/lib/format-number";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { showNumber, toneFor } from "@/lib/unread-is-not-zero";
 import { useUrlBackedView } from "@/lib/use-url-backed-view";
@@ -217,6 +218,7 @@ function Kpi({
   onDrill?: () => void;
   drillLabel?: string;
 }) {
+  const dec0 = useDecimalFormat(0);
   const tc = useTranslations("compliance");
   const te = useTranslations("compliance.explain");
   const showDelta = delta != null && Math.abs(delta) >= 0.005;
@@ -261,7 +263,7 @@ function Kpi({
       {showDelta ? (
         <div className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${z}`}>
           <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
-            {up ? "↗" : "↘"} {Math.abs((delta as number) * 100).toFixed(0)} {tc("kpi.pts")}
+            {up ? "↗" : "↘"} {dec0(Math.abs((delta as number) * 100))} {tc("kpi.pts")}
           </span>
           <span className="truncate text-[var(--muted-foreground)]">{tc("kpi.vsPrev")}</span>
         </div>

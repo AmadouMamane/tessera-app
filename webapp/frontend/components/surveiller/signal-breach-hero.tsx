@@ -5,6 +5,7 @@ import { EyeOff, Flame, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 
+import { useDecimalFormat, usePercentFormat } from "@/lib/format-number";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { useSearchParams } from "next/navigation";
 
@@ -68,11 +69,19 @@ export function SignalBreachHero({
     staleTime: 30_000,
   });
 
+  // Hooks before the early return: a conditional hook is a React error, and `!data` is exactly
+  // the branch that would skip them.
+  const percent = usePercentFormat(1);
+  const decimal = useDecimalFormat(1);
+
   if (!data) return null;
-  const pct = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")} %`;
-  // Tight (no space before %) for the gauge marker flag: a trailing " %" widens the
-  // box on the right and shifts the visible digits left of the vertical marker.
-  const pctTight = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
+  const pct = (n: number) => percent(n);
+  // Tight (no space before %) for the gauge marker flag: a trailing " %" widens the box on the
+  // right and shifts the visible digits left of the vertical marker. The space is STRIPPED from
+  // the formatted result rather than never added: which whitespace to remove is a fact about
+  // the locale — French and German put a narrow no-break space there, English nothing — and
+  // formatting first is the only way to know what is present.
+  const pctTight = (n: number) => percent(n).replace(/[\s\u202f\u00a0]/g, "");
   const metricKey = METRIC_KEY[data.metric as keyof typeof METRIC_KEY];
   const metric = metricKey ? t(metricKey) : data.metric;
 
@@ -138,7 +147,7 @@ export function SignalBreachHero({
     threshold: pct(data.target),
   });
   const burn = t("burn", {
-    x: data.burn_rate.toFixed(1).replace(".", ","),
+    x: decimal(data.burn_rate),
     bad: data.n_bad,
     n: data.n,
   });

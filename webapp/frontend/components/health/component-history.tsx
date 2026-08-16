@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchComponentHistory } from "@/lib/api/client";
 import type { ComponentAvailability, ComponentHistory } from "@/lib/api/schemas";
+import { usePercentFormat } from "@/lib/format-number";
 
 const POLL_MS = 60_000;
 const WINDOWS = [1, 7, 30] as const;
@@ -227,6 +228,8 @@ function TimelineTable({
   rows: ComponentAvailability[];
   days: number;
 }) {
+  const pctFmt = usePercentFormat(1);
+  const pctCoarse = usePercentFormat(0);
   const t = useTranslations("health.history");
   return (
     <div className="overflow-x-auto">
@@ -282,7 +285,7 @@ function TimelineTable({
                           : "text-[var(--tessera-fg-warning)]"
                       }
                     >
-                      {(row.ok_ratio * 100).toFixed(1)} %
+                      {pctFmt(row.ok_ratio)}
                     </span>
                   )}
                 </td>
@@ -294,7 +297,9 @@ function TimelineTable({
                     decidable: humanSeconds(row.decidable_seconds),
                   })}
                 >
-                  {(row.observed_ratio * 100).toFixed(row.observed_ratio < 0.1 ? 1 : 0)} %
+                  {row.observed_ratio < 0.1
+                    ? pctFmt(row.observed_ratio)
+                    : pctCoarse(row.observed_ratio)}
                 </td>
                 <td className="px-1.5 py-1.5 pr-2 text-right text-[0.66rem] text-[var(--muted-foreground)]">
                   {unobserved

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { useIntFormat } from "@/lib/format-number";
+import { useEuroFormat, useIntFormat } from "@/lib/format-number";
 import { type ReactNode, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
@@ -75,10 +75,13 @@ function fmtPct(rate: number | null | undefined): string {
   return `${Math.round(rate * 100)}%`;
 }
 
-function fmtEur(eur: number | null | undefined): string {
-  if (eur == null) return DASH;
-  if (eur === 0) return "0,00 €";
-  return `${eur.toFixed(2).replace(".", ",")} €`;
+/**
+ * A cost, in the reader's language. See {@link useEuroFormat}: the symbol's SIDE is part of the
+ * language (`12,50 €` in fr/de, `€12.50` in en), so it is formatted, never glued on.
+ */
+function useEur(): (eur: number | null | undefined) => string {
+  const euro = useEuroFormat();
+  return (eur) => (eur == null ? DASH : euro(eur));
 }
 
 function fmtDuration(ms: number | null | undefined): string {
@@ -460,6 +463,7 @@ export function RunsKpis({
   datasets: QualityDatasetsReport | undefined;
   skewQuery: EmbeddingSkewQueryState;
 }) {
+  const fmtEur = useEur();
   const tq = useTranslations("quality");
   const fmtInt = useIntFormat();
   const tes = useTranslations("observability.embeddingSkew");
@@ -619,6 +623,7 @@ export function RunsEvalTable({
   selectedId: string | null;
   onSelect: (run: RunSummary) => void;
 }) {
+  const fmtEur = useEur();
   const tq = useTranslations("quality");
   const tt = useTranslations("table");
   const runs = registry?.runs ?? [];
@@ -787,6 +792,7 @@ export function RunContextPanel({
   release: ReleaseStatus | undefined;
   onEvidence: () => void;
 }) {
+  const fmtEur = useEur();
   const tq = useTranslations("quality");
   const rateTone =
     run == null ? MUTED : run.pass_rate >= 0.8 ? GOOD : run.pass_rate >= 0.6 ? WARN : BAD;

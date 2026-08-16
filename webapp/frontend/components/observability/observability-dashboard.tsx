@@ -507,6 +507,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     // …and the curve for each of them, over the window the numbers above are read under.
     // Until 2026-08-01 this column held a direction arrow and nothing else, on all 24 rows.
     controlSeries.data,
+    // …and the language every number in those rows is written in. Without it the registry
+    // falls back to French, which is right here and wrong on the other two locales.
+    locale,
   );
 
   /**

@@ -376,8 +376,10 @@ export function OverviewDashboard({
         },
         historyMode,
         controlSeries.data,
+        locale,
       ),
     [
+      locale,
       controlSeries.data,
       historyMode,
       slo.data,
@@ -724,13 +726,15 @@ function buildControls(
   },
   historyMode: boolean,
   series?: ControlSeries,
+  /** The reader's language — the registry formats every value with it. */
+  locale = "fr",
 ): ControlRow[] {
   // At live, only signals that returned data are shown. In history mode every tracked signal
   // keeps a stable "—" row at T instead of vanishing, so scrubbing does not make the table
   // jump. That is a presentation rule about THIS table, which is why it lives here; what each
   // row means is not, which is why it does not.
   const buckets = series?.buckets ?? [];
-  return readControls(d, OVERVIEW_CONTROLS)
+  return readControls(d, OVERVIEW_CONTROLS, locale)
     .filter((row) => historyMode || !row.noData)
     .map((row) => {
       const source = CONTROL_SOURCE[row.id];

@@ -67,19 +67,14 @@ export function formatInt(locale: string, value: number | null | undefined): str
 }
 
 /**
- * A DECIMAL in the reader's language — the third shape of the same defect, and the one still
- * largely unfixed.
+ * A DECIMAL in the reader's language — the third shape of the same defect.
  *
  * `n.toFixed(1)` always emits a `.`, whatever the page's language: "71.3 min" under a French
  * heading. The cockpit's usual workaround, `.toFixed(1).replace(".", ",")`, is the exact mirror
  * image of the hardcoded `toLocaleString("fr-FR")` this module already replaced — right in
  * French, wrong in English and German, and silent in both.
  *
- * MEASURED 2026-08-15, not estimated: 11 sites use the hardcoded-comma form and 126 render a
- * bare `toFixed`. Converting them is its own pass — a percentage's separator is entangled with
- * its unit, its width in a `tabular-nums` column and, in several charts, with an SVG label — so
- * this door is opened here and used where the number is already being repaired, rather than
- * swept in behind an unrelated fix.
+ * MEASURED 2026-08-15: 13 sites hardcoded the comma and 126 rendered a bare `toFixed`.
  */
 export function formatDecimal(
   locale: string,
@@ -91,4 +86,76 @@ export function formatDecimal(
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
+}
+
+/** The client twin of {@link formatDecimal}, memoised per (locale, digits). */
+export function useDecimalFormat(digits = 1): (value: number | null | undefined) => string {
+  const format = useNumberFormat({ minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return (value) => (value === null || value === undefined ? "—" : format.format(value));
+}
+
+/**
+ * A PERCENTAGE, whose separator is not the only thing that changes with the language.
+ *
+ * `${(v * 100).toFixed(1)}%` gets two things wrong at once outside English, and the second is
+ * the one nobody notices: French and German put a space before the sign (`73,1 %`), English does
+ * not (`73.1%`). `Intl.NumberFormat` with `style: "percent"` knows both, and knows them per
+ * locale rather than per opinion — so the unit stops being glued on by hand.
+ *
+ * Takes a RATIO (0.731), not a pre-multiplied number, because that is what every caller here
+ * holds and `× 100` by hand is the step that drifts.
+ */
+export function usePercentFormat(digits = 1): (value: number | null | undefined) => string {
+  const format = useNumberFormat({
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  return (value) => (value === null || value === undefined ? "—" : format.format(value));
+}
+
+/** The server twin of {@link usePercentFormat}. Same input: a ratio, never a percentage. */
+export function formatPercent(
+  locale: string,
+  value: number | null | undefined,
+  digits = 1,
+): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+/**
+ * MONEY — where the symbol's POSITION is part of the language, not decoration.
+ *
+ * `${v.toFixed(2).replace(".", ",")} €` gets three things wrong outside French at once: the
+ * separator, the space, and the side the symbol sits on. French and German write `12,50 €`;
+ * English writes `€12.50`. Gluing the symbol on by hand can only ever produce one of those, and
+ * this cockpit is read in three languages.
+ *
+ * EUR is fixed, not a parameter: every amount in this product is a euro amount (European retail
+ * banking), and a currency argument would invite a caller to pass the wrong one.
+ */
+export function formatEuro(locale: string, value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+/** The client twin of {@link formatEuro}. */
+export function useEuroFormat(): (value: number | null | undefined) => string {
+  const format = useNumberFormat({
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return (value) => (value === null || value === undefined ? "—" : format.format(value));
 }

@@ -26,7 +26,7 @@ import type { LucideIcon } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale } from "next-intl";
 
-import { useIntFormat } from "@/lib/format-number";
+import { useEuroFormat, useIntFormat } from "@/lib/format-number";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -1642,6 +1642,7 @@ function Chip({ children, tone }: { children: ReactNode; tone?: string }) {
 /** The Debug panel: all eight live introspection surfaces. Honest awaiting
  *  state before a turn; each surface shows only real per-turn data. */
 function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
+  const euro = useEuroFormat();
   const fmtInt = useIntFormat();
   if (!debug) return <Awaiting text={t("debugAwaiting")} />;
   const { prompt, memory, routing, usage, reviewer, language, draft, config } = debug;
@@ -1775,7 +1776,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
             v={`${usage.input_tokens} entrée · ${usage.output_tokens} sortie · ${usage.total_tokens} total`}
           />
           <DebugKV k="Latence" v={fmtMs(usage.latency_ms)} />
-          <DebugKV k="Coût estimé" v={`${usage.estimated_cost_eur.toFixed(6)} €`} />
+          <DebugKV k="Coût estimé" v={euro(usage.estimated_cost_eur)} />
           {usage.sampling && Object.keys(usage.sampling).length > 0 ? (
             // ADR 0031 — the sampling that actually served this turn (only the
             // SET parameters; an absent one means the backend default served).

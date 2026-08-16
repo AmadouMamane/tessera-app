@@ -27,6 +27,7 @@ import type {
   ReleaseStatus,
   RunRegistry,
 } from "@/lib/api/schemas";
+import { useEuroFormat } from "@/lib/format-number";
 
 const DASH = "—";
 
@@ -84,9 +85,20 @@ function scoreToneClass(rate: number): string {
 function fmtScore(rate: number): string {
   return String(Math.round(rate * 100));
 }
-function fmtCost(eur: number | null | undefined): string {
-  if (eur == null) return DASH;
-  return eur === 0 ? "0 €" : `${eur.toFixed(2).replace(".", ",")} €`;
+/**
+ * A cost, in the reader's language — symbol INCLUDED, because its side moves with the language.
+ *
+ * `${v.toFixed(2).replace(".", ",")} €` was wrong three ways outside French at once: separator,
+ * space, and which side the symbol sits on (`12,50 €` in fr/de, `€12.50` in en). A hand-glued
+ * symbol can only ever produce one of the three.
+ *
+ * Free stays free: an exact zero is a fact about the run, not an amount, and "€0.00" reads as a
+ * price that happened to be nothing.
+ */
+function useCost(): (eur: number | null | undefined) => string {
+  const euro = useEuroFormat();
+  const t = useTranslations("quality");
+  return (eur) => (eur == null ? DASH : eur === 0 ? t("runs.free") : euro(eur));
 }
 function useCatLabel() {
   const tq = useTranslations("quality");
@@ -724,6 +736,7 @@ function Spark({ values }: { values: number[] | undefined }) {
 
 function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }) {
   const tq = useTranslations("quality");
+  const fmtCost = useCost();
   const models = comparison?.models ?? [];
   const verdictLabel = (v: string) =>
     ["best", "balanced", "economic", "avoid"].includes(v) ? tq(`models.verdict.${v}`) : v;

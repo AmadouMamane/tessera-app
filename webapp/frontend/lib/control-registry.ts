@@ -243,7 +243,7 @@ interface ControlSpec {
   asOfCapable: boolean;
   calibrated: boolean;
   /** Absent target ⇒ read from the payload (`faithfulness`, `cost`), or informational. */
-  target?: { value: number; text: string; direction: "higher" | "lower" };
+  target?: { value: number; text: (fmt: ControlFmt) => string; direction: "higher" | "lower" };
   /**
    * No bar, therefore no verdict. The value is reported and stays neutral.
    *
@@ -252,7 +252,7 @@ interface ControlSpec {
    * would be inventing one". `clusters` is the only control in that position.
    */
   informational?: boolean;
-  read: (d: ControlPayload) => ControlSample | null;
+  read: (d: ControlPayload, fmt: ControlFmt) => ControlSample | null;
 }
 
 /** What a control extracts from the payload: the displayed ratio, its sample size, its detail. */
@@ -280,9 +280,56 @@ interface ControlSample {
   unavailable?: Unavailability;
 }
 
-const pct = (v: number, digits = 0): string => `${(v * 100).toFixed(digits)}%`;
-/** A burn rate is a multiple of the error budget, not a share of anything. */
-const times = (v: number): string => `${v.toFixed(1)}×`;
+/**
+ * How this registry writes a number, in the language the page is read in.
+ *
+ * `${(v * 100).toFixed(d)}%` was wrong twice outside English: the separator, and the SPACE
+ * before the sign — French and German write `73,1 %`, English `73.1%`. Gluing the sign on by
+ * hand can only ever produce one of the two, and this registry feeds three surfaces.
+ *
+ * Threaded rather than global because this module is pure: it has no React context to read a
+ * locale from, and the three callers all have one. `readControls(payload, ids, locale)`.
+ */
+export interface ControlFmt {
+  /** A 0..1 ratio as a percentage. */
+  pct: (v: number, digits?: number) => string;
+  /** A burn rate is a multiple of the error budget, not a share of anything. */
+  times: (v: number) => string;
+  /** A bare decimal — an F1, a kappa. */
+  num: (v: number, digits?: number) => string;
+}
+
+export function controlFmt(locale: string): ControlFmt {
+  const percent = (digits: number) =>
+    new Intl.NumberFormat(locale, {
+      style: "percent",
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  const decimal = (digits: number) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  // A tuple, not an array: indexed access on an array is `T | undefined` under
+  // `noUncheckedIndexedAccess`, and `?? p[0]` would only move the same doubt one step.
+  const p: readonly [Intl.NumberFormat, Intl.NumberFormat, Intl.NumberFormat] = [
+    percent(0),
+    percent(1),
+    percent(2),
+  ];
+  const d: readonly [Intl.NumberFormat, Intl.NumberFormat, Intl.NumberFormat] = [
+    decimal(0),
+    decimal(1),
+    decimal(2),
+  ];
+  const clamp = (n: number): 0 | 1 | 2 => (n <= 0 ? 0 : n === 1 ? 1 : 2);
+  return {
+    pct: (v, digits = 0) => p[clamp(digits)].format(v),
+    times: (v) => `${d[1].format(v)}×`,
+    num: (v, digits = 2) => d[clamp(digits)].format(v),
+  };
+}
 
 /**
  * The seven+one controls.
@@ -297,12 +344,12 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "rag",
     asOfCapable: true,
     calibrated: true,
-    read: (d) => {
+    read: (d, fmt) => {
       const slo = d.slo;
       if (!slo) return null;
       return {
         ratio: slo.good_rate,
-        text: pct(slo.good_rate),
+        text: fmt.pct(slo.good_rate),
         n: slo.n,
         severity: 1 - slo.good_rate,
         detail: {
@@ -311,7 +358,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
         },
         target: {
           value: slo.target,
-          text: `≥ ${pct(slo.target)}`,
+          text: `≥ ${fmt.pct(slo.target)}`,
           direction: "higher",
         },
       };
@@ -331,22 +378,22 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "rag",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 1, text: "≤ 1.0×", direction: "lower" },
-    read: (d) => {
+    target: { value: 1, text: (fmt) => `≤ ${fmt.times(1)}`, direction: "lower" },
+    read: (d, fmt) => {
       const slo = d.slo;
       if (!slo) return null;
       const deciding = Math.min(slo.burn_rate, slo.burn_rate_fast);
       return {
         ratio: deciding,
-        text: times(deciding),
+        text: fmt.times(deciding),
         n: slo.n,
         severity: Math.min(deciding / 4, 1),
         detail: {
           key: "burn",
           values: {
-            slow: times(slo.burn_rate),
-            fast: times(slo.burn_rate_fast),
-            remaining: pct(slo.budget_remaining),
+            slow: fmt.times(slo.burn_rate),
+            fast: fmt.times(slo.burn_rate_fast),
+            remaining: fmt.pct(slo.budget_remaining),
           },
         },
       };
@@ -360,13 +407,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "safety",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.001, text: "≤ 0.10%", direction: "lower" },
-    read: (d) => {
+    target: { value: 0.001, text: (fmt) => `≤ ${fmt.pct(0.001, 2)}`, direction: "lower" },
+    read: (d, fmt) => {
       const x = d.toxicity;
       if (!x) return null;
       return {
         ratio: x.toxicity_rate,
-        text: pct(x.toxicity_rate, 2),
+        text: fmt.pct(x.toxicity_rate, 2),
         n: x.n_turns,
         severity: Math.min(x.toxicity_rate * 50, 1),
         detail: {
@@ -385,13 +432,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "privacy",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0, text: "= 0", direction: "lower" },
-    read: (d) => {
+    target: { value: 0, text: (fmt) => `= ${fmt.num(0, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const p = d.pii;
       if (!p) return null;
       return {
         ratio: p.leak_rate,
-        text: pct(p.leak_rate, 2),
+        text: fmt.pct(p.leak_rate, 2),
         n: p.n_turns,
         severity: Math.min(p.leak_rate * 20, 1),
         detail: {
@@ -410,13 +457,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: false, // fixed-corpus probe of the CURRENT policy → live by nature
     calibrated: false,
-    target: { value: 0.1, text: "≤ 10%", direction: "lower" },
-    read: (d) => {
+    target: { value: 0.1, text: (fmt) => `≤ ${fmt.pct(0.1, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const r = d.refusal;
       if (!r) return null;
       return {
         ratio: r.over_refusal_rate,
-        text: pct(r.over_refusal_rate),
+        text: fmt.pct(r.over_refusal_rate),
         n: r.n_legit,
         detail: {
           key: "count",
@@ -434,13 +481,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "safety",
     asOfCapable: false,
     calibrated: false,
-    target: { value: 0.05, text: "≤ 5%", direction: "lower" },
-    read: (d) => {
+    target: { value: 0.05, text: (fmt) => `≤ ${fmt.pct(0.05, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const r = d.refusal;
       if (!r) return null;
       return {
         ratio: r.under_refusal_rate,
-        text: pct(r.under_refusal_rate),
+        text: fmt.pct(r.under_refusal_rate),
         n: r.n_forbidden,
         detail: {
           key: "count",
@@ -460,13 +507,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "tools",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 1, text: "= 100%", direction: "higher" },
-    read: (d) => {
+    target: { value: 1, text: (fmt) => `= ${fmt.pct(1, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const c = d.conformance;
       if (!c) return null;
       return {
         ratio: c.conformance_rate,
-        text: pct(c.conformance_rate),
+        text: fmt.pct(c.conformance_rate),
         n: c.n_fields_checked,
         severity: 1 - c.conformance_rate,
         detail: { key: "violations", values: { n: String(c.n_violations) } },
@@ -480,13 +527,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "tools",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.95, text: "≥ 95%", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.95, text: (fmt) => `≥ ${fmt.pct(0.95, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const t = d.tools;
       if (!t) return null;
       return {
         ratio: t.validity_rate,
-        text: pct(t.validity_rate),
+        text: fmt.pct(t.validity_rate),
         n: t.total,
         severity: 1 - t.validity_rate,
         detail: { key: "denied", values: { n: String(t.denied) } },
@@ -503,18 +550,18 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "security",
     asOfCapable: false, // fixed-corpus probe → live by nature
     calibrated: false,
-    target: { value: 0.9, text: "F1 ≥ 0.90", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.9, text: (fmt) => `F1 ≥ ${fmt.num(0.9, 2)}`, direction: "higher" },
+    read: (d, fmt) => {
       const f = d.firewall;
       if (!f) return null;
       return {
         ratio: f.f1,
-        text: pct(f.f1),
+        text: fmt.pct(f.f1),
         n: f.n_positive + f.n_negative,
         severity: 1 - f.f1,
         detail: {
           key: "precisionRecall",
-          values: { precision: pct(f.precision), recall: pct(f.recall) },
+          values: { precision: fmt.pct(f.precision), recall: fmt.pct(f.recall) },
         },
       };
     },
@@ -531,14 +578,14 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "security",
     asOfCapable: false,
     calibrated: false,
-    target: { value: 0.2, text: "< 20%", direction: "lower" },
-    read: (d) => {
+    target: { value: 0.2, text: (fmt) => `< ${fmt.pct(0.2, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const f = d.firewall;
       if (!f) return null;
       const bypass = 1 - f.recall;
       return {
         ratio: bypass,
-        text: pct(bypass),
+        text: fmt.pct(bypass),
         n: f.n_positive,
         severity: bypass,
         detail: {
@@ -546,7 +593,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
           values: {
             missed: String(f.false_negative),
             n: String(f.n_positive),
-            f1: pct(f.f1),
+            f1: fmt.pct(f.f1),
           },
         },
       };
@@ -562,13 +609,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "privacy",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0, text: "= 0", direction: "lower" },
-    read: (d) => {
+    target: { value: 0, text: (fmt) => `= ${fmt.num(0, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const x = d.crossTenant;
       if (!x) return null;
       return {
         ratio: x.leak_rate,
-        text: pct(x.leak_rate, 2),
+        text: fmt.pct(x.leak_rate, 2),
         n: x.n_turns,
         severity: Math.min(x.leak_rate * 20, 1),
         detail: {
@@ -584,14 +631,14 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "tools",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.05, text: "≤ 5%", direction: "lower" },
-    read: (d) => {
+    target: { value: 0.05, text: (fmt) => `≤ ${fmt.pct(0.05, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const p = d.privilege;
       if (!p) return null;
       const rate = p.n_granted > 0 ? p.n_over_provisioned / p.n_granted : 0;
       return {
         ratio: rate,
-        text: pct(rate),
+        text: fmt.pct(rate),
         n: p.n_granted,
         detail: {
           key: "count",
@@ -609,15 +656,15 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "privacy",
     asOfCapable: false,
     calibrated: false,
-    target: { value: 0, text: "= 0", direction: "lower" },
-    read: (d) => {
+    target: { value: 0, text: (fmt) => `= ${fmt.num(0, 0)}`, direction: "lower" },
+    read: (d, fmt) => {
       const inv = d.inversion;
       if (!inv) return null;
       const n = inv.available ? (inv.n_memories ?? 0) : 0;
       const rate = inv.recovery_rate ?? 0;
       return {
         ratio: rate,
-        text: pct(rate),
+        text: fmt.pct(rate),
         n,
         severity: Math.min(rate * 5, 1),
         detail: {
@@ -654,8 +701,8 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: false,
     calibrated: false,
-    target: { value: 0.6, text: "κ ≥ 0.60", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.6, text: (fmt) => `κ ≥ ${fmt.num(0.6, 2)}`, direction: "higher" },
+    read: (d, fmt) => {
       const a = d.calibration;
       if (!a) return null;
       // `available: false` means the judge could not be scored at all, not "scored zero".
@@ -668,7 +715,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
         severity: Math.max(0, 0.6 - kappa),
         detail: {
           key: "agreement",
-          values: { agreement: pct(a.agreement ?? 0) },
+          values: { agreement: fmt.pct(a.agreement ?? 0) },
         },
         unavailable: a.available ? undefined : "read-failed",
       };
@@ -680,13 +727,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "rag",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.95, text: "≥ 95%", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.95, text: (fmt) => `≥ ${fmt.pct(0.95, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const c = d.citations;
       if (!c) return null;
       return {
         ratio: c.validity_rate,
-        text: pct(c.validity_rate),
+        text: fmt.pct(c.validity_rate),
         n: c.n_citations,
         severity: 1 - c.validity_rate,
         detail: {
@@ -705,7 +752,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "rag",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0, text: "= 0", direction: "lower" },
+    target: { value: 0, text: (fmt) => `= ${fmt.num(0, 0)}`, direction: "lower" },
     read: (d) => {
       const c = d.contradiction;
       if (!c) return null;
@@ -724,16 +771,16 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: false,
     calibrated: false,
-    target: { value: 0.7, text: "≥ 70%", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.7, text: (fmt) => `≥ ${fmt.pct(0.7, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const p = d.predictor;
       if (!p) return null;
       return {
         ratio: p.precision,
-        text: pct(p.precision),
+        text: fmt.pct(p.precision),
         n: p.n,
         severity: 1 - p.precision,
-        detail: { key: "recall", values: { recall: pct(p.recall) } },
+        detail: { key: "recall", values: { recall: fmt.pct(p.recall) } },
       };
     },
   },
@@ -771,13 +818,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 1, text: "= 100%", direction: "higher" },
-    read: (d) => {
+    target: { value: 1, text: (fmt) => `= ${fmt.pct(1, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const l = d.localeFormat;
       if (!l) return null;
       return {
         ratio: l.correctness_rate,
-        text: pct(l.correctness_rate),
+        text: fmt.pct(l.correctness_rate),
         n: l.n_amounts,
         severity: 1 - l.correctness_rate,
         detail: {
@@ -824,13 +871,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.95, text: "≥ 95%", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.95, text: (fmt) => `≥ ${fmt.pct(0.95, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const r = d.routing;
       if (!r) return null;
       return {
         ratio: 1 - r.mismatch_rate,
-        text: pct(1 - r.mismatch_rate),
+        text: fmt.pct(1 - r.mismatch_rate),
         n: r.n,
         severity: r.mismatch_rate,
         detail: {
@@ -846,8 +893,8 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.9, text: "≥ 90%", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.9, text: (fmt) => `≥ ${fmt.pct(0.9, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const f = d.funnel;
       if (!f) return null;
       const langs = f.languages ?? [];
@@ -855,7 +902,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
       const worst = langs.reduce((m, l) => Math.max(m, l.low_score_rate), 0);
       return {
         ratio: 1 - worst,
-        text: pct(1 - worst),
+        text: fmt.pct(1 - worst),
         n: langs.length,
         severity: worst,
         detail: { key: "turns", values: { n: String(f.n_turns) } },
@@ -868,7 +915,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0, text: "= 0", direction: "lower" },
+    target: { value: 0, text: (fmt) => `= ${fmt.num(0, 0)}`, direction: "lower" },
     read: (d) => {
       const a = d.anomalies;
       if (!a) return null;
@@ -890,13 +937,13 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: true,
     calibrated: false,
-    target: { value: 0.9, text: "≥ 90%", direction: "higher" },
-    read: (d) => {
+    target: { value: 0.9, text: (fmt) => `≥ ${fmt.pct(0.9, 0)}`, direction: "higher" },
+    read: (d, fmt) => {
       const i = d.intent;
       if (!i) return null;
       return {
         ratio: 1 - i.low_confidence_rate,
-        text: pct(1 - i.low_confidence_rate),
+        text: fmt.pct(1 - i.low_confidence_rate),
         n: i.n,
         severity: i.low_confidence_rate,
         detail: { key: "unknown", values: { n: String(i.unknown) } },
@@ -917,15 +964,30 @@ const NO_BAR = "—";
  * a `noData` reading when the source is present but the sample is empty: that is a measured
  * emptiness, and it keeps its row rather than disappearing.
  */
-export function readControl(id: ControlId, payload: ControlPayload): ControlReading | null {
+export function readControl(
+  id: ControlId,
+  payload: ControlPayload,
+  // The reader's language. Defaulted to French for the callers that have not been threaded
+  // yet — a default that names ONE language is a debt, and `readControls` below passes a real
+  // one from all three surfaces.
+  locale = "fr",
+): ControlReading | null {
   const spec = SPECS[id];
-  const sample = spec.read(payload);
+  const fmt = controlFmt(locale);
+  const sample = spec.read(payload, fmt);
   if (sample === null) return null;
 
   const target = sample.target ?? spec.target;
   if (target === undefined && !spec.informational) return null;
 
-  const bar = target?.text ?? NO_BAR;
+  // A spec's target label is a FUNCTION of the formatter (it holds only a number and an
+  // operator); a sample's is already a string, formatted where `fmt` was in scope.
+  const bar =
+    target === undefined
+      ? NO_BAR
+      : typeof target.text === "function"
+        ? target.text(fmt)
+        : target.text;
 
   if (sample.n <= 0 || sample.ratio === null) {
     return {
@@ -978,9 +1040,10 @@ export function readControl(id: ControlId, payload: ControlPayload): ControlRead
 export function readControls(
   payload: ControlPayload,
   ids: readonly ControlId[] = CONTROL_IDS,
+  locale = "fr",
 ): ControlReading[] {
   return ids
-    .map((id) => readControl(id, payload))
+    .map((id) => readControl(id, payload, locale))
     .filter((row): row is ControlReading => row !== null);
 }
 

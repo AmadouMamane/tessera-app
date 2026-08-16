@@ -36,6 +36,7 @@ import { Truncate } from "@/components/ui/truncate";
 import { fetchDataRange, fetchTimeline } from "@/lib/api/client";
 import type { TimelineReport } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { useDecimalFormat } from "@/lib/format-number";
 import { type OverviewTone, dotBg } from "@/lib/overview";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { setTemporalContext } from "@/lib/temporal-context";
@@ -191,6 +192,7 @@ export function TemporalRail({
    */
   transport?: "signal" | "execution";
 }) {
+  const dec2 = useDecimalFormat(2);
   const t = useTranslations("overview.time");
   // Playback state — only ever used by the execution (XT-01) transport; the signal
   // transport never plays (registre §replay = AGIR only).
@@ -871,7 +873,7 @@ export function TemporalRail({
               className="shrink-0 tabular-nums"
             >
               {baselineDelta >= 0 ? "+" : ""}
-              {baselineDelta.toFixed(2)} {t("vsBaseline")} {baseline.toFixed(2)}
+              {dec2(baselineDelta)} {t("vsBaseline")} {dec2(baseline)}
             </Badge>
           ) : null}
         </div>

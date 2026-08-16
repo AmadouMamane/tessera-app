@@ -60,6 +60,7 @@ import type {
   PrivilegeReport,
 } from "@/lib/api/schemas";
 import { type ControlId, type ControlReading, readControls } from "@/lib/control-registry";
+import { useDecimalFormat, usePercentFormat } from "@/lib/format-number";
 import { panelOf, signalOf } from "@/lib/overview-snapshot";
 import { useWindowStore } from "@/lib/stores/window-store";
 import { showNumber, toneFor } from "@/lib/unread-is-not-zero";
@@ -93,8 +94,21 @@ const TONE_BADGE: Record<Tone, "success" | "warning" | "danger" | "neutral"> = {
 };
 const toneText = (t: Tone) => (t === "ok" ? GOOD : t === "crit" ? BAD : WARN);
 
-function pct(v: number | null | undefined, digits = 0): string {
-  return v == null ? "—" : `${(v * 100).toFixed(digits)}%`;
+/**
+ * A ratio as a percentage, in the reader's language.
+ *
+ * `${(v * 100).toFixed(d)}%` was wrong twice outside English, and the second is the one nobody
+ * catches: the separator, and the SPACE before the sign — French and German write `73,1 %`,
+ * English `73.1%`. Gluing "%" on by hand can only produce one of the two.
+ *
+ * Three formatters rather than one built per call: `usePercentFormat` memoises on its digit
+ * count, and a hook cannot be called inside the returned closure.
+ */
+function usePct(): (v: number | null | undefined, digits?: number) => string {
+  const zero = usePercentFormat(0);
+  const one = usePercentFormat(1);
+  const two = usePercentFormat(2);
+  return (v, digits = 0) => (digits >= 2 ? two : digits === 1 ? one : zero)(v);
 }
 
 // ── atoms ────────────────────────────────────────────────────────────────────
@@ -186,6 +200,7 @@ function Kpi({
   href?: string;
   drillLabel?: string;
 }) {
+  const dec1 = useDecimalFormat(1);
   const ts = useTranslations("security");
   const te = useTranslations("security.explain");
   const showDelta = delta != null && Math.abs(delta) >= 0.005;
@@ -231,7 +246,7 @@ function Kpi({
         >
           <span>{up ? "↗" : "↘"}</span>
           <span>
-            {Math.abs((delta as number) * 100).toFixed(1)} pts {ts("kpi.vs7d")}
+            {dec1(Math.abs((delta as number) * 100))} pts {ts("kpi.vs7d")}
           </span>
         </div>
       ) : null}
@@ -318,6 +333,7 @@ function Gauge({ value, label, tone }: { value: number; label?: string; tone: st
 
 /** Horizontal risk bar row. */
 function RiskBar({ label, value, sub }: { label: string; value: number; sub?: string }) {
+  const pct = usePct();
   const tone =
     value >= 0.5
       ? "var(--tessera-fg-danger)"
@@ -569,6 +585,8 @@ const SEC_TABS = [
 type SecTab = (typeof SEC_TABS)[number];
 
 export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
+  const pct = usePct();
+  const dec2 = useDecimalFormat(2);
   const ts = useTranslations("security");
   // The supporting line under a control value, localised from the SAME catalogue the other
   // two surfaces read — the counts used to be pasted in as `(3/25)` beside every value.
@@ -786,6 +804,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         inversion: inversion.data,
       },
       secControls.map((c) => c.id),
+      locale,
     ).map((r) => [r.id, r]),
   );
 
@@ -1023,7 +1042,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
             tone={toneFor(inversion.data?.n_recoverable, (n) => n > 0, TONE_BAD)}
           />
           <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
-          <KV label={ts("panel.threshold")} value={inversion.data?.threshold?.toFixed(2) ?? "—"} />
+          <KV label={ts("panel.threshold")} value={dec2(inversion.data?.threshold)} />
         </div>
       )}
     </Panel>
@@ -1201,21 +1220,21 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldCheck}
               label={ts("kpi.guard")}
               infoKey="guard"
-              value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+              value={`F1 ${dec2(fw?.f1)}`}
               tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.recall")}
               infoKey="recall"
-              value={fw?.recall?.toFixed(2) ?? "—"}
+              value={dec2(fw?.recall)}
               tone={MUTED}
             />
             <Kpi
               icon={ShieldCheck}
               label={ts("tabx.precision")}
               infoKey="precision"
-              value={fw?.precision?.toFixed(2) ?? "—"}
+              value={dec2(fw?.precision)}
               tone={MUTED}
             />
             <Kpi
@@ -1521,7 +1540,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               icon={ShieldCheck}
               label={ts("kpi.guard")}
               infoKey="guard"
-              value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+              value={`F1 ${dec2(fw?.f1)}`}
               tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
             />
           </>,
@@ -1683,9 +1702,9 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   icon={ShieldCheck}
                   label={ts("kpi.guard")}
                   infoKey="guard"
-                  value={`F1 ${fw?.f1?.toFixed(2) ?? "—"}`}
+                  value={`F1 ${dec2(fw?.f1)}`}
                   tone={fw && fw.f1 >= 0.7 ? GOOD : WARN}
-                  hint={`${ts("kpi.recall")} ${fw?.recall?.toFixed(2) ?? "—"}`}
+                  hint={`${ts("kpi.recall")} ${dec2(fw?.recall)}`}
                 />
               </div>
             </Zone>
@@ -1924,10 +1943,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                         tone={toneFor(inversion.data?.n_recoverable, (n) => n > 0, TONE_BAD)}
                       />
                       <KV label={ts("panel.recoveryRate")} value={pct(invRate)} />
-                      <KV
-                        label={ts("panel.threshold")}
-                        value={inversion.data?.threshold?.toFixed(2) ?? "—"}
-                      />
+                      <KV label={ts("panel.threshold")} value={dec2(inversion.data?.threshold)} />
                     </div>
                   )}
                 </Panel>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEuroFormat, usePercentFormat } from "@/lib/format-number";
 import { useIntFormat } from "@/lib/format-number";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -67,6 +68,7 @@ function KpiInfo({ title, k }: { title: string; k: string }) {
  * question, and they duplicated `/api/version` across two of four tiles.
  */
 export function HealthDashboard() {
+  const pctFmt = usePercentFormat(0);
   const t = useTranslations("health");
 
   const components = useQuery({
@@ -186,7 +188,7 @@ export function HealthDashboard() {
                 <KpiValue value="—" sub={t("kpi.coverage.noneMeasured")} />
               ) : (
                 <KpiValue
-                  value={`${fleetPct.toFixed(0)} %`}
+                  value={pctFmt(fleetPct / 100)}
                   tone={fleetPct >= 99 ? undefined : "warning"}
                   sub={t("kpi.coverage.measured", { n: measured.length })}
                 />
@@ -264,6 +266,7 @@ function KpiValue({
  * question; they stay because their drill-downs are real, but as detail, not as the headline.
  */
 function ServiceCard() {
+  const euro = useEuroFormat();
   const fmtInt = useIntFormat();
   const t = useTranslations("health");
   const tAuth = useTranslations("auth");
@@ -364,7 +367,7 @@ function ServiceCard() {
             ) : budget.data ? (
               <span className="flex items-baseline gap-2">
                 <span className="font-mono text-xs font-medium">
-                  € {budget.data.estimated_cost_eur.toFixed(2)}
+                  {euro(budget.data.estimated_cost_eur)}
                 </span>
                 <span className="text-[0.66rem] text-[var(--muted-foreground)]">
                   {fmtInt(budget.data.input_tokens)} in · {fmtInt(budget.data.output_tokens)} out

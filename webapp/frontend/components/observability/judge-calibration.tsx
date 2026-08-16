@@ -31,6 +31,7 @@ import type {
   ReleaseStatus,
   SeriesBucket,
 } from "@/lib/api/schemas";
+import { usePercentFormat } from "@/lib/format-number";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -492,6 +493,7 @@ export function JudgeCalibration({
   consensus?: JudgeConsensus;
   loading: boolean;
 }) {
+  const pctFmt = usePercentFormat(1);
   const tq = useTranslations("quality");
 
   if (loading && !data) {
@@ -568,14 +570,14 @@ export function JudgeCalibration({
         <Kpi
           label={tq("judge.fp")}
           explainKey="jgFp"
-          value={`${((fp / total) * 100).toFixed(1)}%`}
+          value={pctFmt(fp / total)}
           tone={fp / total < 0.05 ? GOOD : WARN}
           hint={`${fp}/${total}`}
         />
         <Kpi
           label={tq("judge.fn")}
           explainKey="jgFn"
-          value={`${((fn / total) * 100).toFixed(1)}%`}
+          value={pctFmt(fn / total)}
           tone={fn / total < 0.05 ? GOOD : WARN}
           hint={`${fn}/${total}`}
         />
@@ -668,7 +670,7 @@ export function JudgeCalibration({
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold tabular-nums">{data.n_overrides ?? 0}</span>
               <span className="text-[0.65rem] text-[var(--muted-foreground)]">
-                {total > 0 ? `${(((data.n_overrides ?? 0) / total) * 100).toFixed(1)}%` : "—"}
+                {total > 0 ? pctFmt((data.n_overrides ?? 0) / total) : "—"}
               </span>
             </div>
             <ul className="mt-1 flex flex-col gap-0.5">

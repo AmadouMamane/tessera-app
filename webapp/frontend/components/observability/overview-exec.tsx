@@ -19,6 +19,7 @@ import type {
   RegressionRisk,
   ScoreSeries,
 } from "@/lib/api/schemas";
+import { useDecimalFormat, usePercentFormat } from "@/lib/format-number";
 
 /** Overview drill-down targets. Four of them live on the evaluations view (`CROSSED_TARGETS`). */
 export type OverviewTab = "overview" | "signals" | "runs" | "failed" | "models" | "judge";
@@ -552,6 +553,8 @@ export function PredictiveSignals({
   localization: LocalizationReport | undefined;
   loading: boolean;
 }) {
+  const dec2 = useDecimalFormat(2);
+  const pctFmt = usePercentFormat(1);
   const tq = useTranslations("quality");
   const delta = series?.delta ?? null;
   const trend = delta == null ? "flat" : delta <= -0.02 ? "down" : delta >= 0.02 ? "up" : "flat";
@@ -594,14 +597,12 @@ export function PredictiveSignals({
               </Row>
               <Row label={tq("pred.risk")}>
                 <span className={`tabular-nums ${riskTone}`}>
-                  {riskScore == null ? "—" : `${riskScore.toFixed(2)}/1`}
+                  {riskScore == null ? "—" : `${dec2(riskScore)}/1`}
                 </span>
               </Row>
               <Row label={tq("pred.drift")}>
                 <span className="flex items-center gap-1.5">
-                  <span className="tabular-nums">
-                    {div == null ? "—" : `${(div * 100).toFixed(1)}%`}
-                  </span>
+                  <span className="tabular-nums">{pctFmt(div)}</span>
                   <Badge
                     tone={
                       driftLevel === "stable" || driftLevel === "low"

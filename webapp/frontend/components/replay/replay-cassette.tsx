@@ -6,6 +6,7 @@ import { Truncate } from "@/components/ui/truncate";
 import { fetchReplays, runReplay } from "@/lib/api/client";
 import type { ReplayBundle, ReplayResult } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
+import { usePercentFormat } from "@/lib/format-number";
 import { type CassetteSpan, buildCassetteTrace } from "@/lib/replay-cassette";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -410,6 +411,7 @@ function ToolRow({
 }
 
 function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: string | null }) {
+  const pctFmt = usePercentFormat(0);
   const [model, setModel] = useState<string>(MODELS[0]);
   const [result, setResult] = useState<ReplayResult | null>(null);
   const mutation = useMutation({
@@ -472,7 +474,7 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
               {result.score_delta.toFixed(2)}
             </span>
             <span className="text-[var(--tessera-text-muted)]">
-              {t("cassette.similarity")} {(result.similarity * 100).toFixed(0)}%
+              {t("cassette.similarity")} {pctFmt(result.similarity)}
             </span>
           </div>
           <p className="max-h-32 overflow-y-auto whitespace-pre-wrap text-[var(--tessera-text)]">
