@@ -11171,5 +11171,10 @@
     "title": "This view could not be displayed",
     "detail": "The rest of the cockpit remains intact. Reload only this view to resume your work.",
     "retry": "Reload view"
+  },
+  "quality_regime": {
+    "reason": {
+      "demo_no_reference": "Demo agent: no reference corpus and no declared business signals — no ruler has a referent."
+    }
   }
 }

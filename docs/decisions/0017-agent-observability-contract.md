@@ -6,7 +6,10 @@
   (§Amendment 2: typed envelope actor, the 3-level business-metric ladder, declared policy
   metadata, observability level gates release). Amended 2026-08-06 (§Amendment 3: L1 evidence
   is any recorded emission — the business-event ledger joins the Prometheus counter — bounded
-  by a 30-day recency window; a store's blindness now reaches the L0→L1 decision).**
+  by a 30-day recency window; a store's blindness now reaches the L0→L1 decision). Amended
+  2026-08-21 (§Amendment 4: the declared quality regime — every agent names the ruler that
+  judges its production answers; `unscored` is a declaration carrying its reason, never an
+  absence).**
 - Date: 2026-07-06
 - Deciders: Tessera maintainers
 - Related: 0008 (agent audience and surface), 0010 (Recouvrement internal operator agent),
@@ -17,6 +20,50 @@
   `src/tessera/recouvrement/scoring.py`, `src/tessera/agent/agents.yaml`,
   the "ADR-001" vision draft (2026-07-06, chat-authored, outside the numbered corpus —
   harvested by §Amendment 1).
+
+## Amendment 4 (2026-08-21) — the declared quality regime: every agent names the ruler that judges it
+
+**The cockpit runs two disjoint quality rulers, and no declaration said which agent answers to
+which.** The online LLM judge (`faithfulness` / `grounding` / `hallucination`, wired on the
+in-process `/chat` seam, writing `tessera.eval_online_scores`) covers `support-client` and
+`onboarding`. The deterministic business scorers (per-signal `scored` / `unknown` /
+`not_applicable`, ADR 0017 §A2.2) cover `recouvrement`. The three demo agents are covered by
+neither. Measured consequence on the served stack (2026-08-21): the quality page's "0 of N judged
+responses" read as *nothing else is measured*, while a second plane was measured by a stricter
+ruler two clicks away — 20 business runs, ten deterministic scores each, already rendered on the
+Métier view.
+
+### A4.1 — Decision: declared, never inferred
+
+`AgentObservabilitySpec` gains a **required** `quality_regime` field —
+`llm_judged` · `business_scored` · `unscored` — plus `quality_regime_reason_key`. No default, on
+purpose: a default would put a ruler nobody chose behind an agent's quality figures (the ADR 0024
+rule, applied to judgment instead of authorship). An inference (`has eval_set?` `has signals?`)
+was rejected because it can drift silently when the schema evolves; a declaration is refused at
+load when it contradicts the rest of the manifest.
+
+### A4.2 — Integrity: the illegal states are unrepresentable
+
+- declared `business_signals` **or** a scorer-bound workflow ⇒ the regime MUST be
+  `business_scored` — a scored plane may not hide its ruler (the two-rulers defect already paid
+  for on the certifying matrix);
+- `business_scored` ⇒ non-empty `business_signals` AND a scorer-bound workflow — a ruler with no
+  producer scores nothing;
+- `unscored` ⇒ a `quality_regime.`-namespaced reason key, resolved in **every** locale catalogue
+  (same three-catalogue gate as capability/policy labels) — a blind spot is declared with its
+  reason in the reader's language, never silently (ADR 0026);
+- `llm_judged` ⇒ `invocation.binding: in_process_chat` (cross-block, checked at registry load:
+  the judge is wired on one seam; a declared judge the declared transport cannot carry is a
+  promise no line of code keeps).
+
+### A4.3 — One projector, every surface
+
+`quality_regime_descriptor()` (agentspec_projection) is the single read path. Quality surfaces
+render populations **grouped by regime and never sharing a denominator**: a rate that absorbed
+`amount_consistency` into `faithfulness` would be a number nobody can interpret, looking more
+complete than either truth. The conformance ratchet refuses any registry agent without an
+`observability` block — an agent arriving without a declared ruler is a red gate, never an
+invisible row on a quality page.
 
 ## Amendment 3 (2026-08-06) — L1 evidence is *any* recorded emission, bounded by a recency window; the store's blindness reaches L0→L1 too
 

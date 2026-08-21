@@ -11185,5 +11185,10 @@
     "title": "Diese Ansicht konnte nicht angezeigt werden",
     "detail": "Der übrige Cockpit-Zustand bleibt erhalten. Laden Sie nur diese Ansicht neu, um weiterzuarbeiten.",
     "retry": "Ansicht neu laden"
+  },
+  "quality_regime": {
+    "reason": {
+      "demo_no_reference": "Demo-Agent: kein Referenzkorpus und keine deklarierten Fachsignale — kein Maßstab hat einen Bezugspunkt."
+    }
   }
 }

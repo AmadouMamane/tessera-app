@@ -31,6 +31,7 @@ __all__ = [
     "is_invocable",
     "north_star_descriptor",
     "observability_level",
+    "quality_regime_descriptor",
 ]
 
 #: The ladder labels the cockpit displays (ADR 0017 §4). L3 is unlocked in Phase C.
@@ -146,6 +147,29 @@ def business_signal_descriptors(agent: Agent) -> list[dict[str, object]]:
         }
         for sig in spec.business_signals
     ]
+
+
+def quality_regime_descriptor(agent: Agent) -> dict[str, object] | None:
+    """The declared quality regime for one agent — the single projector every surface reads.
+
+    Serialises the manifest's ``quality_regime`` declaration (§3 Amendment 4): which ruler
+    judges this agent's production answers (``llm_judged`` · ``business_scored`` ·
+    ``unscored``), plus the reason key when the declared regime is a blind spot. Read from
+    the declaration, never inferred from wiring — a surface that renders this can name the
+    ruler behind every figure it shows, and the two rulers keep disjoint denominators by
+    construction (the manifest validator forbids signals outside ``business_scored``).
+
+    Returns ``None`` for an un-manifested agent (honest-empty; the conformance ratchet
+    forbids that state in the shipped registry, so ``None`` only reaches tests).
+    """
+    spec = agent.observability
+    if spec is None:
+        return None
+    return {
+        "agent_id": agent.id,
+        "regime": spec.quality_regime.value,
+        "reason_key": spec.quality_regime_reason_key,
+    }
 
 
 def north_star_descriptor(agent: Agent) -> dict[str, object] | None:

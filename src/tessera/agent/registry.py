@@ -33,10 +33,12 @@ from tessera.agent.agentspec import (
     InvocationSpec,
     PolicyMetadata,
     PolicySeverity,
+    QualityRegime,
     SignalEngagement,
     WorkflowBinding,
     parse_invocation,
     parse_observability,
+    validate_quality_seam,
 )
 
 # A capability's ``input_schema`` is part of what the manifest DECLARES, and the schema files sit
@@ -82,6 +84,7 @@ __all__ = [
     "InvocationSpec",
     "PolicyMetadata",
     "PolicySeverity",
+    "QualityRegime",
     "SignalEngagement",
     "Surface",
     "WorkflowBinding",
@@ -207,6 +210,12 @@ def _coerce_agent(raw: Mapping[str, object]) -> Agent:
             invocation = parse_invocation(invocation_raw)
         except ValueError as exc:
             raise ValueError(f"agent {agent_id!r}: {exc}") from exc
+    # Cross-block integrity the per-block validators cannot see (quality regime ↔ seam):
+    # a declared judge the declared transport cannot carry fails the load, never a surface.
+    try:
+        validate_quality_seam(observability, invocation)
+    except ValueError as exc:
+        raise ValueError(f"agent {agent_id!r}: {exc}") from exc
     return Agent(
         id=agent_id,
         name=str(raw.get("name", agent_id)),

@@ -45,8 +45,12 @@ agents:
     # mapped onto the grammar, but declares NO scored business workflow — no scorer,
     # capabilities or business_signals (those belong to workflow agents like recouvrement).
     # The level is COMPUTED, never tuned: L1 ungoverned, L2 once its eval-gating socle ran.
+    # `quality_regime` (§3 Amendment 4): production answers are judged by the online LLM
+    # judge over the /chat seam — declared, so the quality surfaces read a ruler the agent
+    # named, never one they inferred.
     observability:
       spec_version: agentspec.v1
+      quality_regime: llm_judged
       telemetry_capabilities: [graph_topology, tools]
       workflows:
         - workflow_id: support_conversation_v1
@@ -76,9 +80,11 @@ agents:
       binding: in_process_chat
     # AgentSpec observability block (ADR 0017 §3 · step 7 Lot 0) — same telemetry-only shape
     # as support-client: turn + tool spans, a conversation workflow on the grammar, no scored
-    # business workflow. Level computed, never tuned.
+    # business workflow. Level computed, never tuned. Same declared quality regime as
+    # support-client: the online LLM judge over the /chat seam.
     observability:
       spec_version: agentspec.v1
+      quality_regime: llm_judged
       telemetry_capabilities: [graph_topology, tools]
       workflows:
         - workflow_id: onboarding_conversation_v1
@@ -129,8 +135,13 @@ agents:
     # stay deterministic code in `tessera.recouvrement.*` — the manifest declares only ids,
     # reason codes and metadata (A1.1 / A2.3). Business signal keys must be produced by the
     # bound scorer (pinned by `tests/unit/test_agentspec_conformance.py`).
+    # `quality_regime` (§3 Amendment 4): recouvrement's replies are template-assembled, so
+    # LLM faithfulness has no referent here — its ruler is the deterministic business
+    # scorer below (10 signals, status scored/unknown/not_applicable). Declaring
+    # business_signals FORCES this regime at load: the scored plane cannot hide its ruler.
     observability:
       spec_version: agentspec.v1
+      quality_regime: business_scored
       telemetry_capabilities: [graph_topology, tools]
       capabilities:
         - id: summarize_case
@@ -287,8 +298,14 @@ agents:
     # Console renders honest-empty ("observe it through its runs and evals"), never a broken chat.
     invocation:
       binding: none
+    # `quality_regime: unscored` is a DECLARATION, not an absence (§3 Amendment 4): no
+    # reference corpus and no business signals, so no ruler has a referent here. The reason
+    # key resolves in the locale catalogues — every surface renders the blind spot in the
+    # reader's language instead of a silent gap.
     observability:
       spec_version: agentspec.v1
+      quality_regime: unscored
+      quality_regime_reason_key: quality_regime.reason.demo_no_reference
       telemetry_capabilities: [turns]
       workflows:
         - workflow_id: hello_v1
@@ -333,6 +350,10 @@ agents:
       # source could keep, which made the fleet read an observable contract off a manifest alone.
       # A workflow binding declares the grammar of the spans an agent emits, so an agent that
       # emits none declares none. The gap between the two planes is what duplex-agent closes.
+      # Same declared blind spot as hello-agent: a demo turn without a reference corpus is
+      # not judgeable, and the manifest says so instead of leaving the gap silent.
+      quality_regime: unscored
+      quality_regime_reason_key: quality_regime.reason.demo_no_reference
       telemetry_capabilities: []
       workflows: []
 
@@ -362,6 +383,11 @@ agents:
       auth: operator-assertion
     observability:
       spec_version: agentspec.v1
+      # Same declared blind spot as the other two demo agents (§3 Amendment 4): observable
+      # and invocable, yet unscored — the three contracts are orthogonal, and each one is
+      # declared rather than inferred from the others.
+      quality_regime: unscored
+      quality_regime_reason_key: quality_regime.reason.demo_no_reference
       telemetry_capabilities: [turns]
       # The first capability anywhere to declare an `input_schema`: the Console renders it as a
       # generated form (§A1.2 c). `label_key` resolves in the existing locale catalogues — an

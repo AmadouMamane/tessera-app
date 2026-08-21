@@ -11185,5 +11185,10 @@
     "title": "Cette vue n’a pas pu être affichée",
     "detail": "Le reste du cockpit reste intact. Relancez uniquement cette vue pour reprendre votre travail.",
     "retry": "Relancer la vue"
+  },
+  "quality_regime": {
+    "reason": {
+      "demo_no_reference": "Agent de démonstration : aucun corpus de référence ni signal métier déclaré — aucun barème n'a de référent."
+    }
   }
 }

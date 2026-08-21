@@ -14,7 +14,10 @@ import pytest
 from tessera.agent.agentspec import (
     AGENTSPEC_VERSION,
     AgentObservabilitySpec,
+    InvocationBinding,
+    InvocationSpec,
     parse_observability,
+    validate_quality_seam,
 )
 from tessera.agent.registry import get_agent
 from tessera.observability.agentspec_projection import (
@@ -22,6 +25,7 @@ from tessera.observability.agentspec_projection import (
     declared_observability_level,
     north_star_descriptor,
     observability_level,
+    quality_regime_descriptor,
 )
 
 
@@ -29,6 +33,7 @@ def _valid_obs() -> dict[str, object]:
     """A minimal, fully valid observability block (mutate one field to probe rejection)."""
     return {
         "spec_version": AGENTSPEC_VERSION,
+        "quality_regime": "business_scored",
         "telemetry_capabilities": ["graph_topology"],
         "capabilities": [
             {
@@ -126,6 +131,95 @@ def test_grammar_namespace_is_enforced() -> None:
         parse_observability(raw)
 
 
+# --- §3 Amendment 4: the declared quality regime ---------------------------------
+
+
+def test_quality_regime_is_required_and_carries_no_default() -> None:
+    # ADR 0024 applied to judgment: no default may put a ruler nobody chose behind an
+    # agent's figures. The field stays required BY SCHEMA — this ratchet refuses a future
+    # default as loudly as a missing declaration.
+    raw = _valid_obs()
+    del raw["quality_regime"]
+    with pytest.raises(ValueError, match="quality_regime"):
+        parse_observability(raw)
+    assert AgentObservabilitySpec.model_fields["quality_regime"].is_required()
+
+
+def test_unknown_quality_regime_is_rejected() -> None:
+    with pytest.raises(ValueError, match="quality_regime"):
+        parse_observability(_valid_obs() | {"quality_regime": "vibes"})
+
+
+def test_unscored_requires_a_declared_reason() -> None:
+    # A blind spot is declared with its reason, never silently (ADR 0026).
+    raw = _valid_obs()
+    raw["quality_regime"] = "unscored"
+    raw["business_signals"] = []
+    raw["workflows"][0] = {  # type: ignore[index]
+        "workflow_id": "recouvrement_collections_v1",
+        "grammar": "workflow_grammar.v1",
+    }
+    with pytest.raises(ValueError, match="requires quality_regime_reason_key"):
+        parse_observability(raw)
+    raw["quality_regime_reason_key"] = "quality_regime.reason.demo_no_reference"
+    assert parse_observability(raw).quality_regime_reason_key is not None
+
+
+def test_a_reason_on_a_scored_regime_is_rejected() -> None:
+    raw = _valid_obs() | {"quality_regime_reason_key": "quality_regime.reason.demo_no_reference"}
+    with pytest.raises(ValueError, match="must not set"):
+        parse_observability(raw)
+
+
+def test_reason_key_namespace_is_enforced() -> None:
+    raw = _valid_obs()
+    raw["quality_regime"] = "unscored"
+    raw["business_signals"] = []
+    raw["workflows"] = []
+    raw["quality_regime_reason_key"] = "demo_no_reference"
+    with pytest.raises(ValueError, match="quality_regime_reason_key must start"):
+        parse_observability(raw)
+
+
+def test_business_scored_requires_signals_and_a_bound_scorer() -> None:
+    # A ruler with no producer scores nothing — both halves of the production chain must
+    # be declared before the regime may claim them.
+    no_signals = _valid_obs() | {"business_signals": []}
+    with pytest.raises(ValueError, match="requires declared business_signals"):
+        parse_observability(no_signals)
+    no_scorer = _valid_obs()
+    no_scorer["workflows"][0] = {  # type: ignore[index]
+        "workflow_id": "recouvrement_collections_v1",
+        "grammar": "workflow_grammar.v1",
+    }
+    with pytest.raises(ValueError, match="requires a workflow binding a scorer"):
+        parse_observability(no_scorer)
+
+
+def test_declared_signals_force_the_business_scored_regime() -> None:
+    # The two rulers stay disjoint by construction: a scored plane may not hide its ruler
+    # behind another regime (the defect already paid for — insights 361-363).
+    with pytest.raises(ValueError, match="may not hide its ruler"):
+        parse_observability(_valid_obs() | {"quality_regime": "llm_judged"})
+    # And the producer alone forces it too: a bound scorer with no declared signals may
+    # not sit under another regime either.
+    with pytest.raises(ValueError, match="forces its ruler"):
+        parse_observability(_valid_obs() | {"quality_regime": "llm_judged", "business_signals": []})
+
+
+def test_llm_judged_requires_the_chat_seam() -> None:
+    # Cross-block integrity (validate_quality_seam): the online judge is wired on the
+    # in-process /chat seam only — a declared judge the declared transport cannot carry
+    # is a load error, never a surface waiting for a judge that will never come.
+    judged = parse_observability(
+        _valid_obs() | {"quality_regime": "llm_judged", "business_signals": [], "workflows": []}
+    )
+    with pytest.raises(ValueError, match="in_process_chat"):
+        validate_quality_seam(judged, InvocationSpec())
+    validate_quality_seam(judged, InvocationSpec(binding=InvocationBinding.IN_PROCESS_CHAT))
+    validate_quality_seam(None, InvocationSpec())  # un-manifested: nothing to contradict
+
+
 # --- A2.2 display-honesty: an outcome signal is undeclarable ---------------------
 
 
@@ -205,7 +299,14 @@ def test_qa_agents_declare_observable_contract_l1_ungoverned_l2_governed() -> No
 
 def test_manifest_without_observable_contract_reads_l0() -> None:
     agent = get_agent("recouvrement")
-    bare = parse_observability({"spec_version": AGENTSPEC_VERSION})
+    # The barest valid manifest still names its quality regime — required by schema.
+    bare = parse_observability(
+        {
+            "spec_version": AGENTSPEC_VERSION,
+            "quality_regime": "unscored",
+            "quality_regime_reason_key": "quality_regime.reason.demo_no_reference",
+        }
+    )
     l0_agent = dataclasses.replace(agent, observability=bare)
     assert declared_observability_level(l0_agent, governed=True) == "L0"
 
@@ -259,3 +360,30 @@ def test_north_star_descriptor_is_the_declared_one() -> None:
 
 def test_unmanifested_agent_has_no_descriptors() -> None:
     assert business_signal_descriptors(get_agent("support-client")) == []
+
+
+# --- projection: the declared quality regime (§3 Amendment 4) ---------------------
+
+
+def test_quality_regime_descriptor_reads_the_declaration() -> None:
+    # The single projector every quality surface reads — declaration, never inference.
+    assert quality_regime_descriptor(get_agent("recouvrement")) == {
+        "agent_id": "recouvrement",
+        "regime": "business_scored",
+        "reason_key": None,
+    }
+    assert quality_regime_descriptor(get_agent("support-client")) == {
+        "agent_id": "support-client",
+        "regime": "llm_judged",
+        "reason_key": None,
+    }
+    assert quality_regime_descriptor(get_agent("hello-agent")) == {
+        "agent_id": "hello-agent",
+        "regime": "unscored",
+        "reason_key": "quality_regime.reason.demo_no_reference",
+    }
+
+
+def test_unmanifested_agent_has_no_quality_regime_descriptor() -> None:
+    unmanifested = dataclasses.replace(get_agent("support-client"), observability=None)
+    assert quality_regime_descriptor(unmanifested) is None

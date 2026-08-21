@@ -51,6 +51,18 @@ def test_at_least_recouvrement_is_manifested() -> None:
     assert "recouvrement" in ids
 
 
+def test_every_agent_declares_its_quality_regime() -> None:
+    # §3 Amendment 4, layer-3 ratchet: an agent that arrives without a declared ruler is a
+    # RED gate, never an invisible row on a quality page. `quality_regime` is required by
+    # schema inside the block, so the only escape hatch is omitting the whole observability
+    # block — this closes it.
+    undeclared = [a.id for a in list_agents() if a.observability is None]
+    assert not undeclared, (
+        f"agents without an observability block (so without a declared quality_regime): "
+        f"{undeclared} — declare llm_judged, business_scored, or unscored with a reason"
+    )
+
+
 def test_declared_business_scores_are_produced_by_the_bound_scorer() -> None:
     for agent in _manifested_agents():
         spec = agent.observability  # type: ignore[attr-defined]
@@ -88,6 +100,10 @@ def test_manifest_label_keys_exist_in_every_locale(locale: str) -> None:
     for agent in _manifested_agents():
         spec = agent.observability  # type: ignore[attr-defined]
         label_keys = [c.label_key for c in spec.capabilities] + [p.label_key for p in spec.policies]
+        if spec.quality_regime_reason_key:
+            # A declared blind spot renders in the reader's language, so its reason key is
+            # held to the same three-catalogue gate as every other manifest label.
+            label_keys.append(spec.quality_regime_reason_key)
         for key in label_keys:
             resolved = _resolve(catalogue, key)
             if not isinstance(resolved, str) or not resolved:

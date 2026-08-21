@@ -35,10 +35,12 @@ __all__ = [
     "InvocationSpec",
     "PolicyMetadata",
     "PolicySeverity",
+    "QualityRegime",
     "SignalEngagement",
     "WorkflowBinding",
     "parse_invocation",
     "parse_observability",
+    "validate_quality_seam",
 ]
 
 #: The only AgentSpec version this build understands. A manifest declaring anything else
@@ -90,6 +92,26 @@ class SignalEngagement(StrEnum):
     LEGAL = "legal"
     SLA = "sla"
     NONE = "none"
+
+
+class QualityRegime(StrEnum):
+    """Which ruler judges this agent's production answers (ADR 0017 §3 Amendment 4).
+
+    The cockpit runs TWO disjoint quality rulers — the online LLM judge
+    (faithfulness/grounding/hallucination over the ``/chat`` seam) and deterministic
+    business scorers (per-signal ``scored``/``unknown``/``not_applicable``) — and their
+    populations must never share a denominator. The regime is **declared** by each agent,
+    never inferred: an inference can drift silently when the schema evolves, a declaration
+    is refused at load when it contradicts the rest of the manifest.
+
+    ``unscored`` is a first-class declaration, not an absence: it names the blind spot and
+    must carry its reason (ADR 0026 — a witness that cannot see reports a blind spot, never
+    "ok").
+    """
+
+    LLM_JUDGED = "llm_judged"
+    BUSINESS_SCORED = "business_scored"
+    UNSCORED = "unscored"
 
 
 class InvocationBinding(StrEnum):
@@ -208,6 +230,12 @@ class AgentObservabilitySpec(_Spec):
     """The AgentSpec ``observability`` block (ADR 0017 §3)."""
 
     spec_version: str
+    # The declared quality regime — REQUIRED, no default on purpose: a default would put a
+    # ruler nobody chose behind an agent's quality figures (the ADR 0024 rule, applied to
+    # judgment instead of authorship). ``unscored`` must name its reason through a locale
+    # key so every surface can render the blind spot in the reader's language.
+    quality_regime: QualityRegime
+    quality_regime_reason_key: str | None = None
     telemetry_capabilities: tuple[str, ...] = ()
     capabilities: tuple[Capability, ...] = ()
     policies: tuple[PolicyMetadata, ...] = ()
@@ -221,6 +249,60 @@ class AgentObservabilitySpec(_Spec):
             msg = f"unsupported AgentSpec spec_version {value!r}: expected {AGENTSPEC_VERSION!r}"
             raise ValueError(msg)
         return value
+
+    @field_validator("quality_regime_reason_key")
+    @classmethod
+    def _reason_key_namespace(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith("quality_regime."):
+            msg = f"quality_regime_reason_key must start with 'quality_regime.': {value!r}"
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _quality_regime_integrity(self) -> AgentObservabilitySpec:
+        # A declared regime must be one the rest of the manifest can honour — the same
+        # "make the illegal state unrepresentable" rule as the invocation block. The two
+        # rulers stay disjoint by construction: declared business signals FORCE the
+        # business_scored regime, so no scored plane can hide its ruler behind another.
+        if self.quality_regime is QualityRegime.UNSCORED:
+            if not self.quality_regime_reason_key:
+                msg = (
+                    "quality_regime 'unscored' requires quality_regime_reason_key — a blind "
+                    "spot is declared with its reason, never silently (ADR 0026)"
+                )
+                raise ValueError(msg)
+        elif self.quality_regime_reason_key is not None:
+            msg = (
+                f"quality_regime {self.quality_regime.value!r} must not set "
+                "quality_regime_reason_key (a reason belongs to the declared blind spot only)"
+            )
+            raise ValueError(msg)
+        if self.quality_regime is QualityRegime.BUSINESS_SCORED:
+            if not self.business_signals:
+                msg = (
+                    "quality_regime 'business_scored' requires declared business_signals — "
+                    "without them nothing would ever score this agent"
+                )
+                raise ValueError(msg)
+            if not any(w.scorer for w in self.workflows):
+                msg = (
+                    "quality_regime 'business_scored' requires a workflow binding a scorer — "
+                    "a ruler with no producer scores nothing"
+                )
+                raise ValueError(msg)
+        elif self.business_signals:
+            msg = (
+                f"declared business_signals require quality_regime 'business_scored', "
+                f"got {self.quality_regime.value!r} — a scored plane may not hide its ruler"
+            )
+            raise ValueError(msg)
+        elif any(w.scorer for w in self.workflows):
+            msg = (
+                f"a workflow binding a scorer requires quality_regime 'business_scored', "
+                f"got {self.quality_regime.value!r} — a producer forces its ruler's declaration"
+            )
+            raise ValueError(msg)
+        return self
 
     @model_validator(mode="after")
     def _referential_integrity(self) -> AgentObservabilitySpec:
@@ -341,3 +423,35 @@ def parse_invocation(raw: Mapping[str, object]) -> InvocationSpec:
     except ValidationError as exc:
         msg = f"invalid invocation block: {exc}"
         raise ValueError(msg) from exc
+
+
+def validate_quality_seam(
+    observability: AgentObservabilitySpec | None, invocation: InvocationSpec
+) -> None:
+    """Reject a declared quality regime the runtime cannot honour (ADR 0026).
+
+    Cross-block integrity the per-block validators cannot see: the online LLM judge is
+    wired on the in-process ``/chat`` seam only, so an ``llm_judged`` declaration on any
+    other invocation binding is a promise no line of code keeps. The registry loader calls
+    this once both blocks are parsed — a contradictory manifest is a load error, never a
+    surface quietly rendering a judge that will never come.
+
+    Args:
+        observability: The parsed observability block, or ``None`` for an un-manifested
+            agent (nothing declared, nothing to contradict).
+        invocation: The parsed invocation block (always present; honest default ``none``).
+
+    Raises:
+        ValueError: If the declared regime names a judge the declared seam cannot carry.
+    """
+    if observability is None:
+        return
+    if (
+        observability.quality_regime is QualityRegime.LLM_JUDGED
+        and invocation.binding is not InvocationBinding.IN_PROCESS_CHAT
+    ):
+        msg = (
+            "quality_regime 'llm_judged' requires invocation binding 'in_process_chat' "
+            f"(the online judge is wired on the /chat seam), got {invocation.binding.value!r}"
+        )
+        raise ValueError(msg)
