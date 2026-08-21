@@ -396,7 +396,12 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # — the front's /api proxy allowlists that prefix as public and attaches the service bearer
     # on an anonymous caller's behalf (the F-4 lesson), so a bearer under it would have guarded
     # nothing at all.
-    assert len(public) == 139
+    # 140 (2026-08-21): GET /observability/quality-regimes — every agent's DECLARED quality
+    # regime (ADR 0017 §Amendment 4) from the versioned manifest, plus aggregate counts for
+    # the business-scored plane (runs total, per-status signal counts). It quotes the same
+    # builders the bearer-guarded Métier reads use but exposes only their COUNTS: no run
+    # timeline, no artifact, no case id — declarations and integers, the /slo posture.
+    assert len(public) == 140
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

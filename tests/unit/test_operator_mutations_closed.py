@@ -177,13 +177,17 @@ def test_the_public_reads_are_untouched() -> None:
     `/observability/` prefix because the front's /api proxy allowlists that prefix as public and
     attaches the service bearer for anonymous callers (F-4); the freeze counts them because it
     spans every GET on this ROUTER, not every GET under that prefix.
+    +1 on 2026-08-21: GET /observability/quality-regimes — every agent's DECLARED quality
+    regime (ADR 0017 §Amendment 4), read from the versioned manifest, plus aggregate counts
+    for the business-scored plane (runs total, per-status signal counts). Declarations and
+    counts only: no store row, no subject, same public-aggregate posture as /observability/slo.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 144
+    assert len(read_routes) == 145
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (
