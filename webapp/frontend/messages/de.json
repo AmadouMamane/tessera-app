@@ -11190,5 +11190,21 @@
     "reason": {
       "demo_no_reference": "Demo-Agent: kein Referenzkorpus und keine deklarierten Fachsignale — kein Maßstab hat einen Bezugspunkt."
     }
+  },
+  "qualityRegimes": {
+    "title": "Zwei Ebenen, zwei Maßstäbe",
+    "subtitle": "Jeder Agent deklariert den Maßstab, der ihn beurteilt — die Populationen werden nie addiert.",
+    "llm_judged": {
+      "label": "Antworten, vom LLM-Richter bewertet",
+      "note": "gemessen vom Band darüber"
+    },
+    "business_scored": {
+      "label": "Ausführungen, gemessen am Fach-Maßstab",
+      "counts": "{runs, plural, one {# Ausführung} other {# Ausführungen}} · {declared} Signale · {scored} bewertet · {unknown} unbekannt · {na} nicht anwendbar · gesamte Historie",
+      "link": "Fachansicht"
+    },
+    "unscored": {
+      "label": "Nicht bewertete Ebene (deklariert)"
+    }
   }
 }

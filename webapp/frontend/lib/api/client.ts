@@ -224,6 +224,8 @@ import {
   ProvenanceReportSchema,
   type QualityDatasetsReport,
   QualityDatasetsReportSchema,
+  type QualityRegimes,
+  QualityRegimesSchema,
   type RbacMatrix,
   RbacMatrixSchema,
   type RecouvrementQueue,
@@ -611,6 +613,18 @@ export async function fetchSLO(
   days?: string,
 ): Promise<SLOReport> {
   return request(withScope("/observability/slo", at, agent, days), { signal }, SLOReportSchema);
+}
+
+/**
+ * The declared quality regime of every agent (ADR 0017 §Amendment 4): which ruler judges
+ * each one — LLM judge, deterministic business scorer, or a declared `unscored` with its
+ * reason. Declarations + counts only; no rate, so no consumer can merge two rulers.
+ */
+export async function fetchQualityRegimes(
+  signal?: AbortSignal,
+  at?: string,
+): Promise<QualityRegimes> {
+  return request(withAsOf("/observability/quality-regimes", at), { signal }, QualityRegimesSchema);
 }
 
 /**

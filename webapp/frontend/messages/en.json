@@ -11176,5 +11176,21 @@
     "reason": {
       "demo_no_reference": "Demo agent: no reference corpus and no declared business signals — no ruler has a referent."
     }
+  },
+  "qualityRegimes": {
+    "title": "Two planes, two rulers",
+    "subtitle": "Each agent declares the ruler that judges it — the populations are never summed.",
+    "llm_judged": {
+      "label": "Responses judged by the LLM judge",
+      "note": "measured by the band above"
+    },
+    "business_scored": {
+      "label": "Runs scored by the business ruler",
+      "counts": "{runs, plural, one {# run} other {# runs}} · {declared} signals · {scored} scored · {unknown} unknown · {na} not applicable · all history",
+      "link": "Business view"
+    },
+    "unscored": {
+      "label": "Unscored plane (declared)"
+    }
   }
 }

@@ -6,6 +6,7 @@ import { parseTab } from "@/components/eval/eval-tabs";
 import { ScorecardView } from "@/components/eval/scorecard-view";
 import { AppShell } from "@/components/layout/app-shell";
 import { ObservabilityDashboard } from "@/components/observability/observability-dashboard";
+import { QualityRegimeBand } from "@/components/surveiller/quality-regime-band";
 import { QualityViewSwitch } from "@/components/surveiller/quality-view-switch";
 import { ReleaseVerdictRibbon } from "@/components/surveiller/release-verdict-ribbon";
 import { SignalBreachHero } from "@/components/surveiller/signal-breach-hero";
@@ -98,6 +99,10 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
       <div>
         <SignalBreachHero variant="gauge" />
       </div>
+      {/* The hero's verdict covers ONE population (judged responses). This band declares the
+          other planes and their rulers (ADR 0017 §Amendment 4), so "0 judged" can no longer
+          read as "nothing else is measured". Grouped by population, never summed. */}
+      <QualityRegimeBand />
       <ObservabilityDashboard
         agentScope={
           <GovScopeSection

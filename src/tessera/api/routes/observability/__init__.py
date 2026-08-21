@@ -215,6 +215,7 @@ from tessera.api.routes.observability.signals import (
     observability_metric_pairs,
     observability_obs_cost,
     observability_quality_nets,
+    observability_quality_regimes,
     observability_reliability,
     observability_routing,
     observability_score_series,

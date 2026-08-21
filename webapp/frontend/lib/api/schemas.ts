@@ -2189,6 +2189,32 @@ export const SLOReportSchema = z.object({
 });
 export type SLOReport = z.infer<typeof SLOReportSchema>;
 
+// The declared quality regime of every agent (ADR 0017 §Amendment 4). `business` is null on
+// every plane except business_scored — the two rulers' populations never share a field.
+export const QualityRegimeBusinessSchema = z.object({
+  runs_total: z.number().int(),
+  signals_declared: z.number().int(),
+  signals_scored: z.number().int(),
+  signals_unknown: z.number().int(),
+  signals_not_applicable: z.number().int(),
+});
+export const QualityRegimeEntrySchema = z.object({
+  agent_id: z.string(),
+  name: z.string(),
+  regime: z.enum(["llm_judged", "business_scored", "unscored"]),
+  reason_key: z.string().nullable(),
+  business: QualityRegimeBusinessSchema.nullable(),
+});
+export const QualityRegimesSchema = z.object({
+  regimes: z.array(QualityRegimeEntrySchema),
+  as_of: z.string().nullable(),
+  // period_days is null ON PURPOSE: the business counts span all history, and the response
+  // says so rather than letting a reader assume a period (instrumentation trap 2).
+  window: z.object({ period_days: z.number().nullable() }),
+});
+export type QualityRegimeEntry = z.infer<typeof QualityRegimeEntrySchema>;
+export type QualityRegimes = z.infer<typeof QualityRegimesSchema>;
+
 export const SeriesBucketSchema = z.object({
   start: z.string(),
   n: z.number().int(),

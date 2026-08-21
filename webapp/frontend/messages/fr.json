@@ -11190,5 +11190,21 @@
     "reason": {
       "demo_no_reference": "Agent de démonstration : aucun corpus de référence ni signal métier déclaré — aucun barème n'a de référent."
     }
+  },
+  "qualityRegimes": {
+    "title": "Deux plans, deux barèmes",
+    "subtitle": "Chaque agent déclare le barème qui le juge — les populations ne s'additionnent jamais.",
+    "llm_judged": {
+      "label": "Réponses jugées par le juge LLM",
+      "note": "mesuré par la bande ci-dessus"
+    },
+    "business_scored": {
+      "label": "Exécutions scorées par le barème métier",
+      "counts": "{runs, plural, one {# exécution} other {# exécutions}} · {declared} signaux · {scored} scorés · {unknown} inconnus · {na} non applicables · depuis l'origine",
+      "link": "Vue métier"
+    },
+    "unscored": {
+      "label": "Plan non scoré (déclaré)"
+    }
   }
 }

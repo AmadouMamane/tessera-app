@@ -4,18 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from collections import Counter
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends
 
+from tessera.agent.registry import QualityRegime, list_agents
 from tessera.api.routes.observability._common import (
     _agent_or_none,
     _bundles_for,
+    _business_runs_response,
     _data_availability_start,
     _read_audit_entries,
     _scores_for,
 )
 from tessera.api.security import require_bearer
+from tessera.observability.agentspec_projection import quality_regime_descriptor
+from tessera.observability.business_capabilities import business_capability_aggregate
 from tessera.observability import (
     anomalies as anomalies_mod,
     conformance as conformance_mod,
@@ -213,6 +218,53 @@ def observability_slo(
         if s.get("metric") == "faithfulness"
     ]
     return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at, "agent": agent}
+
+
+@router.get("/observability/quality-regimes")
+def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
+    """The declared quality regime of every registry agent (ADR 0017 §Amendment 4).
+
+    Reads each manifest's ``quality_regime`` through the one projector
+    (:func:`quality_regime_descriptor`) — a declaration, never an inference from wiring.
+    For a ``business_scored`` agent it joins the counts the Métier view already computes,
+    through the same builders, so the band and the Métier tab can never disagree (one
+    witness, ADR 0026). The two regimes' populations stay in separate fields with no
+    combined figure anywhere: two rulers never share a denominator.
+
+    Public aggregate surface (ADR 0009): counts and declarations only, no subject. The
+    business counts span all history as of ``at`` — stated by ``window.period_days: null``
+    rather than letting a reader assume a period nobody chose.
+    """
+    regimes: list[dict[str, object]] = []
+    for agent in list_agents():
+        descriptor = quality_regime_descriptor(agent)
+        if descriptor is None:
+            continue  # unreachable in the shipped registry (conformance ratchet)
+        entry: dict[str, object] = {**descriptor, "name": agent.name, "business": None}
+        if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:
+            aggregate = business_capability_aggregate(agent_id=agent.id, at=at)
+            raw_signals = aggregate.get("business_signals")
+            signal_rows = raw_signals if isinstance(raw_signals, list) else []
+            statuses = Counter(str(row.get("status")) for row in signal_rows)
+            runs = _business_runs_response(
+                at=at,
+                agent_id=agent.id,
+                workflow_id=None,
+                conversation_id=None,
+                turn_id=None,
+                case_id=None,
+                capability_id=None,
+                limit=1,
+            )
+            entry["business"] = {
+                "runs_total": runs["runs_total"],
+                "signals_declared": len(signal_rows),
+                "signals_scored": statuses.get("scored", 0),
+                "signals_unknown": statuses.get("unknown", 0),
+                "signals_not_applicable": statuses.get("not_applicable", 0),
+            }
+        regimes.append(entry)
+    return {"regimes": regimes, "as_of": at, "window": {"period_days": None}}
 
 
 @router.get("/observability/trend")
