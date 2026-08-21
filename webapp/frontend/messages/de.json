@@ -11205,6 +11205,7 @@
     },
     "unscored": {
       "label": "Nicht bewertete Ebene (deklariert)"
-    }
+    },
+    "unreadable": "Die Deklarationen konnten nicht gelesen werden — keine Ebene wird bestätigt oder verneint."
   }
 }

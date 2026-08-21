@@ -19,8 +19,6 @@ from tessera.api.routes.observability._common import (
     _scores_for,
 )
 from tessera.api.security import require_bearer
-from tessera.observability.agentspec_projection import quality_regime_descriptor
-from tessera.observability.business_capabilities import business_capability_aggregate
 from tessera.observability import (
     anomalies as anomalies_mod,
     conformance as conformance_mod,
@@ -38,6 +36,8 @@ from tessera.observability import (
     trends as trends_mod,
     whatchanged as whatchanged_mod,
 )
+from tessera.observability.agentspec_projection import quality_regime_descriptor
+from tessera.observability.business_capabilities import business_capability_aggregate
 from tessera.observability.control_series import compute_control_series
 from tessera.observability.fleet import registered_agent_ids
 from tessera.observability.spine.adapters import read_scores

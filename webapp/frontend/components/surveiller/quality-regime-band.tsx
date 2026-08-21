@@ -36,11 +36,27 @@ export function QualityRegimeBand() {
   // The manifest reason keys live under the `quality_regime.` namespace (validated against
   // all three catalogues by the backend conformance gate, so a declared key always resolves).
   const tReason = useTranslations("quality_regime");
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["quality-regimes"],
     queryFn: ({ signal }) => fetchQualityRegimes(signal),
     staleTime: 60_000,
   });
+  // A failed read is not an empty result: a band that silently vanished would recreate the
+  // very defect it exists to fix — a measured plane reading as "nothing else is measured".
+  // The blind state is named (ADR 0026); only the transient pending state renders nothing.
+  if (isError) {
+    return (
+      <section
+        aria-label={t("title")}
+        className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3"
+      >
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <h2 className="text-[0.8rem] font-semibold">{t("title")}</h2>
+          <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("unreadable")}</p>
+        </div>
+      </section>
+    );
+  }
   if (!data) return null;
 
   const byRegime = new Map<string, QualityRegimeEntry[]>();

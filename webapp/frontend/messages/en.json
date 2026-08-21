@@ -11191,6 +11191,7 @@
     },
     "unscored": {
       "label": "Unscored plane (declared)"
-    }
+    },
+    "unreadable": "The declarations could not be read — no plane is asserted or denied."
   }
 }

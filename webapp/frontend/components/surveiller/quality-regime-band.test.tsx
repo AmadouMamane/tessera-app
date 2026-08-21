@@ -19,10 +19,10 @@ import messages from "@/messages/fr.json";
  *  · a regime with no agents renders no row (rows are data, never furniture).
  */
 
-const regimes = vi.hoisted(() => ({ data: null as unknown }));
+const regimes = vi.hoisted(() => ({ data: null as unknown, isError: false }));
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: () => ({ data: regimes.data }),
+  useQuery: () => ({ data: regimes.data, isError: regimes.isError }),
 }));
 
 import { QualityRegimeBand } from "./quality-regime-band";
@@ -139,7 +139,20 @@ describe("the grouped quality-regime band", () => {
 
   it("renders nothing at all before the declaration is read (no invented planes)", () => {
     regimes.data = null;
+    regimes.isError = false;
     const { container } = render(wrap(<QualityRegimeBand />));
     expect(container.textContent).toBe("");
+  });
+
+  it("names the blind spot when the read FAILED — never a silent absence", () => {
+    // A failed read is not an empty result: the band vanishing on error would recreate the
+    // defect it exists to fix. The blind state says "could not read" and asserts no plane.
+    regimes.data = null;
+    regimes.isError = true;
+    render(wrap(<QualityRegimeBand />));
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/n'ont pas pu être lues/);
+    expect(text).not.toMatch(/Réponses jugées|Exécutions scorées|Plan non scoré/);
+    regimes.isError = false;
   });
 });

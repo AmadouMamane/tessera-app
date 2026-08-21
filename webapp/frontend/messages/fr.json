@@ -11205,6 +11205,7 @@
     },
     "unscored": {
       "label": "Plan non scoré (déclaré)"
-    }
+    },
+    "unreadable": "Les déclarations n'ont pas pu être lues — aucun plan n'est affirmé ni infirmé."
   }
 }
