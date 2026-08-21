@@ -14,6 +14,22 @@ import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSLO } from "@/lib/api/client";
 
+/**
+ * A RATE IS NOT PUBLISHED UNTIL THE SAMPLE CAN CARRY ONE.
+ *
+ * Below this many judged responses, one observation moves the percentage by a full point or
+ * more — so "0,0 %" is a count wearing a percent sign, and its decimal is noise. The operator
+ * saw the consequence on 2026-08-21: over seven days the fleet had **one** judged response, it
+ * scored 0.10 against a 0.70 bar, and the band led with "0,0 % des réponses au niveau exigé" —
+ * literally true (0 of 1) and read as a systemic collapse. The sample was on screen, in the
+ * second line, in smaller type.
+ *
+ * 100 is not a taste: it is the point at which one response is worth less than one percentage
+ * point. Under it the headline states the COUNTS, which cannot be misread; over it the rate is
+ * meaningful and leads, with its sample still beside it in the burn line.
+ */
+const MIN_N_FOR_A_RATE = 100;
+
 const METRIC_KEY = {
   faithfulness: "metric.faithfulness",
   relevance: "metric.relevance",
@@ -116,12 +132,19 @@ export function SignalBreachHero({
     );
   }
 
+  // Enough judged responses for a rate to mean something? The two branches below differ only
+  // in what LEADS: a percentage, or the counts it was computed from.
+  const rateIsPublishable = data.n >= MIN_N_FOR_A_RATE;
+
   if (!data.breaching) {
-    const okTitle = t("okShort", {
-      metric,
-      rate: pct(data.good_rate),
-      threshold: pct(data.target),
-    });
+    const okTitle = rateIsPublishable
+      ? t("okShort", { metric, rate: pct(data.good_rate), threshold: pct(data.target) })
+      : t("okCount", {
+          metric,
+          good: data.n_good,
+          n: data.n,
+          threshold: pct(data.target),
+        });
     if (variant === "slim") {
       return <AlertRibbon variant="slim" severity="ok" icon={ShieldCheck} title={okTitle} />;
     }
@@ -132,20 +155,30 @@ export function SignalBreachHero({
         icon={ShieldCheck}
         eyebrow={t("title")}
         title={okTitle}
-        gauge={{
-          value: data.good_rate,
-          threshold: data.target,
-          thresholdLabel: pctTight(data.target),
-        }}
+        // A needle is a percentage drawn instead of written, so it inherits the same rule: on
+        // too small a sample it is the fabricated precision again, in a second notation. This
+        // is the reasoning already committed for `n === 0`, applied one step further along.
+        gauge={
+          rateIsPublishable
+            ? {
+                value: data.good_rate,
+                threshold: data.target,
+                thresholdLabel: pctTight(data.target),
+              }
+            : undefined
+        }
       />
     );
   }
 
-  const title = t("breachedShort", {
-    metric,
-    rate: pct(data.good_rate),
-    threshold: pct(data.target),
-  });
+  const title = rateIsPublishable
+    ? t("breachedShort", { metric, rate: pct(data.good_rate), threshold: pct(data.target) })
+    : t("breachedCount", {
+        metric,
+        good: data.n_good,
+        n: data.n,
+        threshold: pct(data.target),
+      });
   const burn = t("burn", {
     x: decimal(data.burn_rate),
     bad: data.n_bad,
@@ -187,17 +220,33 @@ export function SignalBreachHero({
       icon={TriangleAlert}
       eyebrow={t("title")}
       title={title}
-      gauge={{
-        value: data.good_rate,
-        threshold: data.target,
-        thresholdLabel: pctTight(data.target),
-        caption: (
-          <span className="inline-flex items-center gap-1.5">
-            <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
-            {burn}
-          </span>
-        ),
-      }}
+      // The ribbon falls back to `meta` when there is no gauge, so the burn line — which
+      // carries the SAMPLE — survives the needle's removal instead of going with it.
+      meta={
+        <span className="inline-flex items-center gap-1.5 tabular-nums">
+          <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
+          {burn}
+        </span>
+      }
+      gauge={
+        // Same rule as the green band and as `n === 0`: a needle is a percentage drawn rather
+        // than written, so too small a sample forbids it in either notation. The band keeps its
+        // red severity, its icon and the burn line — the alarm survives; only the false
+        // precision goes.
+        rateIsPublishable
+          ? {
+              value: data.good_rate,
+              threshold: data.target,
+              thresholdLabel: pctTight(data.target),
+              caption: (
+                <span className="inline-flex items-center gap-1.5">
+                  <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
+                  {burn}
+                </span>
+              ),
+            }
+          : undefined
+      }
       action={remediate}
     />
   );

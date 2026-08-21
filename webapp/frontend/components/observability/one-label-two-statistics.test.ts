@@ -23,10 +23,30 @@ import { describe, expect, it } from "vitest";
 const LOCALES = ["fr", "en", "de"] as const;
 
 /** The phrase each locale uses to say "a share OF RESPONSES", not "the metric's value". */
+/**
+ * The NOUN is what the rule is about — a share of *responses*, never a bare number beside a
+ * metric name. An adjective between the article and the noun is allowed, and one arrived on
+ * 2026-08-21: "of JUDGED responses", because the online judge only runs on the `/chat` route
+ * and `recouvrement`'s 261 turns are never scored at all. Narrowing the population is exactly
+ * the kind of honesty this file exists to protect, so the pattern had to stop matching a fixed
+ * phrase and start matching the shape.
+ */
 const NAMES_A_SHARE_OF_RESPONSES = {
-  fr: /des réponses/u,
-  en: /of responses/u,
-  de: /der Antworten/u,
+  fr: /des (?:\w+ )?réponses/u,
+  en: /of (?:\w+ )?responses/u,
+  de: /der (?:\w+ )?Antworten/u,
+} as const;
+
+/**
+ * The count form, added 2026-08-21, states how many responses were judged instead of what share
+ * passed — because below 100 judged responses one of them is worth more than a percentage point,
+ * so a rate there is a count wearing a percent sign. Different sentence, SAME rule: it must name
+ * the responses, never leave a bare number beside the metric.
+ */
+const NAMES_A_COUNT_OF_RESPONSES = {
+  fr: /\{n, plural[^}]*réponses? jugées?/u,
+  en: /\{n, plural[^}]*judged responses?/u,
+  de: /\{n, plural[^}]*bewerteten Antwort/u,
 } as const;
 
 function catalogue(locale: string) {
@@ -37,6 +57,22 @@ function catalogue(locale: string) {
 }
 
 describe("the SLO ribbon says WHICH statistic it is showing", () => {
+  it.each(LOCALES)("%s names the responses in every COUNT sentence too", (locale) => {
+    const { signalHero } = catalogue(locale);
+    for (const key of ["breachedCount", "okCount"]) {
+      const sentence = signalHero[key];
+      expect(sentence, `signalHero.${key} is missing`).toBeTruthy();
+      expect(sentence, `signalHero.${key} must name the responses it counted`).toMatch(
+        NAMES_A_COUNT_OF_RESPONSES[locale],
+      );
+      // A count sentence must NOT also carry a rate: showing both is how the reader is invited
+      // to trust the percentage the sample cannot support.
+      expect(sentence, `signalHero.${key} must not smuggle a rate back in`).not.toMatch(
+        /\{rate\}/u,
+      );
+    }
+  });
+
   it.each(LOCALES)("%s names a share of responses in every verdict sentence", (locale) => {
     const { signalHero } = catalogue(locale);
     for (const key of ["breached", "ok", "breachedShort", "okShort"]) {
