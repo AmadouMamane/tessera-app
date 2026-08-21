@@ -11193,8 +11193,10 @@
       "moreAgents": "{count, plural, one {+# more checked agent} other {+# more checked agents}}"
     },
     "unscored": {
-      "label": "Responses not rated (a declared choice)"
+      "label": "Responses not rated (a declared choice)",
+      "observedNote": "{observed, plural, one {# of these agents already publishes its activity and appears in the cockpit's metrics — only its answer rating is missing} other {# of these agents already publish their activity and appear in the cockpit's metrics — only their answer rating is missing}}"
     },
-    "unreadable": "Cannot read who is rated how — the information is unavailable right now."
+    "unreadable": "Cannot read who is rated how — the information is unavailable right now.",
+    "observedChip": "Publishes its activity — tracked in the cockpit's metrics"
   }
 }

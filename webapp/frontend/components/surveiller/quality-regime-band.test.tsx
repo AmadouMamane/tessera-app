@@ -36,6 +36,7 @@ interface Entry {
   name: string;
   regime: "llm_judged" | "business_scored" | "unscored";
   reason_key: string | null;
+  observable: boolean;
   business: {
     runs_total: number;
     signals_declared: number;
@@ -54,6 +55,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         name: "Support Client",
         regime: "llm_judged",
         reason_key: null,
+        observable: true,
         business: null,
       },
       {
@@ -61,6 +63,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         name: "Onboarding",
         regime: "llm_judged",
         reason_key: null,
+        observable: true,
         business: null,
       },
       {
@@ -68,6 +71,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         name: "Recouvrement",
         regime: "business_scored",
         reason_key: null,
+        observable: true,
         business: {
           runs_total: 67,
           signals_declared: 10,
@@ -81,6 +85,23 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         name: "Hello Agent",
         regime: "unscored",
         reason_key: "quality_regime.reason.demo_no_reference",
+        observable: true,
+        business: null,
+      },
+      {
+        agent_id: "turn-agent",
+        name: "Turn Agent",
+        regime: "unscored",
+        reason_key: "quality_regime.reason.demo_no_reference",
+        observable: false,
+        business: null,
+      },
+      {
+        agent_id: "duplex-agent",
+        name: "Duplex Agent",
+        regime: "unscored",
+        reason_key: "quality_regime.reason.demo_no_reference",
+        observable: true,
         business: null,
       },
     ],
@@ -109,11 +130,15 @@ describe("the answer-quality rating band", () => {
     // quality altogether" — cross-cutting controls cover the whole fleet.
     expect(text).toMatch(/couvrent tous les agents/);
     expect(text).toMatch(/Réponses notées par un juge IA/);
-    expect(text).toMatch(/Support Client · Onboarding/);
+    expect(text).toMatch(/Support Client/);
+    expect(text).toMatch(/Onboarding/);
     expect(text).toMatch(/Exécutions vérifiées par des contrôles métier/);
     expect(text).toMatch(/Réponses non notées/);
     // The declared blind spot renders ITS reason in the reader's language — never a gap.
     expect(text).toMatch(/rien contre quoi noter/);
+    // …and unrated NEVER reads as unseen: two of the three demo agents publish their
+    // activity, and the card says so with the count (operator feedback, 2026-08-21).
+    expect(text).toMatch(/2 de ces agents publient déjà leur activité/);
     // Operator feedback 2026-08-21: screen language stays human — no registry jargon.
     expect(text).not.toMatch(/barème|population|régime/i);
   });
@@ -153,6 +178,7 @@ describe("the answer-quality rating band", () => {
       name: `Agent ${String(i + 1).padStart(3, "0")}`,
       regime: "llm_judged" as const,
       reason_key: null,
+      observable: true,
       business: null,
     }));
     const unscored: Entry[] = Array.from({ length: 49 }, (_, i) => ({
@@ -160,6 +186,7 @@ describe("the answer-quality rating band", () => {
       name: `Démo ${String(i + 1).padStart(3, "0")}`,
       regime: "unscored" as const,
       reason_key: "quality_regime.reason.demo_no_reference",
+      observable: false,
       business: null,
     }));
     const business = fleet.regimes.find((entry) => entry.regime === "business_scored");

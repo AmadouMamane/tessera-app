@@ -37,7 +37,7 @@ from tessera.observability import (
     trends as trends_mod,
     whatchanged as whatchanged_mod,
 )
-from tessera.observability.agentspec_projection import quality_regime_descriptor
+from tessera.observability.agentspec_projection import declares_telemetry, quality_regime_descriptor
 from tessera.observability.business_capabilities import business_signal_rows
 from tessera.observability.control_series import compute_control_series
 from tessera.observability.fleet import registered_agent_ids
@@ -241,7 +241,16 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
         descriptor = quality_regime_descriptor(agent)
         if descriptor is None:
             continue  # unreachable in the shipped registry (conformance ratchet)
-        entry: dict[str, object] = {**descriptor, "name": agent.name, "business": None}
+        # `observable` rides along (the declared publish-activity contract, ADR 0017 §3):
+        # an unrated agent can still be a WATCHED one — turns, telemetry, transversal
+        # controls — and the band must be able to say so instead of reading as "absent
+        # from the cockpit's metrics altogether" (operator feedback, 2026-08-21).
+        entry: dict[str, object] = {
+            **descriptor,
+            "name": agent.name,
+            "observable": declares_telemetry(agent),
+            "business": None,
+        }
         if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:
             # ONE ledger read per business-scored agent, both derivations over it — the
             # same two builders the Métier tab quotes (`business_signal_rows`,

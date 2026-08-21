@@ -11207,8 +11207,10 @@
       "moreAgents": "{count, plural, one {+# weiterer geprüfter Agent} other {+# weitere geprüfte Agenten}}"
     },
     "unscored": {
-      "label": "Antworten ohne Bewertung (deklarierte Entscheidung)"
+      "label": "Antworten ohne Bewertung (deklarierte Entscheidung)",
+      "observedNote": "{observed, plural, one {# dieser Agenten veröffentlicht bereits seine Aktivität und erscheint in den Cockpit-Metriken — nur die Bewertung seiner Antworten fehlt} other {# dieser Agenten veröffentlichen bereits ihre Aktivität und erscheinen in den Cockpit-Metriken — nur die Bewertung ihrer Antworten fehlt}}"
     },
-    "unreadable": "Nicht lesbar, wer wie bewertet wird — die Information ist derzeit nicht verfügbar."
+    "unreadable": "Nicht lesbar, wer wie bewertet wird — die Information ist derzeit nicht verfügbar.",
+    "observedChip": "Veröffentlicht seine Aktivität — in den Cockpit-Metriken erfasst"
   }
 }

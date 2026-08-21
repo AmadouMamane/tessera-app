@@ -11207,8 +11207,10 @@
       "moreAgents": "{count, plural, one {+# autre agent contrôlé} other {+# autres agents contrôlés}}"
     },
     "unscored": {
-      "label": "Réponses non notées (choix déclaré)"
+      "label": "Réponses non notées (choix déclaré)",
+      "observedNote": "{observed, plural, one {# de ces agents publie déjà son activité et apparaît dans les métriques du cockpit — seule la notation de ses réponses est absente} other {# de ces agents publient déjà leur activité et apparaissent dans les métriques du cockpit — seule la notation de leurs réponses est absente}}"
     },
-    "unreadable": "Impossible de lire qui est noté comment — l'information est indisponible pour le moment."
+    "unreadable": "Impossible de lire qui est noté comment — l'information est indisponible pour le moment.",
+    "observedChip": "Publie son activité — suivi dans les métriques du cockpit"
   }
 }

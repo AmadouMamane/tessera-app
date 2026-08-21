@@ -11,7 +11,10 @@ from __future__ import annotations
 
 from tessera.agent.registry import list_agents
 from tessera.api.routes.observability import observability_quality_regimes
-from tessera.observability.agentspec_projection import quality_regime_descriptor
+from tessera.observability.agentspec_projection import (
+    declares_telemetry,
+    quality_regime_descriptor,
+)
 
 
 def _entries() -> dict[str, dict[str, object]]:
@@ -32,6 +35,10 @@ def test_every_registry_agent_appears_with_its_declared_regime() -> None:
         assert entry["regime"] == declared["regime"]
         assert entry["reason_key"] == declared["reason_key"]
         assert entry["name"] == agent.name
+        # An unrated agent can still be a watched one: `observable` is the same declared
+        # publish-activity contract the fleet card reads, riding along so the band can say
+        # "not rated, still observed" instead of implying absence from the cockpit.
+        assert entry["observable"] == declares_telemetry(agent)
 
 
 def test_business_counts_exist_exactly_on_the_business_scored_plane() -> None:

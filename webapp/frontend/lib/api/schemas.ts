@@ -2203,6 +2203,9 @@ export const QualityRegimeEntrySchema = z.object({
   name: z.string(),
   regime: z.enum(["llm_judged", "business_scored", "unscored"]),
   reason_key: z.string().nullable(),
+  // The declared publish-activity contract (same fact the fleet card reads): an unrated
+  // agent can still be a watched one, and the band says so instead of implying absence.
+  observable: z.boolean(),
   business: QualityRegimeBusinessSchema.nullable(),
 });
 export const QualityRegimesSchema = z.object({
