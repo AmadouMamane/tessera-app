@@ -323,6 +323,42 @@ long-lived server on an agent worktree. Every worktree mutation (checkout / park
 refuses to start if the port is already in use. Full rationale:
 `docs/status/0017-execution-status.md` (Preconditions).
 
+## Instrumentation traps (measured, and they all answer a QUESTION YOU DID NOT ASK)
+
+These four cost a wrong conclusion each, more than once. What they share is the shape this
+repository keeps re-learning: **none of them errors.** Every one returns a plausible answer to a
+neighbouring question, so the reader is confident and wrong (ADR 0026).
+
+**1 — The owned score table is `tessera.eval_online_scores`, never `default.scores`.**
+`default.*` in ClickHouse belongs to LANGFUSE. Tessera's online judge writes its own table in the
+`tessera` database (`emit_score` → `clickhouse_scores.record_online_score`). Querying `default.scores`
+for recent quality returns EMPTY and reads as "nothing has been scored in forty days" — which was
+believed, and was false. Same trap in the other direction: a TTL applied to `default.scores` would
+prune Langfuse's rows and leave Tessera's untouched.
+
+**2 — Each observability endpoint speaks its own window dialect, and an unreadable one means ALL HISTORY.**
+`/observability/slo` takes `?days=7`. `/observability/fleet` takes `?period=d7` — the rail's
+vocabulary (`h24` · `d7` · `d14` · `d30`). A parameter this endpoint does not declare is dropped by
+FastAPI without complaint, and `parse_period_days()` returns `None` for anything it cannot read.
+`None` means *all history*, **deliberately** — its own docstring says refusing to guess is the
+point, because coercing an unreadable window into 7 days would put a period nobody chose behind
+numbers they are about to act on. The consequence for a prober: `?days=7` on `/fleet` answers with
+LIFETIME totals, no error, no empty `window`. Measured 2026-08-21 — `?days=7` gave 261 turns for
+`recouvrement`, `?period=d7` gave 4. Read `window.period_days` in the response before believing any
+figure; it is `null` when nothing was applied.
+
+**3 — Pass the ClickHouse password through the ENVIRONMENT, never as an argument.**
+`docker exec -e CLICKHOUSE_PASSWORD="$PW" <container> clickhouse-client -q "…"`. The
+`--password X` form is rejected by the client *and* echoes the secret into the error text. The
+value lives in the agent container's env, so read it from there rather than from a file.
+
+**4 — Never rewrite a message catalogue with `json.dumps` alone.**
+`json.dumps(indent=2)` expands the inline arrays biome keeps on one line: 104 lines of diff for
+15 lines of intent, twice in one session. And deleting a key by hand leaves an orphan comma that
+breaks the JSON. The safe pair is `json.dumps(…, indent=2)` **then** `biome check messages/ --write`
+— biome is the formatter of record here, so it restores the canonical shape and the diff collapses
+to what was actually changed. Verify with `git diff --stat` before committing.
+
 ## Decision records
 
 Read these before making any architecture-shaping change. They are short and binding.
