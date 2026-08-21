@@ -11188,24 +11188,27 @@
   },
   "quality_regime": {
     "reason": {
-      "demo_no_reference": "Agent de démonstration : aucun corpus de référence ni signal métier déclaré — aucun barème n'a de référent."
+      "demo_no_reference": "Agent de démonstration : aucun corpus de référence ni contrôle métier déclaré — il n'y a rien contre quoi noter ses réponses."
     }
   },
   "qualityRegimes": {
-    "title": "Deux plans, deux barèmes",
-    "subtitle": "Chaque agent déclare le barème qui le juge — les populations ne s'additionnent jamais.",
+    "title": "Comment la qualité est notée",
+    "subtitle": "Les contrôles transverses — sécurité, conformité, coûts — couvrent tous les agents. Pour la qualité des réponses, chaque agent déclare sa méthode de notation, et les chiffres de deux méthodes ne se mélangent jamais.",
+    "agentCount": "{count, plural, one {# agent} other {# agents}}",
+    "moreNames": "{count, plural, one {+# autre} other {+# autres}}",
     "llm_judged": {
-      "label": "Réponses jugées par le juge LLM",
-      "note": "mesuré par la bande ci-dessus"
+      "label": "Réponses notées par un juge IA",
+      "note": "la jauge ci-dessus mesure ces agents"
     },
     "business_scored": {
-      "label": "Exécutions scorées par le barème métier",
-      "counts": "{runs, plural, one {# exécution} other {# exécutions}} · {declared} signaux · {scored} scorés · {unknown} inconnus · {na} non applicables · depuis l'origine",
-      "link": "Vue métier"
+      "label": "Exécutions vérifiées par des contrôles métier automatiques",
+      "counts": "{runs, plural, one {# exécution contrôlée} other {# exécutions contrôlées}} · {declared} contrôles · {scored} évalués · {unknown} indéterminés · {na} sans objet · depuis le début",
+      "link": "Vue métier",
+      "moreAgents": "{count, plural, one {+# autre agent contrôlé} other {+# autres agents contrôlés}}"
     },
     "unscored": {
-      "label": "Plan non scoré (déclaré)"
+      "label": "Réponses non notées (choix déclaré)"
     },
-    "unreadable": "Les déclarations n'ont pas pu être lues — aucun plan n'est affirmé ni infirmé."
+    "unreadable": "Impossible de lire qui est noté comment — l'information est indisponible pour le moment."
   }
 }

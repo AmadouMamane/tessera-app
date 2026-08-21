@@ -11174,24 +11174,27 @@
   },
   "quality_regime": {
     "reason": {
-      "demo_no_reference": "Demo agent: no reference corpus and no declared business signals — no ruler has a referent."
+      "demo_no_reference": "Demo agent: no reference corpus and no declared business controls — there is nothing to rate its answers against."
     }
   },
   "qualityRegimes": {
-    "title": "Two planes, two rulers",
-    "subtitle": "Each agent declares the ruler that judges it — the populations are never summed.",
+    "title": "How quality is rated",
+    "subtitle": "Cross-cutting controls — security, compliance, cost — cover every agent. For answer quality, each agent declares its rating method, and figures from two methods are never blended.",
+    "agentCount": "{count, plural, one {# agent} other {# agents}}",
+    "moreNames": "{count, plural, one {+# more} other {+# more}}",
     "llm_judged": {
-      "label": "Responses judged by the LLM judge",
-      "note": "measured by the band above"
+      "label": "Responses rated by an AI judge",
+      "note": "the gauge above measures these agents"
     },
     "business_scored": {
-      "label": "Runs scored by the business ruler",
-      "counts": "{runs, plural, one {# run} other {# runs}} · {declared} signals · {scored} scored · {unknown} unknown · {na} not applicable · all history",
-      "link": "Business view"
+      "label": "Runs checked by automated business controls",
+      "counts": "{runs, plural, one {# checked run} other {# checked runs}} · {declared} controls · {scored} evaluated · {unknown} undetermined · {na} not applicable · since the beginning",
+      "link": "Business view",
+      "moreAgents": "{count, plural, one {+# more checked agent} other {+# more checked agents}}"
     },
     "unscored": {
-      "label": "Unscored plane (declared)"
+      "label": "Responses not rated (a declared choice)"
     },
-    "unreadable": "The declarations could not be read — no plane is asserted or denied."
+    "unreadable": "Cannot read who is rated how — the information is unavailable right now."
   }
 }

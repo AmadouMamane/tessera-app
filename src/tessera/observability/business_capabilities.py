@@ -354,6 +354,18 @@ def _business_signals(
     return signal_rows
 
 
+def business_signal_rows(
+    agent_id: str | None, rows: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    """Public seam over :func:`_business_signals` — the SAME rows the Métier tab renders.
+
+    Exists so another read surface (the quality-regimes route) can quote this builder over
+    a ledger read it already holds, instead of calling the whole capability aggregate a
+    second time: one read, one derivation, and the two surfaces can never disagree.
+    """
+    return _business_signals(agent_id, rows)
+
+
 def _governed(agent_id: str | None) -> bool:
     if not agent_id:
         return False

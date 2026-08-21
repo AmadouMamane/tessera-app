@@ -11188,24 +11188,27 @@
   },
   "quality_regime": {
     "reason": {
-      "demo_no_reference": "Demo-Agent: kein Referenzkorpus und keine deklarierten Fachsignale — kein Maßstab hat einen Bezugspunkt."
+      "demo_no_reference": "Demo-Agent: kein Referenzkorpus und keine deklarierten Fachkontrollen — es gibt nichts, wogegen seine Antworten bewertet werden könnten."
     }
   },
   "qualityRegimes": {
-    "title": "Zwei Ebenen, zwei Maßstäbe",
-    "subtitle": "Jeder Agent deklariert den Maßstab, der ihn beurteilt — die Populationen werden nie addiert.",
+    "title": "Wie die Qualität bewertet wird",
+    "subtitle": "Übergreifende Kontrollen — Sicherheit, Konformität, Kosten — decken alle Agenten ab. Für die Antwortqualität deklariert jeder Agent seine Bewertungsmethode, und Zahlen zweier Methoden werden nie vermischt.",
+    "agentCount": "{count, plural, one {# Agent} other {# Agenten}}",
+    "moreNames": "{count, plural, one {+# weiterer} other {+# weitere}}",
     "llm_judged": {
-      "label": "Antworten, vom LLM-Richter bewertet",
-      "note": "gemessen vom Band darüber"
+      "label": "Antworten, von einem KI-Richter bewertet",
+      "note": "die Anzeige darüber misst diese Agenten"
     },
     "business_scored": {
-      "label": "Ausführungen, gemessen am Fach-Maßstab",
-      "counts": "{runs, plural, one {# Ausführung} other {# Ausführungen}} · {declared} Signale · {scored} bewertet · {unknown} unbekannt · {na} nicht anwendbar · gesamte Historie",
-      "link": "Fachansicht"
+      "label": "Ausführungen, durch automatische Fachkontrollen geprüft",
+      "counts": "{runs, plural, one {# geprüfte Ausführung} other {# geprüfte Ausführungen}} · {declared} Kontrollen · {scored} bewertet · {unknown} unbestimmt · {na} nicht anwendbar · seit Beginn",
+      "link": "Fachansicht",
+      "moreAgents": "{count, plural, one {+# weiterer geprüfter Agent} other {+# weitere geprüfte Agenten}}"
     },
     "unscored": {
-      "label": "Nicht bewertete Ebene (deklariert)"
+      "label": "Antworten ohne Bewertung (deklarierte Entscheidung)"
     },
-    "unreadable": "Die Deklarationen konnten nicht gelesen werden — keine Ebene wird bestätigt oder verneint."
+    "unreadable": "Nicht lesbar, wer wie bewertet wird — die Information ist derzeit nicht verfügbar."
   }
 }

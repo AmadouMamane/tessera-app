@@ -13,14 +13,15 @@ from tessera.agent.registry import QualityRegime, list_agents
 from tessera.api.routes.observability._common import (
     _agent_or_none,
     _bundles_for,
-    _business_runs_response,
     _data_availability_start,
     _read_audit_entries,
     _scores_for,
+    _workflow_runs_from_rows,
 )
 from tessera.api.security import require_bearer
 from tessera.observability import (
     anomalies as anomalies_mod,
+    business_events as business_events_mod,
     conformance as conformance_mod,
     control_signals as control_signals_mod,
     cost_anomaly as cost_anomaly_mod,
@@ -37,7 +38,7 @@ from tessera.observability import (
     whatchanged as whatchanged_mod,
 )
 from tessera.observability.agentspec_projection import quality_regime_descriptor
-from tessera.observability.business_capabilities import business_capability_aggregate
+from tessera.observability.business_capabilities import business_signal_rows
 from tessera.observability.control_series import compute_control_series
 from tessera.observability.fleet import registered_agent_ids
 from tessera.observability.spine.adapters import read_scores
@@ -242,22 +243,16 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             continue  # unreachable in the shipped registry (conformance ratchet)
         entry: dict[str, object] = {**descriptor, "name": agent.name, "business": None}
         if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:
-            aggregate = business_capability_aggregate(agent_id=agent.id, at=at)
-            raw_signals = aggregate.get("business_signals")
-            signal_rows = raw_signals if isinstance(raw_signals, list) else []
+            # ONE ledger read per business-scored agent, both derivations over it — the
+            # same two builders the Métier tab quotes (`business_signal_rows`,
+            # `_workflow_runs_from_rows`), so the figures cannot disagree with it. This is
+            # the scaling profile of the route: registry iteration is free, only the
+            # business-scored agents cost a read each.
+            rows = business_events_mod.business_event_rows(at=at, agent_id=agent.id)
+            signal_rows = business_signal_rows(agent.id, rows)
             statuses = Counter(str(row.get("status")) for row in signal_rows)
-            runs = _business_runs_response(
-                at=at,
-                agent_id=agent.id,
-                workflow_id=None,
-                conversation_id=None,
-                turn_id=None,
-                case_id=None,
-                capability_id=None,
-                limit=1,
-            )
             entry["business"] = {
-                "runs_total": runs["runs_total"],
+                "runs_total": len(_workflow_runs_from_rows(rows)),
                 "signals_declared": len(signal_rows),
                 "signals_scored": statuses.get("scored", 0),
                 "signals_unknown": statuses.get("unknown", 0),
