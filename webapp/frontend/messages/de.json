@@ -11212,6 +11212,23 @@
       "observedNote": "{observed, plural, one {# dieser Agenten veröffentlicht bereits seine Aktivität und erscheint in den Cockpit-Metriken — nur die Bewertung seiner Antworten fehlt} other {# dieser Agenten veröffentlichen bereits ihre Aktivität und erscheinen in den Cockpit-Metriken — nur die Bewertung ihrer Antworten fehlt}}"
     },
     "unreadable": "Nicht lesbar, wer wie bewertet wird — die Information ist derzeit nicht verfügbar.",
-    "observedChip": "Veröffentlicht seine Aktivität — in den Cockpit-Metriken erfasst"
+    "observedChip": "Veröffentlicht seine Aktivität — in den Cockpit-Metriken erfasst",
+    "chip": {
+      "llm_judged": "Qualität: KI-Prüfer",
+      "business_scored": "Qualität: Fachkontrollen",
+      "unscored": "Qualität: nicht bewertet",
+      "unreadable": "Qualität: nicht lesbar"
+    },
+    "judgeCard": {
+      "business": "Dieser Agent wird nicht vom KI-Prüfer bewertet: seine Ausführungen werden durch automatische Fachkontrollen geprüft.",
+      "unscored": "Dieser Agent wird nicht bewertet: eine erklärte Entscheidung, erläutert auf der Seite KI-Qualität."
+    },
+    "byLanguage": {
+      "title": "Nach Sprache",
+      "rated": "{rate} auf dem geforderten Niveau · {n, plural, one {# bewertete Antwort} other {# bewertete Antworten}}",
+      "counts": "{good}/{n} Antworten auf dem geforderten Niveau",
+      "none": "keine bewerteten Antworten",
+      "unreadable": "Sprachraten derzeit nicht lesbar."
+    }
   }
 }

@@ -65,9 +65,11 @@ async def _read_scores(scope: Scope) -> dict[str, object]:
 
 
 async def _read_slo(scope: Scope) -> dict[str, object]:
-    faithfulness = _faithfulness(current_context().scores(scope))
+    # The same one derivation the standalone route calls (`slo_payload`): headline +
+    # per-language slices, so the snapshot slice and the route stay byte-identical by
+    # construction (test_spine_signals_parity witnesses it).
     return {
-        **asdict(slo_mod.compute_slo(faithfulness)),
+        **slo_mod.slo_payload(current_context().scores(scope)),
         "as_of": scope.at,
         "agent": scope.agent_param,
     }

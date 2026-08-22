@@ -212,13 +212,19 @@ def observability_slo(
     log as of instant T (as-of-T read, ADR 0011). ``agent`` scopes the SLO to one
     agent's own scored turns (``all`` = org view); an agent with no scored turns
     yet reads honestly empty (``n=0``). ``days`` scopes it to the selected period.
+
+    ``by_language`` slices the SAME rows by the language each score row carries —
+    one read, one window, three sub-populations of the one judged plane — so the
+    cockpit can show where multilingual quality diverges. A language nobody spoke
+    reads ``n=0``, never a rate.
     """
-    faithfulness = [
-        float(s["score"])  # type: ignore[arg-type]
-        for s in _scores_for(at, _agent_or_none(agent), parse_period_days(days))
-        if s.get("metric") == "faithfulness"
-    ]
-    return {**asdict(slo_mod.compute_slo(faithfulness)), "as_of": at, "agent": agent}
+    # One derivation, two readers: this route and the snapshot's `slo` signal both call
+    # `slo_payload`, so the parity ratchet witnesses one computation instead of two copies.
+    return {
+        **slo_mod.slo_payload(_scores_for(at, _agent_or_none(agent), parse_period_days(days))),
+        "as_of": at,
+        "agent": agent,
+    }
 
 
 @router.get("/observability/quality-regimes")

@@ -305,3 +305,29 @@ test("the departed tabs are gone from the monitoring strip, and its links follow
   // It arrived at the CONTENT, not merely at the URL.
   await expectDrawn(page, page.getByRole("heading", { name: /Le jeu de cas/ }));
 });
+
+test("the rating band names its methods — or names its blind spot — and carries no rate", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto(SIGNALS);
+
+  // The band under the hero (ADR 0017 §Amendment 4). Loading the page is the only witness
+  // for its RSC/client seam (the 2026-08-07 lesson above), and the served band must land in
+  // one of exactly two states: a real reading naming at least one method, or the named
+  // failed-read line. A blank section — the skeleton that never resolves — is the one
+  // outcome this assertion refuses.
+  const band = page.locator('section[aria-label="Comment la qualité est notée"]');
+  await expect(band).toBeVisible();
+  await expect(
+    band
+      .getByText(/Réponses notées par un juge IA/)
+      .or(band.getByText(/Impossible de lire qui est noté comment/)),
+  ).toBeVisible({ timeout: 15_000 });
+
+  // Two rulers never share a denominator, on the SERVED page too: whatever the band shows,
+  // it is counts — the hero above owns the page's only percentage.
+  const text = (await band.textContent()) ?? "";
+  expect(text).not.toMatch(/%/);
+  expect(text).not.toMatch(/barème|population|régime/i);
+});

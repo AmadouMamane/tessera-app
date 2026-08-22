@@ -39,6 +39,7 @@ import { fetchAgentEvaluations, requestAgentRelease } from "@/lib/api/client";
 import type { AgentEvaluations as Data } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 import { useAgentId } from "@/lib/use-agent-id";
+import { useDeclaredQualityRegime } from "@/lib/use-quality-regime";
 import { AgentSubtabs } from "./agent-subtabs";
 import { EvaluationRunRail } from "./evaluation-run-rail";
 import { ComparaisonsTab, ExportsTab, ResultsTab, SetsTab, VersionsTab } from "./evaluation-tabs";
@@ -1243,9 +1244,44 @@ function GatePolicySection({ data }: { data: Data }) {
 
 function JudgeMetrics({ data, className }: { data: Data; className?: string }) {
   const locale = useLocale();
+  const agentId = useAgentId();
+  const t = useTranslations("qualityRegimes");
+  const { entry: regime } = useDeclaredQualityRegime(agentId);
   const judge = data.judge;
   if (!judge) return null;
   const title = pick(locale, "Métriques jugées", "Bewertete Metriken", "Judged metrics");
+  // An agent OUTSIDE the judge's population must not read as a mute "unavailable": when
+  // the declared method is another ruler (or a declared blind spot), the card names it and
+  // opens the right door instead of three dashes (ADR 0017 §A4 — the declaration is the
+  // cockpit's common language, not just the quality band's).
+  if (judge.available === false && regime && regime.regime !== "llm_judged") {
+    return (
+      <section
+        className={cn(
+          "flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3",
+          className,
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            {title}
+            <CardInfo ns="agentEvaluations" k="judge" title={title} />
+          </span>
+        </div>
+        <p className="text-[0.7rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          {regime.regime === "business_scored" ? t("judgeCard.business") : t("judgeCard.unscored")}
+        </p>
+        {regime.regime === "business_scored" ? (
+          <Link
+            href={agentPath(agentId, "metier")}
+            className="text-[0.7rem] font-medium text-[var(--tessera-fg-accent)] transition-colors hover:text-[var(--tessera-text-strong)]"
+          >
+            {t("business_scored.link")} →
+          </Link>
+        ) : null}
+      </section>
+    );
+  }
 
   return (
     <section

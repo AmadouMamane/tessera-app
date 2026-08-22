@@ -11212,6 +11212,23 @@
       "observedNote": "{observed, plural, one {# de ces agents publie déjà son activité et apparaît dans les métriques du cockpit — seule la notation de ses réponses est absente} other {# de ces agents publient déjà leur activité et apparaissent dans les métriques du cockpit — seule la notation de leurs réponses est absente}}"
     },
     "unreadable": "Impossible de lire qui est noté comment — l'information est indisponible pour le moment.",
-    "observedChip": "Publie son activité — suivi dans les métriques du cockpit"
+    "observedChip": "Publie son activité — suivi dans les métriques du cockpit",
+    "chip": {
+      "llm_judged": "Qualité : juge IA",
+      "business_scored": "Qualité : contrôles métier",
+      "unscored": "Qualité : non notée",
+      "unreadable": "Qualité : illisible"
+    },
+    "judgeCard": {
+      "business": "Cet agent n'est pas noté par le juge IA : ses exécutions sont vérifiées par des contrôles métier automatiques.",
+      "unscored": "Cet agent n'est pas noté : choix déclaré, expliqué sur la page Qualité IA."
+    },
+    "byLanguage": {
+      "title": "Par langue",
+      "rated": "{rate} au niveau exigé · {n, plural, one {# réponse notée} other {# réponses notées}}",
+      "counts": "{good}/{n} réponses au niveau exigé",
+      "none": "aucune réponse notée",
+      "unreadable": "Taux par langue illisibles pour le moment."
+    }
   }
 }

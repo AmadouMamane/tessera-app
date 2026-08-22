@@ -2186,6 +2186,11 @@ export const SLOReportSchema = z.object({
   burn_rate: z.number(),
   burn_rate_fast: z.number(),
   breaching: z.boolean(),
+  // Per-language slices of the SAME judged plane (one read, one window). Optional so a
+  // snapshot slice or an older backend without the field still parses.
+  by_language: z
+    .record(z.object({ n: z.number().int(), n_good: z.number().int(), good_rate: z.number() }))
+    .optional(),
 });
 export type SLOReport = z.infer<typeof SLOReportSchema>;
 

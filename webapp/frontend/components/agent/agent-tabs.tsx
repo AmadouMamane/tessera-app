@@ -20,6 +20,7 @@ import { type AgentPage, agentPath } from "@/lib/agent-context";
 import { useAgentId } from "@/lib/use-agent-id";
 
 import { AgentSwitcher } from "./agent-switcher";
+import { RatingMethodChip } from "./rating-method-chip";
 
 /**
  * Shared command-bar tab strip + agent switcher for the AGENT section. Mounted
@@ -54,6 +55,9 @@ export function AgentTabs() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <AgentSwitcher />
+      {/* The declared rating method rides the command bar: every agent page names how
+          this agent's answers are rated, in the band's own vocabulary (ADR 0017 §A4). */}
+      <RatingMethodChip agentId={agentId} />
       <TabStrip
         accent="violet"
         active={active}

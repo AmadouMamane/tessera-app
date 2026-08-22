@@ -19,13 +19,13 @@ regressions, a slow window suppresses flapping on a single bad turn.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
-__all__ = ["SLOReport", "compute_slo"]
+__all__ = ["SLOReport", "compute_slo", "slo_payload"]
 
 # A turn is "good" when its faithfulness meets this bar — the same 0.80 the GCP
 # SLO alert uses, so the local and cloud views agree.
@@ -131,3 +131,34 @@ def compute_slo(
         burn_rate_fast=burn_rate_fast,
         breaching=breaching,
     )
+
+
+# The three catalogue languages — the sub-populations `slo_payload` always names, so a
+# language nobody spoke still appears, as n=0, instead of silently missing from the map.
+_CATALOGUE_LANGUAGES = ("fr", "de", "en")
+
+
+def slo_payload(score_rows: Iterable[Mapping[str, object]]) -> dict[str, object]:
+    """Headline SLO + per-language slices over raw score rows — the ONE derivation.
+
+    Both readers of this fact (`/observability/slo` and the snapshot's ``slo`` signal)
+    call this and add only their envelope, so they cannot diverge by construction — the
+    parity ratchet (``test_spine_signals_parity``) is then a witness over one derivation,
+    not a tax on keeping two in step. ``by_language`` slices the SAME faithfulness rows by
+    the language each row carries: three sub-populations of the one judged plane, each
+    honestly ``n=0`` when nobody spoke it.
+    """
+    rows = [s for s in score_rows if s.get("metric") == _METRIC]
+    payload: dict[str, object] = dict(asdict(compute_slo([float(s["score"]) for s in rows])))  # type: ignore[arg-type]
+    by_language: dict[str, dict[str, object]] = {}
+    for language in _CATALOGUE_LANGUAGES:
+        slice_slo = compute_slo(
+            [float(s["score"]) for s in rows if s.get("language") == language]  # type: ignore[arg-type]
+        )
+        by_language[language] = {
+            "n": slice_slo.n,
+            "n_good": slice_slo.n_good,
+            "good_rate": slice_slo.good_rate,
+        }
+    payload["by_language"] = by_language
+    return payload

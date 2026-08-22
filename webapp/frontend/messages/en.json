@@ -11198,6 +11198,23 @@
       "observedNote": "{observed, plural, one {# of these agents already publishes its activity and appears in the cockpit's metrics — only its answer rating is missing} other {# of these agents already publish their activity and appear in the cockpit's metrics — only their answer rating is missing}}"
     },
     "unreadable": "Cannot read who is rated how — the information is unavailable right now.",
-    "observedChip": "Publishes its activity — tracked in the cockpit's metrics"
+    "observedChip": "Publishes its activity — tracked in the cockpit's metrics",
+    "chip": {
+      "llm_judged": "Quality: AI judge",
+      "business_scored": "Quality: business controls",
+      "unscored": "Quality: not rated",
+      "unreadable": "Quality: unreadable"
+    },
+    "judgeCard": {
+      "business": "This agent is not rated by the AI judge: its runs are checked by automated business controls.",
+      "unscored": "This agent is not rated: a declared choice, explained on the AI Quality page."
+    },
+    "byLanguage": {
+      "title": "By language",
+      "rated": "{rate} at the required level · {n, plural, one {# rated response} other {# rated responses}}",
+      "counts": "{good}/{n} responses at the required level",
+      "none": "no rated responses",
+      "unreadable": "Per-language rates unreadable for now."
+    }
   }
 }
