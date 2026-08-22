@@ -11203,8 +11203,8 @@
     "business_scored": {
       "label": "Exécutions vérifiées par des contrôles métier automatiques",
       "counts": "{runs, plural, one {# exécution contrôlée} other {# exécutions contrôlées}} · {declared} contrôles · {scored} évalués · {unknown} indéterminés · {na} sans objet · depuis le début",
-      "link": "Vue métier",
-      "moreAgents": "{count, plural, one {+# autre agent contrôlé} other {+# autres agents contrôlés}}"
+      "aggregate": "{runs, plural, one {# exécution contrôlée en tout} other {# exécutions contrôlées en tout}} · depuis le début — cliquez un agent pour ouvrir sa vue métier",
+      "link": "Vue métier"
     },
     "unscored": {
       "label": "Réponses non notées (choix déclaré)",

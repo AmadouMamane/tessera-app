@@ -24,8 +24,11 @@ import { cn } from "@/lib/cn";
  *  · an unrated agent is not an invisible one: entries carry the declared
  *    publish-activity contract, chips mark the observed agents, and the card says how
  *    many stay watched on the cockpit (operator feedback, 2026-08-21);
- *  · fleet-scale legibility: chips cap at {@link MAX_NAMES} with "+N more", detailed
- *    business lines at {@link MAX_BUSINESS_LINES} — 200 agents render as counts.
+ *  · fleet-scale legibility: chips cap at {@link MAX_NAMES} with "+N more", and the
+ *    business card speaks at the level of its population — a lone agent gets its full
+ *    counts, several agents get ONE total-runs line with each chip opening that agent's
+ *    Métier view. Per-agent detail is the Métier view's job, never a synthesis card's:
+ *    200 agents render as counts, never as 200 six-figure sentences.
  */
 const REGIME_ORDER = ["llm_judged", "business_scored", "unscored"] as const;
 
@@ -49,8 +52,27 @@ const REGIME_STYLE: Record<Regime, { icon: typeof Gavel; tile: string }> = {
 
 /** Agent chips shown per card before collapsing into "+N more". */
 const MAX_NAMES = 4;
-/** Detailed per-agent count lines on the business card before collapsing. */
-const MAX_BUSINESS_LINES = 3;
+
+/** Shared chip chrome — the business card renders it as a Link, the others as a span. */
+const CHIP_CLASS =
+  "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text)]";
+
+function ChipInner({ entry, observedLabel }: { entry: QualityRegimeEntry; observedLabel: string }) {
+  return (
+    <>
+      {entry.observable ? (
+        // The observed marker: this agent publishes its activity and is already watched
+        // on the cockpit — unrated never means unseen.
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
+          title={observedLabel}
+          aria-label={observedLabel}
+        />
+      ) : null}
+      {entry.name}
+    </>
+  );
+}
 
 export function QualityRegimeBand() {
   const t = useTranslations("qualityRegimes");
@@ -108,8 +130,14 @@ export function QualityRegimeBand() {
           const hiddenNames = entries.length - Math.min(entries.length, MAX_NAMES);
           const businessEntries =
             regime === "business_scored" ? entries.filter((entry) => entry.business) : [];
-          const hiddenBusiness =
-            businessEntries.length - Math.min(businessEntries.length, MAX_BUSINESS_LINES);
+          // The card speaks at the level of its population: one agent → its full counts;
+          // several → one total (runs are the same unit across business agents, so the sum
+          // stays inside ONE ruler) and the per-agent detail lives in each Métier view.
+          const soleBusiness = businessEntries.length === 1 ? businessEntries[0] : undefined;
+          const businessRunsTotal = businessEntries.reduce(
+            (sum, entry) => sum + (entry.business?.runs_total ?? 0),
+            0,
+          );
           const observedCount = entries.filter((entry) => entry.observable).length;
           // One reason per distinct declared key — agents sharing a blind spot share a line.
           const reasonKeys =
@@ -138,23 +166,26 @@ export function QualityRegimeBand() {
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                {entries.slice(0, MAX_NAMES).map((entry) => (
-                  <span
-                    key={entry.agent_id}
-                    className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text)]"
-                  >
-                    {entry.observable ? (
-                      // The observed marker: this agent publishes its activity and is
-                      // already watched on the cockpit — unrated never means unseen.
-                      <span
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
-                        title={t("observedChip")}
-                        aria-label={t("observedChip")}
-                      />
-                    ) : null}
-                    {entry.name}
-                  </span>
-                ))}
+                {entries.slice(0, MAX_NAMES).map((entry) =>
+                  // On the business card each chip is a door to that agent's Métier view —
+                  // at fleet scale the chips ARE the per-agent navigation.
+                  regime === "business_scored" ? (
+                    <Link
+                      key={entry.agent_id}
+                      href={`/agents/${entry.agent_id}/metier` as Route}
+                      className={cn(
+                        CHIP_CLASS,
+                        "transition-colors hover:border-emerald-500/50 hover:text-[var(--tessera-text-strong)]",
+                      )}
+                    >
+                      <ChipInner entry={entry} observedLabel={t("observedChip")} />
+                    </Link>
+                  ) : (
+                    <span key={entry.agent_id} className={CHIP_CLASS}>
+                      <ChipInner entry={entry} observedLabel={t("observedChip")} />
+                    </span>
+                  ),
+                )}
                 {hiddenNames > 0 ? (
                   <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
                     {t("moreNames", { count: hiddenNames })}
@@ -163,29 +194,31 @@ export function QualityRegimeBand() {
               </div>
               <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
                 {regime === "llm_judged" ? <p>{t("llm_judged.note")}</p> : null}
-                {businessEntries.slice(0, MAX_BUSINESS_LINES).map((entry) =>
-                  entry.business ? (
-                    <p key={entry.agent_id} className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="tabular-nums">
-                        {t("business_scored.counts", {
-                          runs: entry.business.runs_total,
-                          declared: entry.business.signals_declared,
-                          scored: entry.business.signals_scored,
-                          unknown: entry.business.signals_unknown,
-                          na: entry.business.signals_not_applicable,
-                        })}
-                      </span>
-                      <Link
-                        href={`/agents/${entry.agent_id}/metier` as Route}
-                        className="font-medium text-[var(--tessera-fg-accent)] transition-colors hover:text-[var(--tessera-text-strong)]"
-                      >
-                        {t("business_scored.link")} →
-                      </Link>
-                    </p>
-                  ) : null,
-                )}
-                {hiddenBusiness > 0 ? (
-                  <p>{t("business_scored.moreAgents", { count: hiddenBusiness })}</p>
+                {soleBusiness?.business ? (
+                  // A lone business agent earns its full counts — the one scale where a
+                  // six-figure sentence is still legible.
+                  <p className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="tabular-nums">
+                      {t("business_scored.counts", {
+                        runs: soleBusiness.business.runs_total,
+                        declared: soleBusiness.business.signals_declared,
+                        scored: soleBusiness.business.signals_scored,
+                        unknown: soleBusiness.business.signals_unknown,
+                        na: soleBusiness.business.signals_not_applicable,
+                      })}
+                    </span>
+                    <Link
+                      href={`/agents/${soleBusiness.agent_id}/metier` as Route}
+                      className="font-medium text-[var(--tessera-fg-accent)] transition-colors hover:text-[var(--tessera-text-strong)]"
+                    >
+                      {t("business_scored.link")} →
+                    </Link>
+                  </p>
+                ) : null}
+                {businessEntries.length > 1 ? (
+                  <p className="tabular-nums">
+                    {t("business_scored.aggregate", { runs: businessRunsTotal })}
+                  </p>
                 ) : null}
                 {reasonKeys.map((key) => (
                   <p key={key}>{tReason(key.slice("quality_regime.".length))}</p>

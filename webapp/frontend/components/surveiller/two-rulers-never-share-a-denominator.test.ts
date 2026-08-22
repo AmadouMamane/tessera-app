@@ -28,7 +28,7 @@ const LOCALES: Locale[] = ["fr", "en", "de"];
 
 interface RegimeCatalogue {
   llm_judged: { label: string; note: string };
-  business_scored: { label: string; counts: string; link: string };
+  business_scored: { label: string; counts: string; aggregate: string; link: string };
   unscored: { label: string };
 }
 
@@ -74,15 +74,21 @@ describe("one population, one noun", () => {
   it.each(LOCALES)("%s: the business plane says runs and never responses", (locale) => {
     const { business_scored } = catalogue(locale);
     expect(business_scored.label).toMatch(RUNS_NOUN[locale]);
-    for (const line of [business_scored.label, business_scored.counts]) {
+    // `aggregate` is the population-level total the card shows past one agent — the same
+    // noun discipline binds it: a fleet-wide figure is exactly where a merged "responses
+    // and runs" sentence would try to appear first.
+    expect(business_scored.aggregate).toMatch(RUNS_NOUN[locale]);
+    for (const line of [business_scored.label, business_scored.counts, business_scored.aggregate]) {
       expect(line).not.toMatch(RESPONSES_NOUN[locale]);
     }
   });
 
-  it.each(LOCALES)("%s: the business counts line carries no rate in either notation", (locale) => {
+  it.each(LOCALES)("%s: the business count lines carry no rate in either notation", (locale) => {
     const { business_scored } = catalogue(locale);
-    expect(business_scored.counts).not.toMatch(/\{rate\}/);
-    expect(business_scored.counts).not.toMatch(/%/);
+    for (const line of [business_scored.counts, business_scored.aggregate]) {
+      expect(line).not.toMatch(/\{rate\}/);
+      expect(line).not.toMatch(/%/);
+    }
   });
 });
 

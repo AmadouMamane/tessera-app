@@ -173,7 +173,7 @@ describe("the answer-quality rating band", () => {
 
   it("stays legible with a 200-agent fleet: counts and overflows, never 200 names", () => {
     const fleet = servedFleet();
-    const llm: Entry[] = Array.from({ length: 150 }, (_, i) => ({
+    const llm: Entry[] = Array.from({ length: 120 }, (_, i) => ({
       agent_id: `llm-${i + 1}`,
       name: `Agent ${String(i + 1).padStart(3, "0")}`,
       regime: "llm_judged" as const,
@@ -181,7 +181,24 @@ describe("the answer-quality rating band", () => {
       observable: true,
       business: null,
     }));
-    const unscored: Entry[] = Array.from({ length: 49 }, (_, i) => ({
+    // 30 business-scored agents, 10 runs each: the card must speak at the level of its
+    // POPULATION — one 300-run total, never thirty six-figure sentences (the per-agent
+    // detail is each Métier view's job, reached through its chip).
+    const business: Entry[] = Array.from({ length: 30 }, (_, i) => ({
+      agent_id: `biz-${i + 1}`,
+      name: `Métier ${String(i + 1).padStart(3, "0")}`,
+      regime: "business_scored" as const,
+      reason_key: null,
+      observable: true,
+      business: {
+        runs_total: 10,
+        signals_declared: 10,
+        signals_scored: 6,
+        signals_unknown: 2,
+        signals_not_applicable: 2,
+      },
+    }));
+    const unscored: Entry[] = Array.from({ length: 50 }, (_, i) => ({
       agent_id: `demo-${i + 1}`,
       name: `Démo ${String(i + 1).padStart(3, "0")}`,
       regime: "unscored" as const,
@@ -189,21 +206,27 @@ describe("the answer-quality rating band", () => {
       observable: false,
       business: null,
     }));
-    const business = fleet.regimes.find((entry) => entry.regime === "business_scored");
-    if (!business) throw new Error("fixture must contain a business_scored entry");
-    fleet.regimes = [...llm, business, ...unscored];
+    fleet.regimes = [...llm, ...business, ...unscored];
     regimes.data = fleet;
-    render(wrap(<QualityRegimeBand />));
+    const { container } = render(wrap(<QualityRegimeBand />));
 
     const text = document.body.textContent ?? "";
-    // The row leads with its COUNT, shows a handful of names, and folds the rest.
-    expect(text).toMatch(/150 agents/);
+    // Each row leads with its COUNT, shows a handful of names, and folds the rest.
+    expect(text).toMatch(/120 agents/);
     expect(text).toMatch(/Agent 004/);
     expect(text).not.toMatch(/Agent 005/);
-    expect(text).toMatch(/\+146 autres/);
-    expect(text).toMatch(/49 agents/);
-    expect(text).toMatch(/\+45 autres/);
-    // One shared blind-spot reason renders ONCE, not 49 times.
+    expect(text).toMatch(/\+116 autres/);
+    expect(text).toMatch(/30 agents/);
+    expect(text).toMatch(/\+26 autres/);
+    expect(text).toMatch(/50 agents/);
+    expect(text).toMatch(/\+46 autres/);
+    // ONE population-level total — and not a single per-agent six-figure sentence.
+    expect(text).toMatch(/300 exécutions contrôlées en tout/);
+    expect(text.match(/exécutions contrôlées/g)?.length).toBe(1);
+    expect(text).not.toMatch(/contrôles ·/);
+    // The chips are the per-agent doors: each links to that agent's Métier view.
+    expect(container.innerHTML).toMatch(/agents\/biz-1\/metier/);
+    // One shared blind-spot reason renders ONCE, not 50 times.
     expect(text.match(/rien contre quoi noter/g)?.length).toBe(1);
   });
 

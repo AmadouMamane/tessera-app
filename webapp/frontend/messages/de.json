@@ -11203,8 +11203,8 @@
     "business_scored": {
       "label": "Ausführungen, durch automatische Fachkontrollen geprüft",
       "counts": "{runs, plural, one {# geprüfte Ausführung} other {# geprüfte Ausführungen}} · {declared} Kontrollen · {scored} bewertet · {unknown} unbestimmt · {na} nicht anwendbar · seit Beginn",
-      "link": "Fachansicht",
-      "moreAgents": "{count, plural, one {+# weiterer geprüfter Agent} other {+# weitere geprüfte Agenten}}"
+      "aggregate": "{runs, plural, one {# geprüfte Ausführung insgesamt} other {# geprüfte Ausführungen insgesamt}} · seit Beginn — ein Klick auf einen Agenten öffnet seine Fachansicht",
+      "link": "Fachansicht"
     },
     "unscored": {
       "label": "Antworten ohne Bewertung (deklarierte Entscheidung)",

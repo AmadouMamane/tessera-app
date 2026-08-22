@@ -9,12 +9,18 @@ response aggregates across regimes.
 
 from __future__ import annotations
 
-from tessera.agent.registry import list_agents
-from tessera.api.routes.observability import observability_quality_regimes
+from dataclasses import replace
+from typing import TYPE_CHECKING
+
+from tessera.agent.registry import get_agent, list_agents
+from tessera.api.routes.observability import observability_quality_regimes, signals
 from tessera.observability.agentspec_projection import (
     declares_telemetry,
     quality_regime_descriptor,
 )
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _entries() -> dict[str, dict[str, object]]:
@@ -74,3 +80,85 @@ def test_the_window_names_itself_as_all_history() -> None:
     # period_days: null out loud — all history, chosen, not assumed.
     payload = observability_quality_regimes()
     assert payload["window"] == {"period_days": None}
+
+
+def _fleet_with_business_clones(count: int) -> list[object]:
+    # A fleet where `count` agents declare business_scored: the real recouvrement plus
+    # clones of it under fresh ids. `replace` keeps the declared manifest (and with it the
+    # regime), so the route sees `count` distinct business-scored declarations.
+    recouvrement = get_agent("recouvrement")
+    assert recouvrement is not None
+    clones = [
+        replace(recouvrement, id=f"recouvrement-clone-{i}", name=f"Recouvrement {i}")
+        for i in range(1, count)
+    ]
+    return [*list_agents(), *clones]
+
+
+def test_the_ledger_is_read_once_for_the_whole_business_population(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The scaling ratchet: the ledger costs ONE read whether 1 or 30 agents declare
+    # business_scored. A per-agent read would make the route's cost grow with the fleet —
+    # correct at 1 agent, wrong by construction at 200 (operator requirement, 2026-08-22).
+    calls: list[dict[str, object]] = []
+
+    def _recording_read(**kwargs: object) -> list[dict[str, object]]:
+        calls.append(dict(kwargs))
+        return []
+
+    monkeypatch.setattr(signals.business_events_mod, "business_event_rows", _recording_read)
+    monkeypatch.setattr(signals, "list_agents", lambda: _fleet_with_business_clones(30))
+
+    payload = observability_quality_regimes()
+
+    assert len(calls) == 1
+    # The one read is the GROUPED one — unscoped, distributed afterwards by the rows' own
+    # agent_id — never a scoped read that would have to be repeated per agent.
+    assert calls[0].get("agent_id") is None
+    regimes = payload["regimes"]
+    assert isinstance(regimes, list)
+    business = [e for e in regimes if e["regime"] == "business_scored"]
+    assert len(business) == 30
+    assert all(isinstance(e["business"], dict) for e in business)
+
+
+def test_the_grouped_read_distributes_rows_to_their_own_agent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Parity with the scoped read: each agent's counts must cover exactly ITS rows. Two
+    # clones with distinct run counts prove the grouping key is the row's own agent_id —
+    # a mis-grouped bucket would show up as a swapped or doubled runs_total.
+    def _row(agent_id: str, conversation: str) -> dict[str, object]:
+        return {
+            "agent_id": agent_id,
+            "conversation_id": conversation,
+            "turn_id": f"{conversation}-t1",
+            "event_name": "case.context_loaded",
+            "timestamp": "2026-08-22T00:00:00+00:00",
+        }
+
+    ledger = [
+        _row("recouvrement-clone-1", "c1"),
+        _row("recouvrement-clone-1", "c2"),
+        _row("recouvrement-clone-2", "c3"),
+        _row("someone-else-entirely", "c4"),
+    ]
+    monkeypatch.setattr(
+        signals.business_events_mod, "business_event_rows", lambda **_: list(ledger)
+    )
+    monkeypatch.setattr(signals, "list_agents", lambda: _fleet_with_business_clones(3))
+
+    payload = observability_quality_regimes()
+    regimes = payload["regimes"]
+    assert isinstance(regimes, list)
+    by_id = {str(e["agent_id"]): e for e in regimes}
+    runs_of = {
+        agent_id: by_id[agent_id]["business"]["runs_total"]  # type: ignore[index]
+        for agent_id in ("recouvrement", "recouvrement-clone-1", "recouvrement-clone-2")
+    }
+    assert runs_of == {
+        "recouvrement": 0,
+        "recouvrement-clone-1": 2,
+        "recouvrement-clone-2": 1,
+    }

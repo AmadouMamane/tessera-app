@@ -236,9 +236,26 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
     business counts span all history as of ``at`` — stated by ``window.period_days: null``
     rather than letting a reader assume a period nobody chose.
     """
+    described = [(agent, quality_regime_descriptor(agent)) for agent in list_agents()]
+    business_ids = [
+        agent.id
+        for agent, descriptor in described
+        if descriptor is not None and descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value
+    ]
+    # ONE grouped ledger read for the WHOLE business-scored population, distributed by the
+    # rows' own agent_id — the same exact-equality match the reader's per-agent filter
+    # applies, so each bucket is byte-identical to what a scoped read would return. This is
+    # the scaling profile of the route: registry iteration is free and the ledger costs one
+    # read whether 1 or 200 agents declare business_scored (ratchet:
+    # test_the_ledger_is_read_once_for_the_whole_business_population).
+    rows_by_agent: dict[str, list[dict[str, object]]] = {aid: [] for aid in business_ids}
+    if business_ids:
+        for row in business_events_mod.business_event_rows(at=at):
+            bucket = rows_by_agent.get(str(row.get("agent_id") or ""))
+            if bucket is not None:
+                bucket.append(row)
     regimes: list[dict[str, object]] = []
-    for agent in list_agents():
-        descriptor = quality_regime_descriptor(agent)
+    for agent, descriptor in described:
         if descriptor is None:
             continue  # unreachable in the shipped registry (conformance ratchet)
         # `observable` rides along (the declared publish-activity contract, ADR 0017 §3):
@@ -252,12 +269,10 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             "business": None,
         }
         if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:
-            # ONE ledger read per business-scored agent, both derivations over it — the
-            # same two builders the Métier tab quotes (`business_signal_rows`,
-            # `_workflow_runs_from_rows`), so the figures cannot disagree with it. This is
-            # the scaling profile of the route: registry iteration is free, only the
-            # business-scored agents cost a read each.
-            rows = business_events_mod.business_event_rows(at=at, agent_id=agent.id)
+            # Both derivations run over the agent's OWN bucket — the same two builders the
+            # Métier tab quotes (`business_signal_rows`, `_workflow_runs_from_rows`), so
+            # the figures cannot disagree with it.
+            rows = rows_by_agent.get(agent.id, [])
             signal_rows = business_signal_rows(agent.id, rows)
             statuses = Counter(str(row.get("status")) for row in signal_rows)
             entry["business"] = {

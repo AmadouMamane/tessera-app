@@ -11189,8 +11189,8 @@
     "business_scored": {
       "label": "Runs checked by automated business controls",
       "counts": "{runs, plural, one {# checked run} other {# checked runs}} · {declared} controls · {scored} evaluated · {unknown} undetermined · {na} not applicable · since the beginning",
-      "link": "Business view",
-      "moreAgents": "{count, plural, one {+# more checked agent} other {+# more checked agents}}"
+      "aggregate": "{runs, plural, one {# checked run in total} other {# checked runs in total}} · since the beginning — click an agent to open its business view",
+      "link": "Business view"
     },
     "unscored": {
       "label": "Responses not rated (a declared choice)",
