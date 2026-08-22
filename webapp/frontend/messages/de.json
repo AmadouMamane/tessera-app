@@ -11198,6 +11198,7 @@
     "moreNames": "{count, plural, one {+# weiterer} other {+# weitere}}",
     "llm_judged": {
       "label": "Antworten, von einem KI-Richter bewertet",
+      "counts": "{n, plural, one {# vom Prüfer bewertete Antwort} other {# vom Prüfer bewertete Antworten}} · seit Beginn",
       "note": "die Anzeige darüber misst diese Agenten"
     },
     "business_scored": {

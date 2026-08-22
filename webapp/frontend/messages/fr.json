@@ -11198,6 +11198,7 @@
     "moreNames": "{count, plural, one {+# autre} other {+# autres}}",
     "llm_judged": {
       "label": "Réponses notées par un juge IA",
+      "counts": "{n, plural, one {# réponse notée par le juge} other {# réponses notées par le juge}} · depuis le début",
       "note": "la jauge ci-dessus mesure ces agents"
     },
     "business_scored": {

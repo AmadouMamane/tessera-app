@@ -44,6 +44,7 @@ interface Entry {
     signals_unknown: number;
     signals_not_applicable: number;
   } | null;
+  judged: { responses_total: number } | null;
 }
 
 /** Exactly what the backend serves for the shipped registry. */
@@ -57,6 +58,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         reason_key: null,
         observable: true,
         business: null,
+        judged: { responses_total: 120 },
       },
       {
         agent_id: "onboarding",
@@ -65,6 +67,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         reason_key: null,
         observable: true,
         business: null,
+        judged: { responses_total: 34 },
       },
       {
         agent_id: "recouvrement",
@@ -79,6 +82,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
           signals_unknown: 2,
           signals_not_applicable: 2,
         },
+        judged: null,
       },
       {
         agent_id: "hello-agent",
@@ -87,6 +91,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         reason_key: "quality_regime.reason.demo_no_reference",
         observable: true,
         business: null,
+        judged: null,
       },
       {
         agent_id: "turn-agent",
@@ -95,6 +100,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         reason_key: "quality_regime.reason.demo_no_reference",
         observable: false,
         business: null,
+        judged: null,
       },
       {
         agent_id: "duplex-agent",
@@ -103,6 +109,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         reason_key: "quality_regime.reason.demo_no_reference",
         observable: true,
         business: null,
+        judged: null,
       },
     ],
     as_of: null,
@@ -123,9 +130,16 @@ afterEach(cleanup);
 describe("the answer-quality rating band", () => {
   it("states that cross-cutting controls cover every agent, then one row per method", () => {
     regimes.data = servedFleet();
-    render(wrap(<QualityRegimeBand />));
+    const { container } = render(wrap(<QualityRegimeBand />));
 
     const text = document.body.textContent ?? "";
+    // The judged plane carries its own COUNT, in its own unit (responses, all history) —
+    // every card holds a figure, none holds a rate (the hero owns the page's only one).
+    expect(text).toMatch(/154 réponses notées par le juge/);
+    // Every chip is a door: business chips open the Métier view (asserted next door), the
+    // other chips open the agent's page — "watched on the cockpit" is one click to prove.
+    expect(container.innerHTML).toMatch(/agents\/support-client/);
+    expect(container.innerHTML).toMatch(/agents\/hello-agent/);
     // The honest-scope sentence: the band must never read as "recouvrement is outside
     // quality altogether" — cross-cutting controls cover the whole fleet.
     expect(text).toMatch(/couvrent tous les agents/);
@@ -180,6 +194,7 @@ describe("the answer-quality rating band", () => {
       reason_key: null,
       observable: true,
       business: null,
+      judged: { responses_total: 5 },
     }));
     // 30 business-scored agents, 10 runs each: the card must speak at the level of its
     // POPULATION — one 300-run total, never thirty six-figure sentences (the per-agent
@@ -197,6 +212,7 @@ describe("the answer-quality rating band", () => {
         signals_unknown: 2,
         signals_not_applicable: 2,
       },
+      judged: null,
     }));
     const unscored: Entry[] = Array.from({ length: 50 }, (_, i) => ({
       agent_id: `demo-${i + 1}`,
@@ -205,6 +221,7 @@ describe("the answer-quality rating band", () => {
       reason_key: "quality_regime.reason.demo_no_reference",
       observable: false,
       business: null,
+      judged: null,
     }));
     fleet.regimes = [...llm, ...business, ...unscored];
     regimes.data = fleet;
@@ -220,7 +237,10 @@ describe("the answer-quality rating band", () => {
     expect(text).toMatch(/\+26 autres/);
     expect(text).toMatch(/50 agents/);
     expect(text).toMatch(/\+46 autres/);
-    // ONE population-level total — and not a single per-agent six-figure sentence.
+    // ONE population-level total per plane — judged responses on the judge card, checked
+    // runs on the business card — and not a single per-agent six-figure sentence.
+    expect(text).toMatch(/600 réponses notées par le juge/);
+    expect(text.match(/réponses notées par le juge/g)?.length).toBe(1);
     expect(text).toMatch(/300 exécutions contrôlées en tout/);
     expect(text.match(/exécutions contrôlées/g)?.length).toBe(1);
     expect(text).not.toMatch(/contrôles ·/);
@@ -230,11 +250,19 @@ describe("the answer-quality rating band", () => {
     expect(text.match(/rien contre quoi noter/g)?.length).toBe(1);
   });
 
-  it("renders nothing at all before the declaration is read (no invented rows)", () => {
+  it("reserves the section's shape while pending, and claims no method or count", () => {
+    // The skeleton kills the layout jump (the section used to render nothing, then push
+    // the page down) — but it must stay CLAIMLESS: static chrome only, no method row, no
+    // figure, no agent name invented while the read is in flight.
     regimes.data = null;
     regimes.isError = false;
     const { container } = render(wrap(<QualityRegimeBand />));
-    expect(container.textContent).toBe("");
+    const text = container.textContent ?? "";
+    expect(text).toMatch(/Comment la qualité est notée/);
+    expect(text).not.toMatch(/Réponses notées|Exécutions vérifiées|Réponses non notées/);
+    expect(text).not.toMatch(/\d/);
+    expect(container.querySelector("[aria-busy='true']")).not.toBeNull();
+    expect(container.querySelectorAll(".animate-pulse").length).toBe(3);
   });
 
   it("names the blind spot when the read FAILED — never a silent absence", () => {

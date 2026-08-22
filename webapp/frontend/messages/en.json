@@ -11184,6 +11184,7 @@
     "moreNames": "{count, plural, one {+# more} other {+# more}}",
     "llm_judged": {
       "label": "Responses rated by an AI judge",
+      "counts": "{n, plural, one {# response rated by the judge} other {# responses rated by the judge}} · since the beginning",
       "note": "the gauge above measures these agents"
     },
     "business_scored": {

@@ -229,18 +229,26 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
     (:func:`quality_regime_descriptor`) — a declaration, never an inference from wiring.
     For a ``business_scored`` agent it joins the counts the Métier view already computes,
     through the same builders, so the band and the Métier tab can never disagree (one
-    witness, ADR 0026). The two regimes' populations stay in separate fields with no
-    combined figure anywhere: two rulers never share a denominator.
+    witness, ADR 0026). For an ``llm_judged`` agent it carries the COUNT of responses the
+    judge has rated (its faithfulness verdicts over the durable score log) — a count in
+    the judged plane's own unit, never a rate: the two regimes' populations stay in
+    separate fields with no combined figure anywhere, two rulers never share a
+    denominator.
 
     Public aggregate surface (ADR 0009): counts and declarations only, no subject. The
-    business counts span all history as of ``at`` — stated by ``window.period_days: null``
-    rather than letting a reader assume a period nobody chose.
+    counts span all history as of ``at`` — stated by ``window.period_days: null`` rather
+    than letting a reader assume a period nobody chose.
     """
     described = [(agent, quality_regime_descriptor(agent)) for agent in list_agents()]
     business_ids = [
         agent.id
         for agent, descriptor in described
         if descriptor is not None and descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value
+    ]
+    llm_ids = [
+        agent.id
+        for agent, descriptor in described
+        if descriptor is not None and descriptor["regime"] == QualityRegime.LLM_JUDGED.value
     ]
     # ONE grouped ledger read for the WHOLE business-scored population, distributed by the
     # rows' own agent_id — the same exact-equality match the reader's per-agent filter
@@ -254,6 +262,19 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             bucket = rows_by_agent.get(str(row.get("agent_id") or ""))
             if bucket is not None:
                 bucket.append(row)
+    # Same profile on the judged plane: ONE full-history read of the score log through the
+    # reader seam (`full=True` — the live ring is a 200-row cut, not history), counted by
+    # the rows' own agent_id. A judged response is one faithfulness verdict — the same
+    # semantics as the hero's n, over all history instead of its window. Rows without an
+    # agent_id (pre-tagging history) are org-only and belong to no agent's count.
+    judged_by_agent: dict[str, int] = dict.fromkeys(llm_ids, 0)
+    if llm_ids:
+        for score in read_scores(at, None, full=True):
+            if score.get("metric") != "faithfulness":
+                continue
+            scored_agent = score.get("agent_id")
+            if isinstance(scored_agent, str) and scored_agent in judged_by_agent:
+                judged_by_agent[scored_agent] += 1
     regimes: list[dict[str, object]] = []
     for agent, descriptor in described:
         if descriptor is None:
@@ -267,7 +288,10 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             "name": agent.name,
             "observable": declares_telemetry(agent),
             "business": None,
+            "judged": None,
         }
+        if descriptor["regime"] == QualityRegime.LLM_JUDGED.value:
+            entry["judged"] = {"responses_total": judged_by_agent.get(agent.id, 0)}
         if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:
             # Both derivations run over the agent's OWN bucket — the same two builders the
             # Métier tab quotes (`business_signal_rows`, `_workflow_runs_from_rows`), so

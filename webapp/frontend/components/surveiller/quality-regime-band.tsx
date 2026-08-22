@@ -24,11 +24,15 @@ import { cn } from "@/lib/cn";
  *  · an unrated agent is not an invisible one: entries carry the declared
  *    publish-activity contract, chips mark the observed agents, and the card says how
  *    many stay watched on the cockpit (operator feedback, 2026-08-21);
- *  · fleet-scale legibility: chips cap at {@link MAX_NAMES} with "+N more", and the
- *    business card speaks at the level of its population — a lone agent gets its full
- *    counts, several agents get ONE total-runs line with each chip opening that agent's
- *    Métier view. Per-agent detail is the Métier view's job, never a synthesis card's:
- *    200 agents render as counts, never as 200 six-figure sentences.
+ *  · every card carries a count in ITS unit (judged responses / checked runs / observed
+ *    agents), and every chip is a door — the business ones to that agent's Métier view,
+ *    the others to the agent's page, so "watched on the cockpit" is one click to prove;
+ *  · fleet-scale legibility: chips cap at {@link MAX_NAMES} with "+N more", and each card
+ *    speaks at the level of its population — one business agent gets its full counts,
+ *    several get ONE total-runs line. Per-agent detail is the agent pages' job, never a
+ *    synthesis card's: 200 agents render as counts, never as 200 six-figure sentences;
+ *  · the pending state reserves the section's shape (title + three skeleton cards) so the
+ *    page never jumps when the declaration arrives — and it claims nothing while waiting.
  */
 const REGIME_ORDER = ["llm_judged", "business_scored", "unscored"] as const;
 
@@ -53,7 +57,7 @@ const REGIME_STYLE: Record<Regime, { icon: typeof Gavel; tile: string }> = {
 /** Agent chips shown per card before collapsing into "+N more". */
 const MAX_NAMES = 4;
 
-/** Shared chip chrome — the business card renders it as a Link, the others as a span. */
+/** Shared chip chrome — every chip is a Link (Métier view or agent page). */
 const CHIP_CLASS =
   "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text)]";
 
@@ -100,7 +104,28 @@ export function QualityRegimeBand() {
       </section>
     );
   }
-  if (!data) return null;
+  if (!data) {
+    // Pending: reserve the section's shape so the page does not jump when the declaration
+    // arrives. Static chrome only (title + subtitle) — the skeleton claims no method, no
+    // agent, no count while the read is in flight.
+    return (
+      <section aria-label={t("title")} aria-busy="true">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <h2 className="text-[0.8rem] font-semibold">{t("title")}</h2>
+          <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("subtitle")}</p>
+        </div>
+        <div className="mt-2 grid grid-cols-1 gap-2.5 md:grid-cols-3">
+          {REGIME_ORDER.map((regime) => (
+            <div
+              key={regime}
+              className="h-[7rem] animate-pulse rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+              aria-hidden
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   const byRegime = new Map<Regime, QualityRegimeEntry[]>();
   for (const entry of data.regimes) {
@@ -138,6 +163,13 @@ export function QualityRegimeBand() {
             (sum, entry) => sum + (entry.business?.runs_total ?? 0),
             0,
           );
+          // The judged plane's own count, same population-level logic: responses rated by
+          // the judge are one unit across llm_judged agents, so the sum stays inside ONE
+          // ruler (a COUNT — the hero owns the page's only rate).
+          const judgedResponsesTotal =
+            regime === "llm_judged"
+              ? entries.reduce((sum, entry) => sum + (entry.judged?.responses_total ?? 0), 0)
+              : 0;
           const observedCount = entries.filter((entry) => entry.observable).length;
           // One reason per distinct declared key — agents sharing a blind spot share a line.
           const reasonKeys =
@@ -166,26 +198,29 @@ export function QualityRegimeBand() {
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-1">
-                {entries.slice(0, MAX_NAMES).map((entry) =>
-                  // On the business card each chip is a door to that agent's Métier view —
-                  // at fleet scale the chips ARE the per-agent navigation.
-                  regime === "business_scored" ? (
-                    <Link
-                      key={entry.agent_id}
-                      href={`/agents/${entry.agent_id}/metier` as Route}
-                      className={cn(
-                        CHIP_CLASS,
-                        "transition-colors hover:border-emerald-500/50 hover:text-[var(--tessera-text-strong)]",
-                      )}
-                    >
-                      <ChipInner entry={entry} observedLabel={t("observedChip")} />
-                    </Link>
-                  ) : (
-                    <span key={entry.agent_id} className={CHIP_CLASS}>
-                      <ChipInner entry={entry} observedLabel={t("observedChip")} />
-                    </span>
-                  ),
-                )}
+                {entries.slice(0, MAX_NAMES).map((entry) => (
+                  // Every chip is a door — the business ones straight to that agent's
+                  // Métier view, the others to the agent's page: at fleet scale the chips
+                  // ARE the per-agent navigation, and "watched on the cockpit" becomes one
+                  // click to prove instead of a claim to trust.
+                  <Link
+                    key={entry.agent_id}
+                    href={
+                      (regime === "business_scored"
+                        ? `/agents/${entry.agent_id}/metier`
+                        : `/agents/${entry.agent_id}`) as Route
+                    }
+                    className={cn(
+                      CHIP_CLASS,
+                      "transition-colors hover:text-[var(--tessera-text-strong)]",
+                      regime === "business_scored"
+                        ? "hover:border-emerald-500/50"
+                        : "hover:border-[var(--tessera-text-muted)]/50",
+                    )}
+                  >
+                    <ChipInner entry={entry} observedLabel={t("observedChip")} />
+                  </Link>
+                ))}
                 {hiddenNames > 0 ? (
                   <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
                     {t("moreNames", { count: hiddenNames })}
@@ -193,6 +228,11 @@ export function QualityRegimeBand() {
                 ) : null}
               </div>
               <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                {regime === "llm_judged" ? (
+                  <p className="tabular-nums">
+                    {t("llm_judged.counts", { n: judgedResponsesTotal })}
+                  </p>
+                ) : null}
                 {regime === "llm_judged" ? <p>{t("llm_judged.note")}</p> : null}
                 {soleBusiness?.business ? (
                   // A lone business agent earns its full counts — the one scale where a

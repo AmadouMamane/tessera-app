@@ -2190,13 +2190,17 @@ export const SLOReportSchema = z.object({
 export type SLOReport = z.infer<typeof SLOReportSchema>;
 
 // The declared quality regime of every agent (ADR 0017 §Amendment 4). `business` is null on
-// every plane except business_scored — the two rulers' populations never share a field.
+// every plane except business_scored, `judged` null except on llm_judged — the two rulers'
+// populations never share a field, and each plane counts in its own unit.
 export const QualityRegimeBusinessSchema = z.object({
   runs_total: z.number().int(),
   signals_declared: z.number().int(),
   signals_scored: z.number().int(),
   signals_unknown: z.number().int(),
   signals_not_applicable: z.number().int(),
+});
+export const QualityRegimeJudgedSchema = z.object({
+  responses_total: z.number().int(),
 });
 export const QualityRegimeEntrySchema = z.object({
   agent_id: z.string(),
@@ -2207,6 +2211,7 @@ export const QualityRegimeEntrySchema = z.object({
   // agent can still be a watched one, and the band says so instead of implying absence.
   observable: z.boolean(),
   business: QualityRegimeBusinessSchema.nullable(),
+  judged: QualityRegimeJudgedSchema.nullable(),
 });
 export const QualityRegimesSchema = z.object({
   regimes: z.array(QualityRegimeEntrySchema),

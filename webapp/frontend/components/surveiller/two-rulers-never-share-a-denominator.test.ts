@@ -27,7 +27,7 @@ type Locale = "fr" | "en" | "de";
 const LOCALES: Locale[] = ["fr", "en", "de"];
 
 interface RegimeCatalogue {
-  llm_judged: { label: string; note: string };
+  llm_judged: { label: string; note: string; counts: string };
   business_scored: { label: string; counts: string; aggregate: string; link: string };
   unscored: { label: string };
 }
@@ -67,8 +67,14 @@ describe("the band's source cannot reach the LLM plane", () => {
 describe("one population, one noun", () => {
   it.each(LOCALES)("%s: the judged plane says responses and never runs", (locale) => {
     const { llm_judged } = catalogue(locale);
-    expect(llm_judged.label).toMatch(RESPONSES_NOUN[locale]);
-    expect(llm_judged.label).not.toMatch(RUNS_NOUN[locale]);
+    // `counts` is the judge card's own figure (responses rated, all history) — a count in
+    // the judged plane's unit, bound by the same noun discipline and the no-rate rule.
+    for (const line of [llm_judged.label, llm_judged.counts]) {
+      expect(line).toMatch(RESPONSES_NOUN[locale]);
+      expect(line).not.toMatch(RUNS_NOUN[locale]);
+    }
+    expect(llm_judged.counts).not.toMatch(/\{rate\}/);
+    expect(llm_judged.counts).not.toMatch(/%/);
   });
 
   it.each(LOCALES)("%s: the business plane says runs and never responses", (locale) => {
