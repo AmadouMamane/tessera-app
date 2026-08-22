@@ -2203,9 +2203,15 @@ export const QualityRegimeBusinessSchema = z.object({
   signals_scored: z.number().int(),
   signals_unknown: z.number().int(),
   signals_not_applicable: z.number().int(),
+  // First/last instants this ruler spoke (ADR 0052: a total without its recency reads as
+  // alive when it may be a fossil). Null when it has never spoken.
+  since: z.string().nullable(),
+  last_event_at: z.string().nullable(),
 });
 export const QualityRegimeJudgedSchema = z.object({
   responses_total: z.number().int(),
+  since: z.string().nullable(),
+  last_scored_at: z.string().nullable(),
 });
 export const QualityRegimeEntrySchema = z.object({
   agent_id: z.string(),

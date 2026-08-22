@@ -227,6 +227,41 @@ def observability_slo(
     }
 
 
+def _judged_plane_stats(at: str | None, llm_ids: list[str]) -> dict[str, dict[str, object]]:
+    """Per-agent judged counts + first/last instants, in ONE score-log read.
+
+    ONE full-history read through the reader seam (``full=True`` — the live ring is a
+    200-row cut, not history), counted by the rows' own agent_id. A judged response is one
+    faithfulness verdict — the same semantics as the hero's n, over all history instead of
+    its window. Rows without an agent_id (pre-tagging history) are org-only and belong to
+    no agent's count. The first/last instants ride the same pass: a total without its
+    recency reads as alive when it may be a fossil (ADR 0052 — silence is a hole, not
+    uptime), so the plane carries WHEN its ruler last spoke, and since when.
+    """
+    stats_by_agent: dict[str, dict[str, object]] = {
+        aid: {"responses_total": 0, "since": None, "last_scored_at": None} for aid in llm_ids
+    }
+    if not llm_ids:
+        return stats_by_agent
+    for score in read_scores(at, None, full=True):
+        if score.get("metric") != "faithfulness":
+            continue
+        scored_agent = score.get("agent_id")
+        stats = stats_by_agent.get(scored_agent) if isinstance(scored_agent, str) else None
+        if stats is None:
+            continue
+        stats["responses_total"] = int(stats["responses_total"] or 0) + 1  # type: ignore[call-overload]
+        scored_at = score.get("scored_at")
+        if isinstance(scored_at, str) and scored_at:
+            # ISO-8601 strings from one writer order lexicographically — the same
+            # comparison the run builder already leans on.
+            if stats["since"] is None or scored_at < str(stats["since"]):
+                stats["since"] = scored_at
+            if stats["last_scored_at"] is None or scored_at > str(stats["last_scored_at"]):
+                stats["last_scored_at"] = scored_at
+    return stats_by_agent
+
+
 @router.get("/observability/quality-regimes")
 def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
     """The declared quality regime of every registry agent (ADR 0017 §Amendment 4).
@@ -268,19 +303,7 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             bucket = rows_by_agent.get(str(row.get("agent_id") or ""))
             if bucket is not None:
                 bucket.append(row)
-    # Same profile on the judged plane: ONE full-history read of the score log through the
-    # reader seam (`full=True` — the live ring is a 200-row cut, not history), counted by
-    # the rows' own agent_id. A judged response is one faithfulness verdict — the same
-    # semantics as the hero's n, over all history instead of its window. Rows without an
-    # agent_id (pre-tagging history) are org-only and belong to no agent's count.
-    judged_by_agent: dict[str, int] = dict.fromkeys(llm_ids, 0)
-    if llm_ids:
-        for score in read_scores(at, None, full=True):
-            if score.get("metric") != "faithfulness":
-                continue
-            scored_agent = score.get("agent_id")
-            if isinstance(scored_agent, str) and scored_agent in judged_by_agent:
-                judged_by_agent[scored_agent] += 1
+    judged_by_agent = _judged_plane_stats(at, llm_ids)
     regimes: list[dict[str, object]] = []
     for agent, descriptor in described:
         if descriptor is None:
@@ -297,7 +320,11 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             "judged": None,
         }
         if descriptor["regime"] == QualityRegime.LLM_JUDGED.value:
-            entry["judged"] = {"responses_total": judged_by_agent.get(agent.id, 0)}
+            entry["judged"] = dict(
+                judged_by_agent.get(
+                    agent.id, {"responses_total": 0, "since": None, "last_scored_at": None}
+                )
+            )
         if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:
             # Both derivations run over the agent's OWN bucket — the same two builders the
             # Métier tab quotes (`business_signal_rows`, `_workflow_runs_from_rows`), so
@@ -305,12 +332,20 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
             rows = rows_by_agent.get(agent.id, [])
             signal_rows = business_signal_rows(agent.id, rows)
             statuses = Counter(str(row.get("status")) for row in signal_rows)
+            stamps = sorted(
+                str(row["timestamp"])
+                for row in rows
+                if isinstance(row.get("timestamp"), str) and row.get("timestamp")
+            )
             entry["business"] = {
                 "runs_total": len(_workflow_runs_from_rows(rows)),
                 "signals_declared": len(signal_rows),
                 "signals_scored": statuses.get("scored", 0),
                 "signals_unknown": statuses.get("unknown", 0),
                 "signals_not_applicable": statuses.get("not_applicable", 0),
+                # When this ruler first and last spoke (same honesty as the judged plane).
+                "since": stamps[0] if stamps else None,
+                "last_event_at": stamps[-1] if stamps else None,
             }
         regimes.append(entry)
     return {"regimes": regimes, "as_of": at, "window": {"period_days": None}}

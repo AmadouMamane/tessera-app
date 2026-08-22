@@ -11198,13 +11198,13 @@
     "moreNames": "{count, plural, one {+# weiterer} other {+# weitere}}",
     "llm_judged": {
       "label": "Antworten, von einem KI-Richter bewertet",
-      "counts": "{n, plural, one {# vom Prüfer bewertete Antwort} other {# vom Prüfer bewertete Antworten}} · seit Beginn",
+      "counts": "{n, plural, one {# vom Prüfer bewertete Antwort} other {# vom Prüfer bewertete Antworten}} · {since}",
       "note": "die Anzeige darüber misst diese Agenten"
     },
     "business_scored": {
       "label": "Ausführungen, durch automatische Fachkontrollen geprüft",
-      "counts": "{runs, plural, one {# geprüfte Ausführung} other {# geprüfte Ausführungen}} · {declared} Kontrollen · {scored} bewertet · {unknown} unbestimmt · {na} nicht anwendbar · seit Beginn",
-      "aggregate": "{runs, plural, one {# geprüfte Ausführung insgesamt} other {# geprüfte Ausführungen insgesamt}} · seit Beginn — ein Klick auf einen Agenten öffnet seine Fachansicht",
+      "counts": "{runs, plural, one {# geprüfte Ausführung} other {# geprüfte Ausführungen}} · {declared} Kontrollen · {scored} bewertet · {unknown} unbestimmt · {na} nicht anwendbar · {since}",
+      "aggregate": "{runs, plural, one {# geprüfte Ausführung insgesamt} other {# geprüfte Ausführungen insgesamt}} · {since} — ein Klick auf einen Agenten öffnet seine Fachansicht",
       "link": "Fachansicht"
     },
     "unscored": {
@@ -11229,6 +11229,21 @@
       "counts": "{good}/{n} Antworten auf dem geforderten Niveau",
       "none": "keine bewerteten Antworten",
       "unreadable": "Sprachraten derzeit nicht lesbar."
+    },
+    "since": {
+      "date": "seit dem {date}",
+      "start": "seit Beginn"
+    },
+    "freshness": {
+      "ratedAgo": "{days, plural, =0 {zuletzt bewertet: heute} one {zuletzt bewertet: vor # Tag} other {zuletzt bewertet: vor # Tagen}}",
+      "checkedAgo": "{days, plural, =0 {letzte Kontrolle: heute} one {letzte Kontrolle: vor # Tag} other {letzte Kontrolle: vor # Tagen}}",
+      "neverRated": "noch nichts bewertet",
+      "neverChecked": "noch nichts kontrolliert"
+    },
+    "strip": {
+      "others": "{count, plural, one {# weiterer Agent} other {# weitere Agenten}} · {n}",
+      "observed": "{n, plural, one {# Agent veröffentlicht seine Aktivität} other {# Agenten veröffentlichen ihre Aktivität}}",
+      "unobserved": "{n, plural, one {# Agent ohne veröffentlichte Aktivität} other {# Agenten ohne veröffentlichte Aktivität}}"
     }
   }
 }

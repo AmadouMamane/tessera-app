@@ -11198,13 +11198,13 @@
     "moreNames": "{count, plural, one {+# autre} other {+# autres}}",
     "llm_judged": {
       "label": "Réponses notées par un juge IA",
-      "counts": "{n, plural, one {# réponse notée par le juge} other {# réponses notées par le juge}} · depuis le début",
+      "counts": "{n, plural, one {# réponse notée par le juge} other {# réponses notées par le juge}} · {since}",
       "note": "la jauge ci-dessus mesure ces agents"
     },
     "business_scored": {
       "label": "Exécutions vérifiées par des contrôles métier automatiques",
-      "counts": "{runs, plural, one {# exécution contrôlée} other {# exécutions contrôlées}} · {declared} contrôles · {scored} évalués · {unknown} indéterminés · {na} sans objet · depuis le début",
-      "aggregate": "{runs, plural, one {# exécution contrôlée en tout} other {# exécutions contrôlées en tout}} · depuis le début — cliquez un agent pour ouvrir sa vue métier",
+      "counts": "{runs, plural, one {# exécution contrôlée} other {# exécutions contrôlées}} · {declared} contrôles · {scored} évalués · {unknown} indéterminés · {na} sans objet · {since}",
+      "aggregate": "{runs, plural, one {# exécution contrôlée en tout} other {# exécutions contrôlées en tout}} · {since} — cliquez un agent pour ouvrir sa vue métier",
       "link": "Vue métier"
     },
     "unscored": {
@@ -11229,6 +11229,21 @@
       "counts": "{good}/{n} réponses au niveau exigé",
       "none": "aucune réponse notée",
       "unreadable": "Taux par langue illisibles pour le moment."
+    },
+    "since": {
+      "date": "depuis le {date}",
+      "start": "depuis le début"
+    },
+    "freshness": {
+      "ratedAgo": "{days, plural, =0 {dernière notation : aujourd'hui} one {dernière notation : il y a # jour} other {dernière notation : il y a # jours}}",
+      "checkedAgo": "{days, plural, =0 {dernier contrôle : aujourd'hui} one {dernier contrôle : il y a # jour} other {dernier contrôle : il y a # jours}}",
+      "neverRated": "aucune notation encore",
+      "neverChecked": "aucun contrôle encore"
+    },
+    "strip": {
+      "others": "{count, plural, one {# autre agent} other {# autres agents}} · {n}",
+      "observed": "{n, plural, one {# agent publie son activité} other {# agents publient leur activité}}",
+      "unobserved": "{n, plural, one {# agent sans activité publiée} other {# agents sans activité publiée}}"
     }
   }
 }

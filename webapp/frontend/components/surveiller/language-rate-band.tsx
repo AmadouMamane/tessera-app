@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
+import { ProportionStrip } from "@/components/surveiller/proportion-strip";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSLO } from "@/lib/api/client";
 import { usePercentFormat } from "@/lib/format-number";
@@ -51,6 +52,18 @@ export function LanguageRateBand() {
       <span className="text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
         {t("title")}
       </span>
+      {/* Each language's share of the judged responses — one unit (responses), so the
+          strip stays inside the hero's own plane. Hidden when only one language spoke. */}
+      <ProportionStrip
+        className="w-24 shrink-0"
+        label={t("title")}
+        segments={LANGUAGES.map((language, index) => ({
+          key: language,
+          title: `${language.toUpperCase()} · ${slices[language]?.n ?? 0}`,
+          value: slices[language]?.n ?? 0,
+          className: ["bg-[#7c5cf5]", "bg-[#7c5cf5]/60", "bg-[#7c5cf5]/30"][index] ?? "",
+        }))}
+      />
       {LANGUAGES.map((language) => {
         const slice = slices[language];
         const n = slice?.n ?? 0;

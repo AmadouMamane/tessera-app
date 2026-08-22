@@ -60,8 +60,17 @@ def test_each_plane_carries_counts_in_its_own_field_and_no_other() -> None:
             judged = entry["judged"]
             assert isinstance(judged, dict)
             assert isinstance(judged["responses_total"], int)
+            # Recency rides the count (ADR 0052): a total without WHEN the ruler last
+            # spoke reads as alive when it may be a fossil. Both bounds, or honestly None.
+            assert judged["since"] is None or isinstance(judged["since"], str)
+            assert judged["last_scored_at"] is None or isinstance(judged["last_scored_at"], str)
         else:
             assert entry["judged"] is None
+        if entry["regime"] == "business_scored":
+            business = entry["business"]
+            assert isinstance(business, dict)
+            assert business["since"] is None or isinstance(business["since"], str)
+            assert business["last_event_at"] is None or isinstance(business["last_event_at"], str)
 
 
 def test_business_signal_counts_partition_the_declared_set() -> None:
@@ -149,12 +158,32 @@ def test_judged_counts_come_from_each_agents_own_faithfulness_verdicts(
     # row, another agent's row, and the org-only rows (agent_id None — pre-tagging
     # history) must not inflate the count.
     scores = [
-        {"metric": "faithfulness", "agent_id": "support-client"},
-        {"metric": "faithfulness", "agent_id": "support-client"},
-        {"metric": "faithfulness", "agent_id": "onboarding"},
-        {"metric": "relevancy", "agent_id": "support-client"},
-        {"metric": "faithfulness", "agent_id": None},
-        {"metric": "faithfulness", "agent_id": "recouvrement"},
+        {
+            "metric": "faithfulness",
+            "agent_id": "support-client",
+            "scored_at": "2026-08-10T09:00:00+00:00",
+        },
+        {
+            "metric": "faithfulness",
+            "agent_id": "support-client",
+            "scored_at": "2026-06-01T09:00:00+00:00",
+        },
+        {
+            "metric": "faithfulness",
+            "agent_id": "onboarding",
+            "scored_at": "2026-07-15T09:00:00+00:00",
+        },
+        {
+            "metric": "relevancy",
+            "agent_id": "support-client",
+            "scored_at": "2026-08-20T09:00:00+00:00",
+        },
+        {"metric": "faithfulness", "agent_id": None, "scored_at": "2026-08-21T09:00:00+00:00"},
+        {
+            "metric": "faithfulness",
+            "agent_id": "recouvrement",
+            "scored_at": "2026-08-21T09:00:00+00:00",
+        },
     ]
     monkeypatch.setattr(signals, "read_scores", lambda *_a, **_k: list(scores))
 
@@ -162,6 +191,10 @@ def test_judged_counts_come_from_each_agents_own_faithfulness_verdicts(
     support = entries["support-client"]["judged"]
     onboarding = entries["onboarding"]["judged"]
     assert isinstance(support, dict) and support["responses_total"] == 2
+    # First and last are the agent's OWN faithfulness bounds — the later relevancy row and
+    # the org-only row must not move them.
+    assert support["since"] == "2026-06-01T09:00:00+00:00"
+    assert support["last_scored_at"] == "2026-08-10T09:00:00+00:00"
     assert isinstance(onboarding, dict) and onboarding["responses_total"] == 1
     # A business_scored agent has no judged field at all — even with a stray score row.
     assert entries["recouvrement"]["judged"] is None

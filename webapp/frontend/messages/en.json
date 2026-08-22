@@ -11184,13 +11184,13 @@
     "moreNames": "{count, plural, one {+# more} other {+# more}}",
     "llm_judged": {
       "label": "Responses rated by an AI judge",
-      "counts": "{n, plural, one {# response rated by the judge} other {# responses rated by the judge}} · since the beginning",
+      "counts": "{n, plural, one {# response rated by the judge} other {# responses rated by the judge}} · {since}",
       "note": "the gauge above measures these agents"
     },
     "business_scored": {
       "label": "Runs checked by automated business controls",
-      "counts": "{runs, plural, one {# checked run} other {# checked runs}} · {declared} controls · {scored} evaluated · {unknown} undetermined · {na} not applicable · since the beginning",
-      "aggregate": "{runs, plural, one {# checked run in total} other {# checked runs in total}} · since the beginning — click an agent to open its business view",
+      "counts": "{runs, plural, one {# checked run} other {# checked runs}} · {declared} controls · {scored} evaluated · {unknown} undetermined · {na} not applicable · {since}",
+      "aggregate": "{runs, plural, one {# checked run in total} other {# checked runs in total}} · {since} — click an agent to open its business view",
       "link": "Business view"
     },
     "unscored": {
@@ -11215,6 +11215,21 @@
       "counts": "{good}/{n} responses at the required level",
       "none": "no rated responses",
       "unreadable": "Per-language rates unreadable for now."
+    },
+    "since": {
+      "date": "since {date}",
+      "start": "since the beginning"
+    },
+    "freshness": {
+      "ratedAgo": "{days, plural, =0 {last rated: today} one {last rated: # day ago} other {last rated: # days ago}}",
+      "checkedAgo": "{days, plural, =0 {last checked: today} one {last checked: # day ago} other {last checked: # days ago}}",
+      "neverRated": "nothing rated yet",
+      "neverChecked": "nothing checked yet"
+    },
+    "strip": {
+      "others": "{count, plural, one {# other agent} other {# other agents}} · {n}",
+      "observed": "{n, plural, one {# agent publishes its activity} other {# agents publish their activity}}",
+      "unobserved": "{n, plural, one {# agent without published activity} other {# agents without published activity}}"
     }
   }
 }

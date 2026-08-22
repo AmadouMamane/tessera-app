@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { EyeOff, Gavel, Ruler } from "lucide-react";
+import { Clock, EyeOff, Gavel, Ruler } from "lucide-react";
 import type { Route } from "next";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 
+import { ProportionStrip, type StripSegment } from "@/components/surveiller/proportion-strip";
 import { Link } from "@/i18n/navigation";
 import { fetchQualityRegimes } from "@/lib/api/client";
 import type { QualityRegimeEntry } from "@/lib/api/schemas";
@@ -32,7 +33,13 @@ import { cn } from "@/lib/cn";
  *    several get ONE total-runs line. Per-agent detail is the agent pages' job, never a
  *    synthesis card's: 200 agents render as counts, never as 200 six-figure sentences;
  *  · the pending state reserves the section's shape (title + three skeleton cards) so the
- *    page never jumps when the declaration arrives — and it claims nothing while waiting.
+ *    page never jumps when the declaration arrives — and it claims nothing while waiting;
+ *  · every counting card carries its LIVENESS: "last rated/checked N days ago" (warning
+ *    tone past {@link STALE_AFTER_DAYS}) and "since {a named date}" instead of a vague
+ *    "since the beginning" — a total without its recency reads as alive when it may be a
+ *    fossil (ADR 0052);
+ *  · each card draws its population's shares as a one-unit {@link ProportionStrip} —
+ *    responses, runs, or agents — never a figure that crosses two rulers.
  */
 const REGIME_ORDER = ["llm_judged", "business_scored", "unscored"] as const;
 
@@ -57,9 +64,105 @@ const REGIME_STYLE: Record<Regime, { icon: typeof Gavel; tile: string }> = {
 /** Agent chips shown per card before collapsing into "+N more". */
 const MAX_NAMES = 4;
 
+/** A ruler silent longer than this is flagged: a stale total must not read as alive. */
+const STALE_AFTER_DAYS = 14;
+const DAY_MS = 86_400_000;
+
+/** Share-of-population ramps, one hue per plane — a strip never mixes two rulers. */
+const JUDGE_RAMP = ["bg-[#7c5cf5]", "bg-[#7c5cf5]/75", "bg-[#7c5cf5]/55", "bg-[#7c5cf5]/35"];
+const JUDGE_REST = "bg-[#7c5cf5]/20";
+const BUSINESS_RAMP = [
+  "bg-emerald-500",
+  "bg-emerald-500/75",
+  "bg-emerald-500/55",
+  "bg-emerald-500/35",
+];
+const BUSINESS_REST = "bg-emerald-500/20";
+
+function daysSince(iso: string): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY_MS));
+}
+
+/** Lexicographic bounds over ISO-8601 instants from one writer — same order, no parsing. */
+function earliest(instants: Array<string | null | undefined>): string | undefined {
+  const known = instants.filter((value): value is string => !!value);
+  return known.length ? known.reduce((a, b) => (a < b ? a : b)) : undefined;
+}
+function latest(instants: Array<string | null | undefined>): string | undefined {
+  const known = instants.filter((value): value is string => !!value);
+  return known.length ? known.reduce((a, b) => (a > b ? a : b)) : undefined;
+}
+
+/** Top-N shares plus a folded rest — the strip twin of the "+N more" chip overflow. */
+function shareSegments(
+  entries: QualityRegimeEntry[],
+  shareOf: (entry: QualityRegimeEntry) => number,
+  ramp: string[],
+  rest: string,
+  othersTitle: (count: number, value: number) => string,
+): StripSegment[] {
+  const ranked = [...entries].sort((a, b) => shareOf(b) - shareOf(a));
+  const top = ranked.slice(0, ramp.length);
+  const folded = ranked.slice(ramp.length);
+  const foldedValue = folded.reduce((sum, entry) => sum + shareOf(entry), 0);
+  const segments: StripSegment[] = top.map((entry, index) => ({
+    key: entry.agent_id,
+    title: `${entry.name} · ${shareOf(entry)}`,
+    value: shareOf(entry),
+    className: ramp[index] ?? rest,
+  }));
+  if (foldedValue > 0) {
+    segments.push({
+      key: "others",
+      title: othersTitle(folded.length, foldedValue),
+      value: foldedValue,
+      className: rest,
+    });
+  }
+  return segments;
+}
+
 /** Shared chip chrome — every chip is a Link (Métier view or agent page). */
 const CHIP_CLASS =
   "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text)]";
+
+/**
+ * "Last spoke: N days ago" — the liveness line every counting card carries (ADR 0052:
+ * a total without its recency reads as alive when it may be a fossil). Past
+ * {@link STALE_AFTER_DAYS} of silence the line turns to the warning tone; a ruler that
+ * has NEVER spoken says so instead of hiding the line.
+ */
+function FreshnessLine({
+  lastIso,
+  agoKey,
+  neverKey,
+}: {
+  lastIso: string | undefined;
+  agoKey: string;
+  neverKey: string;
+}) {
+  const t = useTranslations("qualityRegimes");
+  if (!lastIso) {
+    return (
+      <p className="flex items-center gap-1.5">
+        <Clock className="h-3 w-3 shrink-0" aria-hidden />
+        {t(neverKey)}
+      </p>
+    );
+  }
+  const days = daysSince(lastIso);
+  return (
+    <p
+      className={cn(
+        "flex items-center gap-1.5 tabular-nums",
+        days > STALE_AFTER_DAYS && "font-medium text-[var(--tessera-fg-warning)]",
+      )}
+    >
+      <Clock className="h-3 w-3 shrink-0" aria-hidden />
+      {t(agoKey, { days })}
+    </p>
+  );
+}
 
 function ChipInner({ entry, observedLabel }: { entry: QualityRegimeEntry; observedLabel: string }) {
   return (
@@ -80,6 +183,7 @@ function ChipInner({ entry, observedLabel }: { entry: QualityRegimeEntry; observ
 
 export function QualityRegimeBand() {
   const t = useTranslations("qualityRegimes");
+  const format = useFormatter();
   // The manifest reason keys live under the `quality_regime.` namespace (validated against
   // all three catalogues by the backend conformance gate, so a declared key always resolves).
   const tReason = useTranslations("quality_regime");
@@ -136,6 +240,14 @@ export function QualityRegimeBand() {
   }
   const presentRegimes = REGIME_ORDER.filter((r) => (byRegime.get(r)?.length ?? 0) > 0);
 
+  // "since {a named date}" — vague "since the beginning" only when the ruler never spoke.
+  // The date comes through next-intl's formatter, never a bare toLocaleString (the
+  // formatter is the reader's locale; the bare call is the RUNTIME's).
+  const sinceText = (iso: string | undefined) =>
+    iso
+      ? t("since.date", { date: format.dateTime(new Date(iso), { dateStyle: "long" }) })
+      : t("since.start");
+
   return (
     <section aria-label={t("title")}>
       <div className="flex flex-wrap items-baseline gap-x-2">
@@ -170,7 +282,50 @@ export function QualityRegimeBand() {
             regime === "llm_judged"
               ? entries.reduce((sum, entry) => sum + (entry.judged?.responses_total ?? 0), 0)
               : 0;
+          // First and last instants THIS ruler spoke, across its whole population.
+          const planeSince =
+            regime === "llm_judged"
+              ? earliest(entries.map((entry) => entry.judged?.since))
+              : earliest(businessEntries.map((entry) => entry.business?.since));
+          const planeLast =
+            regime === "llm_judged"
+              ? latest(entries.map((entry) => entry.judged?.last_scored_at))
+              : latest(businessEntries.map((entry) => entry.business?.last_event_at));
           const observedCount = entries.filter((entry) => entry.observable).length;
+          // The card's share strip — shares of ONE population, in its own unit: responses
+          // across judged agents, runs across business agents, agents across the
+          // observed/unobserved split. Never a figure that crosses two rulers.
+          const stripSegments: StripSegment[] =
+            regime === "llm_judged"
+              ? shareSegments(
+                  entries,
+                  (entry) => entry.judged?.responses_total ?? 0,
+                  JUDGE_RAMP,
+                  JUDGE_REST,
+                  (count, value) => t("strip.others", { count, n: value }),
+                )
+              : regime === "business_scored"
+                ? shareSegments(
+                    businessEntries,
+                    (entry) => entry.business?.runs_total ?? 0,
+                    BUSINESS_RAMP,
+                    BUSINESS_REST,
+                    (count, value) => t("strip.others", { count, n: value }),
+                  )
+                : [
+                    {
+                      key: "observed",
+                      title: t("strip.observed", { n: observedCount }),
+                      value: observedCount,
+                      className: "bg-emerald-500/70",
+                    },
+                    {
+                      key: "unobserved",
+                      title: t("strip.unobserved", { n: entries.length - observedCount }),
+                      value: entries.length - observedCount,
+                      className: "bg-[var(--tessera-border)]",
+                    },
+                  ];
           // One reason per distinct declared key — agents sharing a blind spot share a line.
           const reasonKeys =
             regime === "unscored"
@@ -227,11 +382,22 @@ export function QualityRegimeBand() {
                   </span>
                 ) : null}
               </div>
+              <ProportionStrip segments={stripSegments} label={t(`${regime}.label`)} />
               <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
                 {regime === "llm_judged" ? (
                   <p className="tabular-nums">
-                    {t("llm_judged.counts", { n: judgedResponsesTotal })}
+                    {t("llm_judged.counts", {
+                      n: judgedResponsesTotal,
+                      since: sinceText(planeSince),
+                    })}
                   </p>
+                ) : null}
+                {regime === "llm_judged" ? (
+                  <FreshnessLine
+                    lastIso={planeLast}
+                    agoKey="freshness.ratedAgo"
+                    neverKey="freshness.neverRated"
+                  />
                 ) : null}
                 {regime === "llm_judged" ? <p>{t("llm_judged.note")}</p> : null}
                 {soleBusiness?.business ? (
@@ -245,6 +411,7 @@ export function QualityRegimeBand() {
                         scored: soleBusiness.business.signals_scored,
                         unknown: soleBusiness.business.signals_unknown,
                         na: soleBusiness.business.signals_not_applicable,
+                        since: sinceText(planeSince),
                       })}
                     </span>
                     <Link
@@ -257,8 +424,18 @@ export function QualityRegimeBand() {
                 ) : null}
                 {businessEntries.length > 1 ? (
                   <p className="tabular-nums">
-                    {t("business_scored.aggregate", { runs: businessRunsTotal })}
+                    {t("business_scored.aggregate", {
+                      runs: businessRunsTotal,
+                      since: sinceText(planeSince),
+                    })}
                   </p>
+                ) : null}
+                {regime === "business_scored" ? (
+                  <FreshnessLine
+                    lastIso={planeLast}
+                    agoKey="freshness.checkedAgo"
+                    neverKey="freshness.neverChecked"
+                  />
                 ) : null}
                 {reasonKeys.map((key) => (
                   <p key={key}>{tReason(key.slice("quality_regime.".length))}</p>
