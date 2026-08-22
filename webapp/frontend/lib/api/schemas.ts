@@ -2212,6 +2212,13 @@ export const QualityRegimeJudgedSchema = z.object({
   responses_total: z.number().int(),
   since: z.string().nullable(),
   last_scored_at: z.string().nullable(),
+  // Per-language counts of the judged plane — the three catalogue languages, always
+  // present (a language nobody spoke reads 0, never silently missing).
+  languages: z.object({
+    fr: z.number().int(),
+    de: z.number().int(),
+    en: z.number().int(),
+  }),
 });
 export const QualityRegimeEntrySchema = z.object({
   agent_id: z.string(),

@@ -64,6 +64,12 @@ def test_each_plane_carries_counts_in_its_own_field_and_no_other() -> None:
             # spoke reads as alive when it may be a fossil. Both bounds, or honestly None.
             assert judged["since"] is None or isinstance(judged["since"], str)
             assert judged["last_scored_at"] is None or isinstance(judged["last_scored_at"], str)
+            # The three catalogue languages are ALWAYS present: a language nobody spoke
+            # reads 0 instead of silently missing from the map.
+            languages = judged["languages"]
+            assert isinstance(languages, dict)
+            assert set(languages) == {"fr", "de", "en"}
+            assert sum(languages.values()) <= judged["responses_total"]  # type: ignore[misc]
         else:
             assert entry["judged"] is None
         if entry["regime"] == "business_scored":
@@ -162,6 +168,7 @@ def test_judged_counts_come_from_each_agents_own_faithfulness_verdicts(
             "metric": "faithfulness",
             "agent_id": "support-client",
             "scored_at": "2026-08-10T09:00:00+00:00",
+            "language": "fr",
         },
         {
             "metric": "faithfulness",

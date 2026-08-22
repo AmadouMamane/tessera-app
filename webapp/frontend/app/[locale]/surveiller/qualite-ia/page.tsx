@@ -6,7 +6,6 @@ import { parseTab } from "@/components/eval/eval-tabs";
 import { ScorecardView } from "@/components/eval/scorecard-view";
 import { AppShell } from "@/components/layout/app-shell";
 import { ObservabilityDashboard } from "@/components/observability/observability-dashboard";
-import { LanguageRateBand } from "@/components/surveiller/language-rate-band";
 import { QualityRegimeBand } from "@/components/surveiller/quality-regime-band";
 import { QualityViewSwitch } from "@/components/surveiller/quality-view-switch";
 import { ReleaseVerdictRibbon } from "@/components/surveiller/release-verdict-ribbon";
@@ -100,10 +99,6 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
       <div>
         <SignalBreachHero variant="gauge" />
       </div>
-      {/* Sub-populations of the hero's own plane: the SAME judged responses, sliced by the
-          language each score carries — same endpoint, same query key, same window. Where
-          multilingual quality diverges is exactly what a three-language bank must see. */}
-      <LanguageRateBand />
       {/* The hero's verdict covers ONE population (judged responses). This band declares the
           other planes and their rulers (ADR 0017 §Amendment 4), so "0 judged" can no longer
           read as "nothing else is measured". Grouped by population, never summed. */}

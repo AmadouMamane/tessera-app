@@ -11185,7 +11185,8 @@
     "llm_judged": {
       "label": "Responses rated by an AI judge",
       "counts": "{n, plural, one {# response rated by the judge} other {# responses rated by the judge}} · {since}",
-      "note": "the gauge above measures these agents"
+      "note": "the gauge above measures these agents",
+      "languages": "by language: FR {fr} · DE {de} · EN {en}"
     },
     "business_scored": {
       "label": "Runs checked by automated business controls",
@@ -11209,13 +11210,6 @@
       "business": "This agent is not rated by the AI judge: its runs are checked by automated business controls.",
       "unscored": "This agent is not rated: a declared choice, explained on the AI Quality page."
     },
-    "byLanguage": {
-      "title": "By language",
-      "rated": "{rate} at the required level · {n, plural, one {# rated response} other {# rated responses}}",
-      "counts": "{good}/{n} responses at the required level",
-      "none": "no rated responses",
-      "unreadable": "Per-language rates unreadable for now."
-    },
     "since": {
       "date": "since {date}",
       "start": "since the beginning"
@@ -11226,10 +11220,9 @@
       "neverRated": "nothing rated yet",
       "neverChecked": "nothing checked yet"
     },
-    "strip": {
-      "others": "{count, plural, one {# other agent} other {# other agents}} · {n}",
-      "observed": "{n, plural, one {# agent publishes its activity} other {# agents publish their activity}}",
-      "unobserved": "{n, plural, one {# agent without published activity} other {# agents without published activity}}"
+    "chipStale": {
+      "rated": "{days, plural, one {nothing rated for # day} other {nothing rated for # days}}",
+      "checked": "{days, plural, one {nothing checked for # day} other {nothing checked for # days}}"
     }
   }
 }

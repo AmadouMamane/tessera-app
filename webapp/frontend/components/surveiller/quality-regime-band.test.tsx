@@ -46,7 +46,12 @@ interface Entry {
     since: string | null;
     last_event_at: string | null;
   } | null;
-  judged: { responses_total: number; since: string | null; last_scored_at: string | null } | null;
+  judged: {
+    responses_total: number;
+    since: string | null;
+    last_scored_at: string | null;
+    languages: { fr: number; de: number; en: number };
+  } | null;
 }
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
@@ -66,6 +71,7 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
           responses_total: 120,
           since: "2026-06-12T12:00:00+00:00",
           last_scored_at: daysAgo(3),
+          languages: { fr: 120, de: 0, en: 0 },
         },
       },
       {
@@ -78,7 +84,8 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
         judged: {
           responses_total: 34,
           since: "2026-07-01T12:00:00+00:00",
-          last_scored_at: daysAgo(5),
+          last_scored_at: daysAgo(16),
+          languages: { fr: 20, de: 14, en: 0 },
         },
       },
       {
@@ -155,9 +162,12 @@ describe("the answer-quality rating band", () => {
     // …and the count travels with its LIVENESS: when the judge last spoke (freshest
     // across the population — support-client's 3 days beats onboarding's 5).
     expect(text).toMatch(/dernière notation : il y a 3 jours/);
-    // The card draws its population's shares — one strip, one unit (responses).
-    expect(container.innerHTML).toMatch(/Support Client · 120/);
-    expect(container.innerHTML).toMatch(/Onboarding · 34/);
+    // The judged plane's languages live on ITS card — counts, one unit (responses).
+    expect(text).toMatch(/par langue : FR 140 · DE 14 · EN 0/);
+    // The population line reads the FRESHEST agent (3 days); the agent individually
+    // silent past the bar carries the amber dot on its own chip, with the days named.
+    expect(container.innerHTML).toMatch(/aucune notation depuis 16 jours/);
+    expect(container.innerHTML).toContain("--tessera-fg-warning");
     // Every chip is a door: business chips open the Métier view (asserted next door), the
     // other chips open the agent's page — "watched on the cockpit" is one click to prove.
     expect(container.innerHTML).toMatch(/agents\/support-client/);
@@ -205,7 +215,12 @@ describe("the answer-quality rating band", () => {
       .filter((entry) => entry.regime === "llm_judged")
       .map((entry) => ({
         ...entry,
-        judged: { responses_total: 0, since: null, last_scored_at: null },
+        judged: {
+          responses_total: 0,
+          since: null,
+          last_scored_at: null,
+          languages: { fr: 0, de: 0, en: 0 },
+        },
       }));
     regimes.data = fleet;
     render(wrap(<QualityRegimeBand />));
@@ -255,6 +270,7 @@ describe("the answer-quality rating band", () => {
         responses_total: 5,
         since: "2026-06-12T12:00:00+00:00",
         last_scored_at: daysAgo(1),
+        languages: { fr: 5, de: 0, en: 0 },
       },
     }));
     // 30 business-scored agents, 10 runs each: the card must speak at the level of its

@@ -236,30 +236,44 @@ def _judged_plane_stats(at: str | None, llm_ids: list[str]) -> dict[str, dict[st
     its window. Rows without an agent_id (pre-tagging history) are org-only and belong to
     no agent's count. The first/last instants ride the same pass: a total without its
     recency reads as alive when it may be a fossil (ADR 0052 — silence is a hole, not
-    uptime), so the plane carries WHEN its ruler last spoke, and since when.
+    uptime), so the plane carries WHEN its ruler last spoke, and since when. Per-language
+    counts ride it too — the three catalogue languages, always present so a language
+    nobody spoke reads 0 instead of silently missing.
     """
-    stats_by_agent: dict[str, dict[str, object]] = {
-        aid: {"responses_total": 0, "since": None, "last_scored_at": None} for aid in llm_ids
+    counts: dict[str, int] = dict.fromkeys(llm_ids, 0)
+    since: dict[str, str | None] = dict.fromkeys(llm_ids)
+    last: dict[str, str | None] = dict.fromkeys(llm_ids)
+    languages: dict[str, dict[str, int]] = {aid: {"fr": 0, "de": 0, "en": 0} for aid in llm_ids}
+    if llm_ids:
+        for score in read_scores(at, None, full=True):
+            if score.get("metric") != "faithfulness":
+                continue
+            scored_agent = score.get("agent_id")
+            if not isinstance(scored_agent, str) or scored_agent not in counts:
+                continue
+            counts[scored_agent] += 1
+            language = score.get("language")
+            if isinstance(language, str) and language in languages[scored_agent]:
+                languages[scored_agent][language] += 1
+            scored_at = score.get("scored_at")
+            if isinstance(scored_at, str) and scored_at:
+                # ISO-8601 strings from one writer order lexicographically — the same
+                # comparison the run builder already leans on.
+                current_since = since[scored_agent]
+                if current_since is None or scored_at < current_since:
+                    since[scored_agent] = scored_at
+                current_last = last[scored_agent]
+                if current_last is None or scored_at > current_last:
+                    last[scored_agent] = scored_at
+    return {
+        aid: {
+            "responses_total": counts[aid],
+            "since": since[aid],
+            "last_scored_at": last[aid],
+            "languages": languages[aid],
+        }
+        for aid in llm_ids
     }
-    if not llm_ids:
-        return stats_by_agent
-    for score in read_scores(at, None, full=True):
-        if score.get("metric") != "faithfulness":
-            continue
-        scored_agent = score.get("agent_id")
-        stats = stats_by_agent.get(scored_agent) if isinstance(scored_agent, str) else None
-        if stats is None:
-            continue
-        stats["responses_total"] = int(stats["responses_total"] or 0) + 1  # type: ignore[call-overload]
-        scored_at = score.get("scored_at")
-        if isinstance(scored_at, str) and scored_at:
-            # ISO-8601 strings from one writer order lexicographically — the same
-            # comparison the run builder already leans on.
-            if stats["since"] is None or scored_at < str(stats["since"]):
-                stats["since"] = scored_at
-            if stats["last_scored_at"] is None or scored_at > str(stats["last_scored_at"]):
-                stats["last_scored_at"] = scored_at
-    return stats_by_agent
 
 
 @router.get("/observability/quality-regimes")
@@ -322,7 +336,13 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
         if descriptor["regime"] == QualityRegime.LLM_JUDGED.value:
             entry["judged"] = dict(
                 judged_by_agent.get(
-                    agent.id, {"responses_total": 0, "since": None, "last_scored_at": None}
+                    agent.id,
+                    {
+                        "responses_total": 0,
+                        "since": None,
+                        "last_scored_at": None,
+                        "languages": {"fr": 0, "de": 0, "en": 0},
+                    },
                 )
             )
         if descriptor["regime"] == QualityRegime.BUSINESS_SCORED.value:

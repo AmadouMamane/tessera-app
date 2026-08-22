@@ -5,7 +5,6 @@ import { Clock, EyeOff, Gavel, Ruler } from "lucide-react";
 import type { Route } from "next";
 import { useFormatter, useTranslations } from "next-intl";
 
-import { ProportionStrip, type StripSegment } from "@/components/surveiller/proportion-strip";
 import { Link } from "@/i18n/navigation";
 import { fetchQualityRegimes } from "@/lib/api/client";
 import type { QualityRegimeEntry } from "@/lib/api/schemas";
@@ -38,8 +37,9 @@ import { cn } from "@/lib/cn";
  *    tone past {@link STALE_AFTER_DAYS}) and "since {a named date}" instead of a vague
  *    "since the beginning" — a total without its recency reads as alive when it may be a
  *    fossil (ADR 0052);
- *  · each card draws its population's shares as a one-unit {@link ProportionStrip} —
- *    responses, runs, or agents — never a figure that crosses two rulers.
+ *  · and the silence of ONE agent is visible on its chip: an amber dot (with the
+ *    silent-days tooltip) when that agent's own ruler has said nothing for more than
+ *    {@link STALE_AFTER_DAYS} days while the card's population line still reads fresh.
  */
 const REGIME_ORDER = ["llm_judged", "business_scored", "unscored"] as const;
 
@@ -68,17 +68,6 @@ const MAX_NAMES = 4;
 const STALE_AFTER_DAYS = 14;
 const DAY_MS = 86_400_000;
 
-/** Share-of-population ramps, one hue per plane — a strip never mixes two rulers. */
-const JUDGE_RAMP = ["bg-[#7c5cf5]", "bg-[#7c5cf5]/75", "bg-[#7c5cf5]/55", "bg-[#7c5cf5]/35"];
-const JUDGE_REST = "bg-[#7c5cf5]/20";
-const BUSINESS_RAMP = [
-  "bg-emerald-500",
-  "bg-emerald-500/75",
-  "bg-emerald-500/55",
-  "bg-emerald-500/35",
-];
-const BUSINESS_REST = "bg-emerald-500/20";
-
 function daysSince(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / DAY_MS));
 }
@@ -91,35 +80,6 @@ function earliest(instants: Array<string | null | undefined>): string | undefine
 function latest(instants: Array<string | null | undefined>): string | undefined {
   const known = instants.filter((value): value is string => !!value);
   return known.length ? known.reduce((a, b) => (a > b ? a : b)) : undefined;
-}
-
-/** Top-N shares plus a folded rest — the strip twin of the "+N more" chip overflow. */
-function shareSegments(
-  entries: QualityRegimeEntry[],
-  shareOf: (entry: QualityRegimeEntry) => number,
-  ramp: string[],
-  rest: string,
-  othersTitle: (count: number, value: number) => string,
-): StripSegment[] {
-  const ranked = [...entries].sort((a, b) => shareOf(b) - shareOf(a));
-  const top = ranked.slice(0, ramp.length);
-  const folded = ranked.slice(ramp.length);
-  const foldedValue = folded.reduce((sum, entry) => sum + shareOf(entry), 0);
-  const segments: StripSegment[] = top.map((entry, index) => ({
-    key: entry.agent_id,
-    title: `${entry.name} · ${shareOf(entry)}`,
-    value: shareOf(entry),
-    className: ramp[index] ?? rest,
-  }));
-  if (foldedValue > 0) {
-    segments.push({
-      key: "others",
-      title: othersTitle(folded.length, foldedValue),
-      value: foldedValue,
-      className: rest,
-    });
-  }
-  return segments;
 }
 
 /** Shared chip chrome — every chip is a Link (Métier view or agent page). */
@@ -164,7 +124,16 @@ function FreshnessLine({
   );
 }
 
-function ChipInner({ entry, observedLabel }: { entry: QualityRegimeEntry; observedLabel: string }) {
+function ChipInner({
+  entry,
+  observedLabel,
+  staleTitle,
+}: {
+  entry: QualityRegimeEntry;
+  observedLabel: string;
+  /** Set when THIS agent's own ruler has been silent past the staleness bar. */
+  staleTitle?: string;
+}) {
   return (
     <>
       {entry.observable ? (
@@ -177,6 +146,16 @@ function ChipInner({ entry, observedLabel }: { entry: QualityRegimeEntry; observ
         />
       ) : null}
       {entry.name}
+      {staleTitle ? (
+        // The individual silence the population line hides: the card's "last rated" reads
+        // the FRESHEST agent, so one agent gone quiet stays invisible up there — its own
+        // chip carries the amber dot and names the silent days (operator ask, 2026-08-22).
+        <span
+          className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-fg-warning)]"
+          title={staleTitle}
+          aria-label={staleTitle}
+        />
+      ) : null}
     </>
   );
 }
@@ -292,40 +271,32 @@ export function QualityRegimeBand() {
               ? latest(entries.map((entry) => entry.judged?.last_scored_at))
               : latest(businessEntries.map((entry) => entry.business?.last_event_at));
           const observedCount = entries.filter((entry) => entry.observable).length;
-          // The card's share strip — shares of ONE population, in its own unit: responses
-          // across judged agents, runs across business agents, agents across the
-          // observed/unobserved split. Never a figure that crosses two rulers.
-          const stripSegments: StripSegment[] =
-            regime === "llm_judged"
-              ? shareSegments(
-                  entries,
-                  (entry) => entry.judged?.responses_total ?? 0,
-                  JUDGE_RAMP,
-                  JUDGE_REST,
-                  (count, value) => t("strip.others", { count, n: value }),
-                )
-              : regime === "business_scored"
-                ? shareSegments(
-                    businessEntries,
-                    (entry) => entry.business?.runs_total ?? 0,
-                    BUSINESS_RAMP,
-                    BUSINESS_REST,
-                    (count, value) => t("strip.others", { count, n: value }),
-                  )
-                : [
-                    {
-                      key: "observed",
-                      title: t("strip.observed", { n: observedCount }),
-                      value: observedCount,
-                      className: "bg-emerald-500/70",
-                    },
-                    {
-                      key: "unobserved",
-                      title: t("strip.unobserved", { n: entries.length - observedCount }),
-                      value: entries.length - observedCount,
-                      className: "bg-[var(--tessera-border)]",
-                    },
-                  ];
+          // Per-language COUNTS of the judged plane (fr/de/en, same unit — responses):
+          // the judged plane's languages live on ITS card, not appended to a status ribbon.
+          const judgedLanguages = { fr: 0, de: 0, en: 0 };
+          if (regime === "llm_judged") {
+            for (const entry of entries) {
+              judgedLanguages.fr += entry.judged?.languages?.fr ?? 0;
+              judgedLanguages.de += entry.judged?.languages?.de ?? 0;
+              judgedLanguages.en += entry.judged?.languages?.en ?? 0;
+            }
+          }
+          // The individual silence the population line hides: this agent's OWN ruler said
+          // nothing for more than STALE_AFTER_DAYS — its chip carries the amber dot.
+          const staleTitleOf = (entry: QualityRegimeEntry): string | undefined => {
+            const last =
+              regime === "llm_judged"
+                ? entry.judged?.last_scored_at
+                : regime === "business_scored"
+                  ? entry.business?.last_event_at
+                  : null;
+            if (!last) return undefined;
+            const days = daysSince(last);
+            if (days <= STALE_AFTER_DAYS) return undefined;
+            return t(regime === "llm_judged" ? "chipStale.rated" : "chipStale.checked", {
+              days,
+            });
+          };
           // One reason per distinct declared key — agents sharing a blind spot share a line.
           const reasonKeys =
             regime === "unscored"
@@ -373,7 +344,11 @@ export function QualityRegimeBand() {
                         : "hover:border-[var(--tessera-text-muted)]/50",
                     )}
                   >
-                    <ChipInner entry={entry} observedLabel={t("observedChip")} />
+                    <ChipInner
+                      entry={entry}
+                      observedLabel={t("observedChip")}
+                      staleTitle={staleTitleOf(entry)}
+                    />
                   </Link>
                 ))}
                 {hiddenNames > 0 ? (
@@ -382,7 +357,6 @@ export function QualityRegimeBand() {
                   </span>
                 ) : null}
               </div>
-              <ProportionStrip segments={stripSegments} label={t(`${regime}.label`)} />
               <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
                 {regime === "llm_judged" ? (
                   <p className="tabular-nums">
@@ -391,6 +365,9 @@ export function QualityRegimeBand() {
                       since: sinceText(planeSince),
                     })}
                   </p>
+                ) : null}
+                {regime === "llm_judged" ? (
+                  <p className="tabular-nums">{t("llm_judged.languages", judgedLanguages)}</p>
                 ) : null}
                 {regime === "llm_judged" ? (
                   <FreshnessLine
