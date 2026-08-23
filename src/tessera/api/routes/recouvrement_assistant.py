@@ -31,13 +31,16 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from tessera.agent.recouvrement import (
     DEFAULT_SURFACE,
+    DEFAULT_TEXT_INTENT,
     RECOUVREMENT_AGENT_ID,
     RECOUVREMENT_WORKFLOW_ID,
     RecouvrementArtifact,
+    classify_recouvrement_text,
     run_recouvrement_action_workflow_v1,
     run_recouvrement_graph_v1,
 )
 from tessera.agent.state import ConversationMessage
+from tessera.api.config_overrides import resolve_understanding_config
 from tessera.api.security import actor_of, require_collections_operator
 from tessera.api.session import (
     SessionContext,  # noqa: TCH001  — FastAPI resolves Annotated at runtime
@@ -49,7 +52,8 @@ from tessera.guard.redaction import apply_output_guard, mask_pan
 from tessera.memory.transcript import append_messages
 from tessera.observability.business_events import BusinessEventName, record_business_event
 from tessera.observability.metrics import AGENT_TURNS_TOTAL
-from tessera.recouvrement.understanding import classify_intent_llm
+from tessera.recouvrement.capabilities import capability_for_task
+from tessera.recouvrement.understanding import UnderstandingOutcome, classify_intent_llm
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
@@ -209,37 +213,45 @@ async def _shadow_understanding(
     message: str,
     language: str,
     routed_intent: str,
+    mode: str,
+    outcome: UnderstandingOutcome | None,
     surface: str,
     conversation_id: str,
     turn_id: str,
     case_id: str,
     environment: str,
 ) -> None:
-    """ADR 0053 Phase S: classify in parallel, record the comparison, touch nothing.
+    """ADR 0053: record the understanding comparison for this turn, touch nothing.
 
-    The LLM verdict is compared to the intent the regex router actually served and
-    the pair lands in the business-event ledger under the SAME turn, node
-    ``shadow_understanding`` — the telemetry the calibration (slice 4) and the
-    agreement read are built on. Every failure kind is recorded as itself
-    (``schema_invalid`` / ``timeout`` / ``llm_error`` / ``budget_ceiling``);
-    nothing here may ever reach the operator's reply.
+    In SHADOW mode the LLM is called here, off the hot path. In ACTIVE mode the
+    route already called it (``outcome`` is precomputed) and this only writes the
+    ledger row — the agreement telemetry survives the flip. ``agree`` compares
+    the LLM verdict to the PURE regex answer (ladder or default) so its meaning
+    is mode-stable; ``routed_intent`` separately records what actually served.
+    Every failure kind is recorded as itself; nothing here may ever reach the
+    operator's reply.
     """
     try:
-        outcome = await classify_intent_llm(message, language=language)
+        if outcome is None:
+            outcome = await classify_intent_llm(message, language=language)
+        text_verdict = classify_recouvrement_text(message)
+        regex_intent = text_verdict[0] if text_verdict is not None else DEFAULT_TEXT_INTENT
         verdict = outcome.verdict
         record_business_event(
             author=AGENT_TURN_ACTOR,
             event_name=BusinessEventName.INTENT_ROUTED,
             payload={
                 "shadow": True,
+                "mode": mode,
                 "routed_intent": routed_intent,
+                "regex_intent": regex_intent,
                 "llm_status": outcome.status,
                 "schema_valid": outcome.status == "verdict",
                 "llm_intent": verdict.intent if verdict is not None else None,
                 "llm_confidence": verdict.confidence if verdict is not None else None,
                 "llm_duration_months": verdict.duration_months if verdict is not None else None,
                 "llm_requested_time": verdict.requested_time if verdict is not None else None,
-                "agree": (verdict.intent == routed_intent) if verdict is not None else None,
+                "agree": (verdict.intent == regex_intent) if verdict is not None else None,
                 "llm_latency_ms": round(outcome.latency_ms, 1),
                 "llm_detail": outcome.detail,
                 "prompt_version": outcome.prompt_version,
@@ -261,13 +273,19 @@ async def _shadow_understanding(
 
 
 def _spawn_shadow_understanding(
-    payload: RecouvrementAssistantRequest, result: Mapping[str, object]
+    payload: RecouvrementAssistantRequest,
+    result: Mapping[str, object],
+    *,
+    message: str | None = None,
+    mode: str = "shadow",
+    outcome: UnderstandingOutcome | None = None,
 ) -> None:
-    """Fire the layer-1 shadow off the hot path; the reply never waits for it.
+    """Fire the layer-1 comparison off the hot path; the reply never waits for it.
 
     A declared intent is skipped — a pressed button is an answer, and a classifier
     has nothing to add (ADR 0053 §1). The turn identifiers are read from the
-    turn's own event rows so the shadow row joins the exact turn it shadows.
+    turn's own event rows so the row joins the exact turn it describes. In active
+    mode ``outcome`` carries the call the route already made, so no second spend.
     """
     events = _turn_events(result)
     if not events or _routed_intent_source(events) == "declared":
@@ -280,9 +298,11 @@ def _spawn_shadow_understanding(
     routed_intent = str(routed)
     task = asyncio.create_task(
         _shadow_understanding(
-            message=payload.message,
+            message=message if message is not None else payload.message,
             language=payload.language,
             routed_intent=routed_intent,
+            mode=mode,
+            outcome=outcome,
             surface=str(first.get("surface", payload.surface)),
             conversation_id=str(first.get("conversation_id", "")),
             turn_id=str(first.get("turn_id", "")),
@@ -333,6 +353,35 @@ async def recouvrement_assistant_message(
             detail="message refused by the input guard",
         )
     started = time.perf_counter()
+    # ADR 0053 §5: which layer-1 mode this turn serves under is a GOVERNED state, read from
+    # the override store (fails open to shadow, loudly). In active mode the LLM classifies
+    # on the hot path, bounded by the governed timeout; its acceptance (schema-valid AND
+    # confidence over the calibrated threshold) is decided HERE — the graph only consumes.
+    # A declared intent skips the model in every mode: a pressed button is an answer.
+    understanding_config = await resolve_understanding_config()
+    active_outcome: UnderstandingOutcome | None = None
+    llm_understanding: dict[str, object] | None = None
+    assistant_state = payload.assistant_state or {}
+    if (
+        understanding_config.mode == "active"
+        and capability_for_task(assistant_state.get("declaredIntent")) is None
+    ):
+        active_outcome = await classify_intent_llm(
+            check.sanitised_text,
+            language=payload.language,
+            timeout_s=understanding_config.timeout_s,
+        )
+        verdict = active_outcome.verdict
+        threshold = understanding_config.threshold
+        llm_understanding = {
+            "accepted": verdict is not None
+            and threshold is not None
+            and verdict.confidence >= threshold,
+            "intent": verdict.intent if verdict is not None else None,
+            "confidence": verdict.confidence if verdict is not None else None,
+            "duration_months": verdict.duration_months if verdict is not None else None,
+            "requested_time": verdict.requested_time if verdict is not None else None,
+        }
     # The guard's per-turn state, on this plane too (audit 2026-08-03). It was installed only
     # in /chat, so this workflow ran with no call-count map at all — meaning
     # `max_calls_per_turn` was not enforced here, and the auth floor saw the ANONYMOUS default
@@ -349,6 +398,7 @@ async def recouvrement_assistant_message(
                 turn_id=payload.turn_id,
                 surface=payload.surface,
                 language=payload.language,
+                llm_understanding=llm_understanding,
             )
     except Exception:
         # A failed turn is still a turn served, and `/chat` counts its failures too. Counting
@@ -364,7 +414,13 @@ async def recouvrement_assistant_message(
     latency_ms = (time.perf_counter() - started) * _MS_PER_SECOND
     guarded = _guard_visible_reply(result, language=payload.language)
     await _persist_recouvrement_turn(payload, guarded, latency_ms)
-    _spawn_shadow_understanding(payload, guarded)
+    _spawn_shadow_understanding(
+        payload,
+        guarded,
+        message=check.sanitised_text,
+        mode=understanding_config.mode,
+        outcome=active_outcome,
+    )
     return dict(guarded)
 
 

@@ -205,6 +205,7 @@ def score_llm_column(
     *,
     timeout_s: float = DEFAULT_TIMEOUT_S,
     concurrency: int = 4,
+    model: str | None = None,
 ) -> list[LlmCaseVerdict]:
     """Score the LLM classifier over the same referent, a few cases at a time.
 
@@ -230,7 +231,7 @@ def score_llm_column(
         async def _one(case: IntentCase) -> LlmCaseVerdict:
             async with semaphore:
                 outcome = await classify_intent_llm(
-                    case.utterance, language=case.language, timeout_s=timeout_s
+                    case.utterance, language=case.language, timeout_s=timeout_s, model=model
                 )
             verdict = outcome.verdict
             predicted_fields: dict[str, object] = {}
@@ -328,7 +329,45 @@ def _llm_column(
             "correct": composed_correct,
             "accuracy": round(composed_correct / len(verdicts), 4) if verdicts else None,
         },
+        "threshold_sweep": _threshold_sweep(verdicts, regex_by_id),
         "misrouted_case_ids": [v.case.id for v in verdicts if not v.correct],
+    }
+
+
+def _threshold_sweep(
+    verdicts: list[LlmCaseVerdict], regex_by_id: dict[str, CaseVerdict]
+) -> dict[str, object]:
+    """Composed correctness (LLM above t, else regex) for every candidate threshold.
+
+    This is the ADR 0053 §6 calibration read: the RULE (below the threshold, the
+    regex serves) is engraved; the NUMBER a governed write stores is the lowest
+    threshold maximising the composed count on a measured run — cited, never
+    picked. The sweep travels in the report so the citation is checkable.
+    """
+    points: list[dict[str, object]] = []
+    best_threshold = 0.0
+    best_correct = -1
+    for step in range(21):
+        threshold = step / 20
+        correct_at = 0
+        for verdict in verdicts:
+            confident = (
+                verdict.outcome.status == "verdict"
+                and verdict.outcome.verdict is not None
+                and verdict.outcome.verdict.confidence >= threshold
+            )
+            if confident:
+                correct_at += int(verdict.correct)
+            else:
+                fallback = regex_by_id.get(verdict.case.id)
+                correct_at += int(fallback.correct) if fallback is not None else 0
+        points.append({"threshold": threshold, "correct": correct_at})
+        if correct_at > best_correct:
+            best_correct = correct_at
+            best_threshold = threshold
+    return {
+        "points": points,
+        "suggested": {"threshold": best_threshold, "correct": best_correct},
     }
 
 
@@ -459,6 +498,12 @@ def _print_report(report: dict[str, object]) -> None:
     latency = cast(dict[str, object], llm_column["latency_ms"])
     print(f"    latency ms: p50 {latency['p50']} · max {latency['max']}")
     print("    " + _format_llm_counts("with regex fallback (active-mode composition)", composed))
+    sweep = cast(dict[str, object], llm_column["threshold_sweep"])
+    suggested = cast(dict[str, object], sweep["suggested"])
+    print(
+        f"    threshold sweep suggests: {suggested['threshold']} "
+        f"(composed {suggested['correct']}/{composed['n']})"
+    )
 
 
 def _format_llm_counts(label: str, counts: dict[str, object]) -> str:
@@ -508,11 +553,21 @@ def main(argv: list[str] | None = None) -> int:
         default=4,
         help="concurrent LLM calls (default 4 — be kind to a local model)",
     )
+    parser.add_argument(
+        "--llm-model",
+        default=None,
+        help="model override for the LLM column (candidate measurement); default: profile base",
+    )
     args = parser.parse_args(argv)
     intent_set = load_intent_set(args.set_path)
     verdicts = score_regex_column(intent_set.cases)
     llm_verdicts = (
-        score_llm_column(intent_set.cases, timeout_s=args.llm_timeout, concurrency=args.concurrency)
+        score_llm_column(
+            intent_set.cases,
+            timeout_s=args.llm_timeout,
+            concurrency=args.concurrency,
+            model=args.llm_model,
+        )
         if args.llm
         else None
     )

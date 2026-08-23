@@ -195,9 +195,12 @@ def _fake_result(intent_source: str, intent: str = "summarize_case") -> dict[str
 
 
 def _payload(language: str = "fr") -> recouvrement_assistant.RecouvrementAssistantRequest:
+    # "Résume ce dossier" hits the summary word list, so the pure regex answer and the
+    # stubbed LLM verdict below genuinely agree — the agreement field is tested on a case
+    # where agreement is TRUE for a reason, not by construction of the stub alone.
     return recouvrement_assistant.RecouvrementAssistantRequest(
         case_id="RC-2048",
-        message="Où en est-on sur ce dossier ?",
+        message="Résume ce dossier",
         language=language,  # type: ignore[arg-type]
     )
 
@@ -249,9 +252,11 @@ async def test_a_classified_turn_records_the_comparison_under_its_own_turn(
     assert len(shadow_rows) == 1
     payload = shadow_rows[0]["payload"]
     assert payload["shadow"] is True
+    assert payload["mode"] == "shadow"
     assert payload["schema_valid"] is True
     assert payload["llm_intent"] == "summarize_case"
     assert payload["routed_intent"] == "summarize_case"
+    assert payload["regex_intent"] == "summarize_case"
     assert payload["agree"] is True
     assert payload["prompt_version"] == "recouvrement_intent.v1"
 
@@ -282,3 +287,4 @@ async def test_a_failed_classification_is_recorded_as_its_kind(
     assert payload["schema_valid"] is False
     assert payload["agree"] is None
     assert payload["llm_intent"] is None
+    assert payload["regex_intent"] == "summarize_case"  # the floor still answered

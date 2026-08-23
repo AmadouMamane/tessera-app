@@ -35,8 +35,16 @@ def test_the_registry_is_the_org_knob_plus_one_per_fleet_agent() -> None:
     """
     keys = knob_keys()
     assert keys[0] == CHAT_MODEL_KEY
-    assert keys[1:-2] == [f"llm.chat_model.agent.{a.id}" for a in list_agents()]
-    assert keys[-2:] == [DAILY_BUDGET_KEY, BUDGET_OVERRUN_KEY]
+    assert keys[1:-5] == [f"llm.chat_model.agent.{a.id}" for a in list_agents()]
+    # Frozen tail grown twice, both deliberate: ADR 0034 (the two budget knobs),
+    # then ADR 0053 (the three recouvrement understanding knobs, 2026-08-23).
+    assert keys[-5:] == [
+        DAILY_BUDGET_KEY,
+        BUDGET_OVERRUN_KEY,
+        "recouvrement.understanding.mode",
+        "recouvrement.understanding.confidence_threshold",
+        "recouvrement.understanding.timeout_s",
+    ]
 
 
 def test_agent_of_key_names_the_agent_and_only_the_agent() -> None:

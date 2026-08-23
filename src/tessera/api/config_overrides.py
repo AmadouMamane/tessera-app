@@ -23,6 +23,7 @@ pattern as :mod:`tessera.api.settings_store`.
 from __future__ import annotations
 
 import sys
+import time
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Final, Literal
@@ -41,10 +42,15 @@ __all__ = [
     "BUDGET_OVERRUN_KEY",
     "CHAT_MODEL_KEY",
     "DAILY_BUDGET_KEY",
+    "UNDERSTANDING_MODES",
+    "UNDERSTANDING_MODE_KEY",
+    "UNDERSTANDING_THRESHOLD_KEY",
+    "UNDERSTANDING_TIMEOUT_KEY",
     "BudgetPolicy",
     "KnobError",
     "Override",
     "OverrideNotStoredError",
+    "UnderstandingConfig",
     "agent_of_key",
     "allowed_chat_models",
     "base_chat_model",
@@ -54,6 +60,7 @@ __all__ = [
     "list_overrides",
     "resolve_budget_policy",
     "resolve_chat_model_override",
+    "resolve_understanding_config",
     "set_override",
 ]
 
@@ -68,6 +75,16 @@ DAILY_BUDGET_KEY: Final[str] = "llm.budget.daily_eur"
 #: ADR 0034 — the declared behaviour at overrun.
 BUDGET_OVERRUN_KEY: Final[str] = "llm.budget.overrun"
 BUDGET_OVERRUN_BEHAVIOURS: Final[tuple[str, ...]] = ("block", "local_fallback")
+#: ADR 0053 §5 — recouvrement layer-1 deployment mode. The regex→LLM switch is a
+#: journalled governed act with a named author and reason, never a code edit.
+UNDERSTANDING_MODE_KEY: Final[str] = "recouvrement.understanding.mode"
+UNDERSTANDING_MODES: Final[tuple[str, ...]] = ("shadow", "active")
+#: ADR 0053 §6 — the calibrated confidence floor below which layer 1 falls back to the
+#: regex ladder. The RULE is engraved; the NUMBER comes from a bench run (store it with
+#: the run in the reason). ``active`` cannot be stored without it.
+UNDERSTANDING_THRESHOLD_KEY: Final[str] = "recouvrement.understanding.confidence_threshold"
+#: ADR 0053 — the per-call bound on the layer-1 model, seconds (measured, then governed).
+UNDERSTANDING_TIMEOUT_KEY: Final[str] = "recouvrement.understanding.timeout_s"
 
 
 class KnobError(ValueError):
@@ -108,6 +125,9 @@ def knob_keys() -> list[str]:
         *(f"{_AGENT_KEY_PREFIX}{a.id}" for a in list_agents()),
         DAILY_BUDGET_KEY,
         BUDGET_OVERRUN_KEY,
+        UNDERSTANDING_MODE_KEY,
+        UNDERSTANDING_THRESHOLD_KEY,
+        UNDERSTANDING_TIMEOUT_KEY,
     ]
 
 
@@ -208,9 +228,39 @@ def _validated_value(key: str, value: str) -> str:
                 f"overrun behaviour {value!r} is not one of {BUDGET_OVERRUN_BEHAVIOURS} — refused"
             )
         return value
+    understood = _validated_understanding_value(key, value)
+    if understood is not None:
+        return understood
     if value not in allowed_chat_models():
         raise KnobError(f"model {value!r} is not in the catalogue — refused, never stored")
     return value
+
+
+def _validated_understanding_value(key: str, value: str) -> str | None:
+    """Validate an ADR 0053 understanding-knob value, or ``None`` for other families."""
+    if key == UNDERSTANDING_MODE_KEY:
+        if value not in UNDERSTANDING_MODES:
+            raise KnobError(
+                f"understanding mode {value!r} is not one of {UNDERSTANDING_MODES} — refused"
+            )
+        return value
+    if key == UNDERSTANDING_THRESHOLD_KEY:
+        try:
+            threshold = Decimal(value)
+        except InvalidOperation as exc:
+            raise KnobError(f"{value!r} is not a decimal confidence threshold — refused") from exc
+        if not threshold.is_finite() or not Decimal(0) <= threshold <= Decimal(1):
+            raise KnobError(f"the confidence threshold lives in [0, 1]; got {value!r}")
+        return str(threshold)
+    if key == UNDERSTANDING_TIMEOUT_KEY:
+        try:
+            timeout_s = Decimal(value)
+        except InvalidOperation as exc:
+            raise KnobError(f"{value!r} is not a decimal timeout in seconds — refused") from exc
+        if not timeout_s.is_finite() or not Decimal(0) < timeout_s <= Decimal(60):
+            raise KnobError(f"the understanding timeout lives in (0, 60] seconds; got {value!r}")
+        return str(timeout_s)
+    return None
 
 
 def _forget_cached_ceiling() -> None:
@@ -225,6 +275,7 @@ def _forget_cached_ceiling() -> None:
     from tessera.llm.ceiling import invalidate_policy_cache
 
     invalidate_policy_cache()
+    _forget_cached_understanding()
 
 
 async def set_override(key: str, value: str, *, author: str, reason: str) -> Override:
@@ -251,6 +302,19 @@ async def set_override(key: str, value: str, *, author: str, reason: str) -> Ove
     value = _validated_value(key, value)
     if not reason.strip():
         raise KnobError("a governed override carries its reason (ADR 0024) — blank refused")
+    # ADR 0053 §6: the rule is engraved, the number is measured — an active layer 1
+    # with no calibrated threshold is an illegal state, made unrepresentable in the
+    # store rather than patched over at read time.
+    if (
+        key == UNDERSTANDING_MODE_KEY
+        and value == "active"
+        and await _stored_value(UNDERSTANDING_THRESHOLD_KEY) is None
+    ):
+        raise KnobError(
+            "active understanding requires a stored confidence threshold first — "
+            "calibrate on the bench (eval.intent_bench threshold sweep), store "
+            f"{UNDERSTANDING_THRESHOLD_KEY!r} citing the run, then flip (ADR 0053 §6)"
+        )
     await ensure_overrides_schema()
     pool = get_pool()
     async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
@@ -281,7 +345,19 @@ async def delete_override(key: str) -> None:
     Raises:
         OverrideNotStoredError: When the knob held no override — the caller maps
             it to a 404 rather than recording a change that never happened.
+        KnobError: When removing this override would leave the store in an
+            illegal state (the calibrated threshold under an active layer 1).
     """
+    # The write guard's mirror: deleting the threshold under an ACTIVE layer 1 would
+    # recreate the illegal state sideways. Flip the mode back to shadow first.
+    if (
+        key == UNDERSTANDING_THRESHOLD_KEY
+        and await _stored_value(UNDERSTANDING_MODE_KEY) == "active"
+    ):
+        raise KnobError(
+            "the confidence threshold cannot be removed while understanding mode is "
+            "'active' — set the mode back to 'shadow' first (ADR 0053 §6)"
+        )
     await ensure_overrides_schema()
     pool = get_pool()
     async with pool.connection() as conn, conn.cursor() as cur:
@@ -405,3 +481,109 @@ async def resolve_budget_policy() -> BudgetPolicy | None:
         "local_fallback" if overrun_raw == "local_fallback" else "block"
     )
     return BudgetPolicy(daily_eur=ceiling, overrun=overrun)
+
+
+async def _stored_value(key: str) -> str | None:
+    """The stored override value for ``key``, or ``None`` when none is stored.
+
+    Used by the understanding write/delete guards. Unlike the read resolvers it
+    does NOT fail open: a guard that cannot see must refuse rather than allow
+    (ADR 0026), so a store error propagates and the governed write is refused.
+    """
+    await ensure_overrides_schema()
+    pool = get_pool()
+    async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute(
+            sql.SQL("SELECT value FROM {table} WHERE key = %s;").format(table=_TABLE),
+            (key,),
+        )
+        row = await cur.fetchone()
+    return str(row["value"]) if row else None
+
+
+@dataclass(frozen=True, slots=True)
+class UnderstandingConfig:
+    """The governed layer-1 deployment state recouvrement serves under (ADR 0053)."""
+
+    mode: Literal["shadow", "active"]
+    threshold: float | None
+    timeout_s: float
+
+
+#: How long a read of the understanding knobs stays good (the ADR 0034 ceiling pattern:
+#: an operator's flip takes effect within a page refresh, and the hot path does not pay
+#: a Postgres read per turn for a knob that changes a few times a year).
+_UNDERSTANDING_TTL_SECONDS: Final[float] = 30.0
+_understanding_cache: tuple[float, UnderstandingConfig] | None = None
+
+
+def _forget_cached_understanding() -> None:
+    """Drop the understanding-config cache; called from the same write path as the ceiling's."""
+    global _understanding_cache
+    _understanding_cache = None
+
+
+async def resolve_understanding_config() -> UnderstandingConfig:
+    """The layer-1 mode / threshold / timeout this turn serves under (ADR 0053 §5-§6).
+
+    Cached for :data:`_UNDERSTANDING_TTL_SECONDS`; every override write or delete
+    drops the cache (same seam as the ceiling's). Fails open to SHADOW, loudly:
+    shadow is the known-good state and a turn is never blocked on this store.
+    ``active`` with no stored threshold cannot be written (the write guard) nor
+    left behind by a delete (its mirror); if a legacy or hand-edited store
+    presents it anyway, the resolver serves shadow and says so on stderr — a
+    degradation, never a silent one.
+    """
+    global _understanding_cache
+    now = time.monotonic()
+    if _understanding_cache is not None and now - _understanding_cache[0] < (
+        _UNDERSTANDING_TTL_SECONDS
+    ):
+        return _understanding_cache[1]
+    config = await _read_understanding_config()
+    _understanding_cache = (now, config)
+    return config
+
+
+async def _read_understanding_config() -> UnderstandingConfig:
+    """One uncached read of the three understanding knobs (see the resolver's contract)."""
+    from tessera.recouvrement.understanding import DEFAULT_TIMEOUT_S
+
+    keys = [UNDERSTANDING_MODE_KEY, UNDERSTANDING_THRESHOLD_KEY, UNDERSTANDING_TIMEOUT_KEY]
+    try:
+        await ensure_overrides_schema()
+        pool = get_pool()
+        async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                sql.SQL("SELECT key, value FROM {table} WHERE key = ANY(%s);").format(table=_TABLE),
+                (keys,),
+            )
+            rows = await cur.fetchall()
+    except Exception as exc:  # fail open to shadow — never block a turn on this store
+        sys.stderr.write(
+            f"tessera.config_overrides: understanding read failed, serving shadow: {exc}\n"
+        )
+        return UnderstandingConfig(mode="shadow", threshold=None, timeout_s=DEFAULT_TIMEOUT_S)
+    by_key = {str(r["key"]): str(r["value"]) for r in rows}
+    return _interpret_understanding_rows(by_key, default_timeout_s=DEFAULT_TIMEOUT_S)
+
+
+def _interpret_understanding_rows(
+    by_key: dict[str, str], *, default_timeout_s: float
+) -> UnderstandingConfig:
+    """Turn stored knob rows into the served config — degradations spoken, never silent."""
+    threshold = (
+        float(by_key[UNDERSTANDING_THRESHOLD_KEY])
+        if UNDERSTANDING_THRESHOLD_KEY in by_key
+        else None
+    )
+    timeout_s = float(by_key.get(UNDERSTANDING_TIMEOUT_KEY, default_timeout_s))
+    mode = by_key.get(UNDERSTANDING_MODE_KEY, "shadow")
+    if mode == "active" and threshold is None:
+        sys.stderr.write(
+            "tessera.config_overrides: understanding mode 'active' with no stored threshold "
+            "— an illegal store state; serving shadow (ADR 0053 §6)\n"
+        )
+        mode = "shadow"
+    resolved_mode: Literal["shadow", "active"] = "active" if mode == "active" else "shadow"
+    return UnderstandingConfig(mode=resolved_mode, threshold=threshold, timeout_s=timeout_s)

@@ -278,6 +278,7 @@ class RecouvrementWorkflowState(TypedDict):
     model: str
     environment: str
     assistant_state: NotRequired[dict[str, object]]
+    llm_understanding: NotRequired[dict[str, object]]
     authorized: NotRequired[bool]
     authorization_reason: NotRequired[str]
     case: NotRequired[RecouvrementCaseSnapshot]
@@ -739,33 +740,61 @@ def extract_recouvrement_text_fields(message: str) -> dict[str, object]:
     return fields
 
 
+def _accepted_llm_understanding(state: RecouvrementWorkflowState) -> dict[str, object] | None:
+    """The route-accepted LLM verdict for this turn, or ``None``.
+
+    ``None`` covers three honest states at once: shadow/off mode (no attempt),
+    an attempt the route rejected (failure or below the governed threshold —
+    acceptance is decided at the ROUTE, which knows the threshold), or a
+    malformed injection. The graph only ever consumes an accepted verdict.
+    """
+    llm = state.get("llm_understanding")
+    if isinstance(llm, dict) and llm.get("accepted") is True and isinstance(llm.get("intent"), str):
+        return llm
+    return None
+
+
 def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Route the supported Recouvrement intents from the current Julie message."""
     active_task = _active_task(state)
     declared_intent = _declared_intent(state)
+    llm_attempted = isinstance(state.get("llm_understanding"), dict)
+    accepted_llm = _accepted_llm_understanding(state)
     text_verdict = classify_recouvrement_text(state["message"])
     if declared_intent is not None:
         # A declared capability is an ANSWER, not a hint: the caller pressed the button that
         # names it. Classifying its prompt afterwards can only disagree with it — and did.
         intent = declared_intent
         confidence = 1.0
-    elif text_verdict is not None:
-        intent, confidence = text_verdict
-    elif active_task == "explain_payment_options":
-        intent = "explain_payment_options"
-        confidence = 0.82
-    elif active_task == "summary":
-        intent = "summarize_case"
-        confidence = 0.82
-    elif active_task in {"check_rule", "check_contact_rule"}:
-        intent = "check_contact_rule"
-        confidence = 0.82
-    elif active_task == "draft_reminder":
-        intent = "draft_reminder"
-        confidence = 0.82
+        intent_source = "declared"
+    elif accepted_llm is not None:
+        # ADR 0053 active mode: a schema-valid verdict above the governed threshold routes.
+        intent = str(accepted_llm["intent"])
+        raw_confidence = accepted_llm.get("confidence")
+        confidence = float(raw_confidence) if isinstance(raw_confidence, int | float) else 0.0
+        intent_source = "llm"
     else:
-        intent = DEFAULT_TEXT_INTENT
-        confidence = 0.72
+        # The deterministic ladder — the permanent floor. When an LLM attempt existed and
+        # was rejected (failure, or below the threshold), the trail says so: only a
+        # 'regex_fallback' turn can be re-examined as "the model was tried and lost".
+        intent_source = "regex_fallback" if llm_attempted else "regex"
+        if text_verdict is not None:
+            intent, confidence = text_verdict
+        elif active_task == "explain_payment_options":
+            intent = "explain_payment_options"
+            confidence = 0.82
+        elif active_task == "summary":
+            intent = "summarize_case"
+            confidence = 0.82
+        elif active_task in {"check_rule", "check_contact_rule"}:
+            intent = "check_contact_rule"
+            confidence = 0.82
+        elif active_task == "draft_reminder":
+            intent = "draft_reminder"
+            confidence = 0.82
+        else:
+            intent = DEFAULT_TEXT_INTENT
+            confidence = 0.72
     capability_id = capability_for_task(intent)
     record_business_event(
         author=AGENT_TURN_ACTOR,
@@ -776,8 +805,8 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
             "active_task": active_task,
             # The audit trail must be able to tell how the turn was understood — only some
             # sources can be wrong in some ways (ADR 0053 vocabulary: declared / llm /
-            # regex / regex_fallback; the LLM values arrive with active mode).
-            "intent_source": "declared" if declared_intent is not None else "regex",
+            # regex / regex_fallback).
+            "intent_source": intent_source,
         },
         **_event_common(
             state,
@@ -793,8 +822,16 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
     case = state["case"]
     intent = state.get("intent", "check_contact_rule")
     current_artifact = _current_artifact(state)
+    accepted_llm = _accepted_llm_understanding(state) or {}
     if intent == "propose_schedule":
-        requested_months = _parse_duration_months(state["message"]) or 3
+        # ADR 0053: when the accepted LLM verdict carries the field, it serves — the model
+        # reads "douze mois"; the digit parser stays as the fallback for what it missed.
+        llm_months = accepted_llm.get("duration_months")
+        requested_months = (
+            (llm_months if isinstance(llm_months, int) and llm_months > 0 else None)
+            or _parse_duration_months(state["message"])
+            or 3
+        )
         monthly_amount = round(case.amount_due / requested_months, 2)
         slots: dict[str, object] = {
             "case_id": state["case_id"],
@@ -857,7 +894,10 @@ def extract_recouvrement_slots(state: RecouvrementWorkflowState) -> dict[str, ob
             "no_external_effect": True,
         }
     else:
-        requested_time = _parse_time(state["message"])
+        llm_time = accepted_llm.get("requested_time")
+        requested_time = (
+            llm_time if isinstance(llm_time, str) and llm_time else None
+        ) or _parse_time(state["message"])
         slots = {
             "requested_time": requested_time,
             "rule_impacting": requested_time is not None,
@@ -2940,8 +2980,15 @@ def run_recouvrement_graph_v1(
     language: RecouvrementLanguage = "fr",
     model: str = RECOUVREMENT_WORKFLOW_ID,
     environment: str = "dev",
+    llm_understanding: dict[str, object] | None = None,
 ) -> RecouvrementOutput:
-    """Run the minimal Recouvrement graph and return the drawer-ready contract."""
+    """Run the minimal Recouvrement graph and return the drawer-ready contract.
+
+    ``llm_understanding`` is the route's ADR 0053 active-mode injection — the
+    layer-1 verdict WITH its acceptance already decided (the route knows the
+    governed threshold; the graph only records and consumes). ``None`` means
+    shadow/off: the deterministic ladder routes, unchanged.
+    """
     initial: RecouvrementWorkflowState = {
         "conversation_id": conversation_id or uuid.uuid4().hex,
         "turn_id": turn_id or uuid.uuid4().hex,
@@ -2954,5 +3001,7 @@ def run_recouvrement_graph_v1(
     }
     if assistant_state is not None:
         initial["assistant_state"] = assistant_state
+    if llm_understanding is not None:
+        initial["llm_understanding"] = llm_understanding
     final_state = cast(RecouvrementWorkflowState, _compiled_recouvrement_graph_v1().invoke(initial))
     return final_state["output"]

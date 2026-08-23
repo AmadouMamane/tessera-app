@@ -138,6 +138,7 @@ async def classify_intent_llm(
     *,
     language: str,
     timeout_s: float = DEFAULT_TIMEOUT_S,
+    model: str | None = None,
 ) -> UnderstandingOutcome:
     """Classify one free-text turn with the profile LLM; never raise into the caller.
 
@@ -151,6 +152,9 @@ async def classify_intent_llm(
         message: The operator's free-text turn, unnormalized.
         language: The turn's language code (prompt selection only).
         timeout_s: Hard bound on the model call.
+        model: Optional model override (bench candidate measurement — the
+            ``--llm-model`` column); ``None`` serves the profile base, and the
+            override still clears the daily ceiling like any other spend.
 
     Returns:
         A verdict outcome, or a failure outcome naming its kind.
@@ -161,7 +165,7 @@ async def classify_intent_llm(
     from tessera.llm.ceiling import DailyCeilingReachedError, resolve_spend_model
 
     try:
-        model = await resolve_spend_model(caller=_CALLER)
+        model = await resolve_spend_model(caller=_CALLER, model=model)
     except DailyCeilingReachedError as exc:
         return UnderstandingOutcome(
             status="budget_ceiling",
