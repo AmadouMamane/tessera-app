@@ -56,16 +56,23 @@ if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
 
 __all__ = [
+    "DEFAULT_TEXT_INTENT",
     "RECOUVREMENT_AGENT_ID",
     "RECOUVREMENT_WORKFLOW_ID",
     "RecouvrementCaseSnapshot",
     "build_recouvrement_graph_v1",
+    "classify_recouvrement_text",
+    "extract_recouvrement_text_fields",
     "run_recouvrement_action_workflow_v1",
     "run_recouvrement_graph_v1",
 ]
 
 RECOUVREMENT_AGENT_ID = "recouvrement"
 RECOUVREMENT_WORKFLOW_ID = "recouvrement_collections_v1"
+#: Where the router lands when neither the caller, the text, nor the drawer says anything.
+#: One name shared by the graph and the intent bench (ADR 0053): the bench must score the
+#: router's actual default, never a re-guessed copy of it.
+DEFAULT_TEXT_INTENT = "check_contact_rule"
 DEFAULT_SURFACE = "dedicated-ui"
 AUTHORIZED_SURFACES = {Surface.DEDICATED_UI.value, Surface.COCKPIT_EMBEDDED.value}
 
@@ -670,36 +677,80 @@ def load_case_context(state: RecouvrementWorkflowState) -> dict[str, object]:
     return {"case": case}
 
 
+def classify_recouvrement_text(message: str) -> tuple[str, float] | None:
+    """Classify a free-text Recouvrement turn deterministically, or admit no match.
+
+    This is the exact matcher ladder ``route_recouvrement_intent`` applies to free
+    text, extracted pure so the intent bench interrogates the classifier itself
+    rather than a neighbouring re-implementation (ADR 0026). It is the layer-1
+    deterministic baseline of ADR 0053: the null floor an LLM classifier must
+    measurably beat, and the unconditional fallback once one exists.
+
+    Args:
+        message: The operator's free-text turn, unnormalized.
+
+    Returns:
+        The ``(intent, confidence)`` the ladder assigns, or ``None`` when no word
+        list matches — the router then falls back to drawer context or to
+        :data:`DEFAULT_TEXT_INTENT`, and the bench scores that fallback as the
+        router's answer while counting it separately.
+    """
+    normalized = _normalize_message(message)
+    has_schedule = _has_schedule_intent(normalized)
+    has_draft = _has_draft_intent(normalized)
+    has_payment = _has_payment_options_intent(normalized)
+    if has_draft and not has_schedule and not has_payment:
+        return ("draft_reminder", 0.93)
+    if has_schedule and (_parse_duration_months(message) is not None or not has_payment):
+        return ("propose_schedule", 0.94)
+    if has_payment:
+        return ("explain_payment_options", 0.94)
+    if _has_summary_intent(normalized):
+        return ("summarize_case", 0.95)
+    if _has_contact_rule_intent(normalized):
+        return ("check_contact_rule", 0.96)
+    return None
+
+
+def extract_recouvrement_text_fields(message: str) -> dict[str, object]:
+    """Extract the layer-1 text fields the graph consumes (ADR 0053 bench seam).
+
+    The same parsers ``extract_recouvrement_slots`` uses, exposed as one pure
+    read so the bench and a future LLM extractor are measured against the same
+    seam. ``requested_time`` may derive from a "now" word (``maintenant`` /
+    ``now`` / ``jetzt``) and is then clock-dependent — the labeled set never
+    labels such cases.
+
+    Args:
+        message: The operator's free-text turn, unnormalized.
+
+    Returns:
+        A dict holding ``duration_months`` (int) and/or ``requested_time``
+        (``HH:MM``) when the text carries them; absent keys mean the parsers
+        found nothing.
+    """
+    fields: dict[str, object] = {}
+    months = _parse_duration_months(message)
+    if months is not None:
+        fields["duration_months"] = months
+    requested_time = _parse_time(message)
+    if requested_time is not None:
+        fields["requested_time"] = requested_time
+    return fields
+
+
 def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, object]:
     """Route the supported Recouvrement intents from the current Julie message."""
-    normalized = _normalize_message(state["message"])
     active_task = _active_task(state)
     declared_intent = _declared_intent(state)
-    has_schedule_intent = _has_schedule_intent(normalized)
-    has_draft_intent = _has_draft_intent(normalized)
-    has_summary_intent = _has_summary_intent(normalized)
-    has_payment_options_intent = _has_payment_options_intent(normalized)
-    has_requested_duration = _parse_duration_months(state["message"]) is not None
+    text_verdict = classify_recouvrement_text(state["message"])
     if declared_intent is not None:
         # A declared capability is an ANSWER, not a hint: the caller pressed the button that
         # names it. Classifying its prompt afterwards can only disagree with it — and did.
         intent = declared_intent
         confidence = 1.0
-    elif has_draft_intent and not has_schedule_intent and not has_payment_options_intent:
-        intent = "draft_reminder"
-        confidence = 0.93
-    elif has_schedule_intent and (has_requested_duration or not has_payment_options_intent):
-        intent = "propose_schedule"
-        confidence = 0.94
-    elif has_payment_options_intent:
-        intent = "explain_payment_options"
-        confidence = 0.94
-    elif has_summary_intent:
-        intent = "summarize_case"
-        confidence = 0.95
-    elif _has_contact_rule_intent(normalized):
-        intent = "check_contact_rule"
-        confidence = 0.96
+    elif text_verdict is not None:
+        intent, confidence = text_verdict
     elif active_task == "explain_payment_options":
         intent = "explain_payment_options"
         confidence = 0.82
@@ -713,7 +764,7 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
         intent = "draft_reminder"
         confidence = 0.82
     else:
-        intent = "check_contact_rule"
+        intent = DEFAULT_TEXT_INTENT
         confidence = 0.72
     capability_id = capability_for_task(intent)
     record_business_event(
