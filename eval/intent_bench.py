@@ -21,6 +21,7 @@ over ``eval/reports/<env>/`` and the flat root).
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import json
 from dataclasses import dataclass
@@ -35,6 +36,11 @@ from tessera.agent.recouvrement import (
     classify_recouvrement_text,
     extract_recouvrement_text_fields,
 )
+from tessera.recouvrement.understanding import (
+    DEFAULT_TIMEOUT_S,
+    UnderstandingOutcome,
+    classify_intent_llm,
+)
 
 __all__ = [
     "DEFAULT_SET_PATH",
@@ -42,9 +48,11 @@ __all__ = [
     "CaseVerdict",
     "IntentCase",
     "IntentSet",
+    "LlmCaseVerdict",
     "build_report",
     "load_intent_set",
     "main",
+    "score_llm_column",
     "score_regex_column",
 ]
 
@@ -182,6 +190,71 @@ def score_regex_column(cases: tuple[IntentCase, ...]) -> list[CaseVerdict]:
     return verdicts
 
 
+@dataclass(frozen=True, slots=True)
+class LlmCaseVerdict:
+    """The LLM column's answer to one labeled case (ADR 0053 slice 3)."""
+
+    case: IntentCase
+    outcome: UnderstandingOutcome
+    correct: bool
+    field_exact: dict[str, bool]
+
+
+def score_llm_column(
+    cases: tuple[IntentCase, ...],
+    *,
+    timeout_s: float = DEFAULT_TIMEOUT_S,
+    concurrency: int = 4,
+) -> list[LlmCaseVerdict]:
+    """Score the LLM classifier over the same referent, a few cases at a time.
+
+    Runs the REAL classifier (:func:`classify_intent_llm` — same prompt, same
+    backend seam, same schema as the shadow), so the column measures the thing
+    that would serve, never a bench-only re-implementation (ADR 0026). Failures
+    (timeout / schema_invalid / llm_error / budget_ceiling) score as incorrect
+    in the raw column and are counted by kind; the active-mode composition
+    (LLM verdict, else regex) is derived in :func:`build_report`.
+
+    Args:
+        cases: The labeled cases to score.
+        timeout_s: Per-call bound on the model.
+        concurrency: How many calls run at once (be kind to a local model).
+
+    Returns:
+        One verdict per case, in set order.
+    """
+
+    async def _run() -> list[LlmCaseVerdict]:
+        semaphore = asyncio.Semaphore(max(1, concurrency))
+
+        async def _one(case: IntentCase) -> LlmCaseVerdict:
+            async with semaphore:
+                outcome = await classify_intent_llm(
+                    case.utterance, language=case.language, timeout_s=timeout_s
+                )
+            verdict = outcome.verdict
+            predicted_fields: dict[str, object] = {}
+            if verdict is not None:
+                if verdict.duration_months is not None:
+                    predicted_fields["duration_months"] = verdict.duration_months
+                if verdict.requested_time is not None:
+                    predicted_fields["requested_time"] = verdict.requested_time
+            field_exact = {
+                key: predicted_fields.get(key) == expected
+                for key, expected in case.expected_fields.items()
+            }
+            return LlmCaseVerdict(
+                case=case,
+                outcome=outcome,
+                correct=verdict is not None and verdict.intent == case.expected_intent,
+                field_exact=field_exact,
+            )
+
+        return list(await asyncio.gather(*(_one(case) for case in cases)))
+
+    return asyncio.run(_run())
+
+
 def _counts(verdicts: list[CaseVerdict]) -> dict[str, object]:
     """Counts for one population: n, correct, defaulted, and the derived rate."""
     n = len(verdicts)
@@ -195,8 +268,76 @@ def _counts(verdicts: list[CaseVerdict]) -> dict[str, object]:
     }
 
 
-def build_report(intent_set: IntentSet, verdicts: list[CaseVerdict]) -> dict[str, object]:
-    """Assemble the two-column report; the absent column names itself absent.
+def _llm_counts(verdicts: list[LlmCaseVerdict]) -> dict[str, object]:
+    """Counts for one LLM-column population: n, correct, failures by kind, rate."""
+    n = len(verdicts)
+    correct = sum(1 for verdict in verdicts if verdict.correct)
+    return {
+        "n": n,
+        "correct": correct,
+        "accuracy": round(correct / n, 4) if n else None,
+    }
+
+
+def _llm_column(
+    verdicts: list[LlmCaseVerdict], regex_verdicts: list[CaseVerdict]
+) -> dict[str, object]:
+    """The measured LLM column, plus the active-mode composition (LLM verdict, else regex)."""
+    languages = sorted({v.case.language for v in verdicts})
+    failures: dict[str, int] = {}
+    for verdict in verdicts:
+        if verdict.outcome.status != "verdict":
+            failures[verdict.outcome.status] = failures.get(verdict.outcome.status, 0) + 1
+    fields: dict[str, dict[str, object]] = {}
+    for key in _FIELD_KEYS:
+        labeled = [v for v in verdicts if key in v.case.expected_fields]
+        if labeled:
+            fields[key] = {
+                "n": len(labeled),
+                "exact": sum(1 for v in labeled if v.field_exact.get(key, False)),
+            }
+    regex_by_id = {v.case.id: v for v in regex_verdicts}
+    composed_correct = 0
+    for verdict in verdicts:
+        if verdict.outcome.status == "verdict":
+            composed_correct += int(verdict.correct)
+        else:
+            fallback = regex_by_id.get(verdict.case.id)
+            composed_correct += int(fallback.correct) if fallback is not None else 0
+    models = sorted({v.outcome.model for v in verdicts if v.outcome.model})
+    prompt_versions = sorted({v.outcome.prompt_version for v in verdicts})
+    latencies = sorted(v.outcome.latency_ms for v in verdicts)
+    return {
+        "status": "measured",
+        "classifier": "tessera.recouvrement.understanding.classify_intent_llm",
+        "models": models,
+        "prompt_versions": prompt_versions,
+        "overall": _llm_counts(verdicts),
+        "by_language": {
+            language: _llm_counts([v for v in verdicts if v.case.language == language])
+            for language in languages
+        },
+        "failures": failures,
+        "fields": fields,
+        "latency_ms": {
+            "p50": round(latencies[len(latencies) // 2], 1) if latencies else None,
+            "max": round(latencies[-1], 1) if latencies else None,
+        },
+        "with_regex_fallback": {
+            "n": len(verdicts),
+            "correct": composed_correct,
+            "accuracy": round(composed_correct / len(verdicts), 4) if verdicts else None,
+        },
+        "misrouted_case_ids": [v.case.id for v in verdicts if not v.correct],
+    }
+
+
+def build_report(
+    intent_set: IntentSet,
+    verdicts: list[CaseVerdict],
+    llm_verdicts: list[LlmCaseVerdict] | None = None,
+) -> dict[str, object]:
+    """Assemble the two-column report; an absent column names itself absent.
 
     Every number travels with its population (overall / by language / by cell),
     cells stay COUNTS (a rate on a small n is a count in disguise), and the
@@ -206,6 +347,8 @@ def build_report(intent_set: IntentSet, verdicts: list[CaseVerdict]) -> dict[str
     Args:
         intent_set: The referent the verdicts were scored against.
         verdicts: The regex column's verdicts over that referent.
+        llm_verdicts: The LLM column's verdicts, when that column ran; ``None``
+            keeps the column honestly absent.
 
     Returns:
         The report document (``intent_bench.v1``).
@@ -254,13 +397,17 @@ def build_report(intent_set: IntentSet, verdicts: list[CaseVerdict]) -> dict[str
                 "fields": fields,
                 "misrouted_case_ids": misrouted,
             },
-            "llm": {
-                "status": "not_wired",
-                "reason": (
-                    "ADR 0053 slice 3 — no LLM classifier exists yet; "
-                    "this column must never carry a fabricated number"
-                ),
-            },
+            "llm": (
+                _llm_column(llm_verdicts, verdicts)
+                if llm_verdicts is not None
+                else {
+                    "status": "not_run",
+                    "reason": (
+                        "the LLM column only exists when a run measured it (--llm); "
+                        "this column must never carry a fabricated number"
+                    ),
+                }
+            ),
         },
     }
 
@@ -292,7 +439,33 @@ def _print_report(report: dict[str, object]) -> None:
     misrouted = cast(list[str], regex_column["misrouted_case_ids"])
     if misrouted:
         print(f"    misrouted ({len(misrouted)}): " + ", ".join(misrouted))
-    print(f"  column llm — {llm_column['status']}: {llm_column['reason']}")
+    if llm_column["status"] != "measured":
+        print(f"  column llm — {llm_column['status']}: {llm_column['reason']}")
+        return
+    overall_llm = cast(dict[str, object], llm_column["overall"])
+    composed = cast(dict[str, object], llm_column["with_regex_fallback"])
+    print(
+        "  column llm — "
+        + _format_llm_counts("overall", overall_llm)
+        + f" · models {llm_column['models']}"
+    )
+    for language, counts in cast(dict[str, dict[str, object]], llm_column["by_language"]).items():
+        print("    " + _format_llm_counts(language, counts))
+    failures = cast(dict[str, int], llm_column["failures"])
+    if failures:
+        print("    failures: " + ", ".join(f"{kind} {n}" for kind, n in sorted(failures.items())))
+    for key, stats in cast(dict[str, dict[str, object]], llm_column["fields"]).items():
+        print(f"    field {key}: {stats['exact']}/{stats['n']} exact")
+    latency = cast(dict[str, object], llm_column["latency_ms"])
+    print(f"    latency ms: p50 {latency['p50']} · max {latency['max']}")
+    print("    " + _format_llm_counts("with regex fallback (active-mode composition)", composed))
+
+
+def _format_llm_counts(label: str, counts: dict[str, object]) -> str:
+    """One human line for one LLM-column population's counts."""
+    accuracy = counts["accuracy"]
+    rate = f" ({float(cast(float, accuracy)) * 100:.1f} %)" if accuracy is not None else ""
+    return f"{label}: {counts['correct']}/{counts['n']} correct{rate}"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -318,10 +491,32 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="write the JSON report to this path (publication is deliberate, never a side effect)",
     )
+    parser.add_argument(
+        "--llm",
+        action="store_true",
+        help="also run the LLM column against the live profile backend (spends real calls)",
+    )
+    parser.add_argument(
+        "--llm-timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_S,
+        help=f"per-call bound for the LLM column, seconds (default {DEFAULT_TIMEOUT_S})",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=4,
+        help="concurrent LLM calls (default 4 — be kind to a local model)",
+    )
     args = parser.parse_args(argv)
     intent_set = load_intent_set(args.set_path)
     verdicts = score_regex_column(intent_set.cases)
-    report = build_report(intent_set, verdicts)
+    llm_verdicts = (
+        score_llm_column(intent_set.cases, timeout_s=args.llm_timeout, concurrency=args.concurrency)
+        if args.llm
+        else None
+    )
+    report = build_report(intent_set, verdicts, llm_verdicts)
     _print_report(report)
     if args.report is not None:
         args.report.parent.mkdir(parents=True, exist_ok=True)

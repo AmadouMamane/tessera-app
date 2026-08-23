@@ -19,6 +19,7 @@ verified operator assertion (the guard returns it), never from the body.
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import time
 import uuid
@@ -31,6 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from tessera.agent.recouvrement import (
     DEFAULT_SURFACE,
     RECOUVREMENT_AGENT_ID,
+    RECOUVREMENT_WORKFLOW_ID,
     RecouvrementArtifact,
     run_recouvrement_action_workflow_v1,
     run_recouvrement_graph_v1,
@@ -42,10 +44,12 @@ from tessera.api.session import (
 )
 from tessera.authz import AuthState, Surface
 from tessera.guard.adapter import check_user_input
-from tessera.guard.audit import turn_context
+from tessera.guard.audit import AGENT_TURN_ACTOR, turn_context
 from tessera.guard.redaction import apply_output_guard, mask_pan
 from tessera.memory.transcript import append_messages
+from tessera.observability.business_events import BusinessEventName, record_business_event
 from tessera.observability.metrics import AGENT_TURNS_TOTAL
+from tessera.recouvrement.understanding import classify_intent_llm
 from tessera.settings import LanguageCode, get_settings
 
 if TYPE_CHECKING:
@@ -178,6 +182,118 @@ def _guard_visible_reply(result: Mapping[str, object], *, language: str) -> dict
     return {**result, "visibleReply": guarded}
 
 
+#: Strong references to in-flight shadow classifications — a bare ``create_task`` result
+#: is garbage-collectable mid-flight; the done-callback discards each task when it lands.
+_SHADOW_TASKS: set[asyncio.Task[None]] = set()
+
+
+def _turn_events(result: Mapping[str, object]) -> list[dict[str, object]]:
+    """The turn's own ledger rows, as the graph projected them into the output contract."""
+    raw = result.get("businessEvents")
+    return [row for row in raw if isinstance(row, dict)] if isinstance(raw, list) else []
+
+
+def _routed_intent_source(events: list[dict[str, object]]) -> str | None:
+    """How the router says it decided this turn — read from ITS event, never re-guessed."""
+    for row in events:
+        if row.get("event_name") == BusinessEventName.INTENT_ROUTED.value:
+            payload = row.get("payload")
+            if isinstance(payload, dict):
+                source = payload.get("intent_source")
+                return str(source) if source is not None else None
+    return None
+
+
+async def _shadow_understanding(
+    *,
+    message: str,
+    language: str,
+    routed_intent: str,
+    surface: str,
+    conversation_id: str,
+    turn_id: str,
+    case_id: str,
+    environment: str,
+) -> None:
+    """ADR 0053 Phase S: classify in parallel, record the comparison, touch nothing.
+
+    The LLM verdict is compared to the intent the regex router actually served and
+    the pair lands in the business-event ledger under the SAME turn, node
+    ``shadow_understanding`` — the telemetry the calibration (slice 4) and the
+    agreement read are built on. Every failure kind is recorded as itself
+    (``schema_invalid`` / ``timeout`` / ``llm_error`` / ``budget_ceiling``);
+    nothing here may ever reach the operator's reply.
+    """
+    try:
+        outcome = await classify_intent_llm(message, language=language)
+        verdict = outcome.verdict
+        record_business_event(
+            author=AGENT_TURN_ACTOR,
+            event_name=BusinessEventName.INTENT_ROUTED,
+            payload={
+                "shadow": True,
+                "routed_intent": routed_intent,
+                "llm_status": outcome.status,
+                "schema_valid": outcome.status == "verdict",
+                "llm_intent": verdict.intent if verdict is not None else None,
+                "llm_confidence": verdict.confidence if verdict is not None else None,
+                "llm_duration_months": verdict.duration_months if verdict is not None else None,
+                "llm_requested_time": verdict.requested_time if verdict is not None else None,
+                "agree": (verdict.intent == routed_intent) if verdict is not None else None,
+                "llm_latency_ms": round(outcome.latency_ms, 1),
+                "llm_detail": outcome.detail,
+                "prompt_version": outcome.prompt_version,
+            },
+            agent_id=RECOUVREMENT_AGENT_ID,
+            workflow_id=RECOUVREMENT_WORKFLOW_ID,
+            capability_id=None,
+            surface=surface,
+            conversation_id=conversation_id,
+            turn_id=turn_id,
+            case_id=case_id,
+            node_name="shadow_understanding",
+            language=language,
+            model=outcome.model or RECOUVREMENT_WORKFLOW_ID,
+            environment=environment,
+        )
+    except Exception as exc:  # the shadow must never surface anywhere but stderr
+        sys.stderr.write(f"tessera.recouvrement.understanding: shadow failed: {exc}\n")
+
+
+def _spawn_shadow_understanding(
+    payload: RecouvrementAssistantRequest, result: Mapping[str, object]
+) -> None:
+    """Fire the layer-1 shadow off the hot path; the reply never waits for it.
+
+    A declared intent is skipped — a pressed button is an answer, and a classifier
+    has nothing to add (ADR 0053 §1). The turn identifiers are read from the
+    turn's own event rows so the shadow row joins the exact turn it shadows.
+    """
+    events = _turn_events(result)
+    if not events or _routed_intent_source(events) == "declared":
+        return
+    first = events[0]
+    decisions = result.get("decisions")
+    routed = decisions.get("intent") if isinstance(decisions, dict) else None
+    if not routed:
+        return
+    routed_intent = str(routed)
+    task = asyncio.create_task(
+        _shadow_understanding(
+            message=payload.message,
+            language=payload.language,
+            routed_intent=routed_intent,
+            surface=str(first.get("surface", payload.surface)),
+            conversation_id=str(first.get("conversation_id", "")),
+            turn_id=str(first.get("turn_id", "")),
+            case_id=payload.case_id,
+            environment=str(first.get("environment", "dev")),
+        )
+    )
+    _SHADOW_TASKS.add(task)
+    task.add_done_callback(_SHADOW_TASKS.discard)
+
+
 @router.post("/recouvrement-assistant/message")
 @router.post("/api/recouvrement-assistant/message")
 async def recouvrement_assistant_message(
@@ -248,6 +364,7 @@ async def recouvrement_assistant_message(
     latency_ms = (time.perf_counter() - started) * _MS_PER_SECOND
     guarded = _guard_visible_reply(result, language=payload.language)
     await _persist_recouvrement_turn(payload, guarded, latency_ms)
+    _spawn_shadow_understanding(payload, guarded)
     return dict(guarded)
 
 

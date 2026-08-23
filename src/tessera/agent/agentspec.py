@@ -37,6 +37,8 @@ __all__ = [
     "PolicySeverity",
     "QualityRegime",
     "SignalEngagement",
+    "UnderstandingMode",
+    "UnderstandingSpec",
     "WorkflowBinding",
     "parse_invocation",
     "parse_observability",
@@ -114,6 +116,19 @@ class QualityRegime(StrEnum):
     UNSCORED = "unscored"
 
 
+class UnderstandingMode(StrEnum):
+    """How the agent understands a free-text turn (ADR 0017 §3 Amendment 5, ADR 0053).
+
+    ``deterministic`` — word lists / parsers, no model. ``llm_structured`` — an LLM
+    produces a schema-validated verdict consumed by code; the model never speaks to
+    anyone. The mode is **declared**, never inferred: an agent that wires a model
+    into its understanding without saying so would carry an unmeasured plane.
+    """
+
+    DETERMINISTIC = "deterministic"
+    LLM_STRUCTURED = "llm_structured"
+
+
 class InvocationBinding(StrEnum):
     """How a declared consumer sends a turn to the agent (ADR 0019 §1).
 
@@ -139,6 +154,29 @@ class _Spec(BaseModel):
     """A frozen, typo-proof manifest block: unknown keys are a validation error."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class UnderstandingSpec(_Spec):
+    """The AgentSpec ``understanding`` block (§3 Amendment 5 — the understanding ruler).
+
+    ``bench_set`` names the labeled referent (``eval/intents/<bench_set>.json``)
+    the understanding layer is measured against — REQUIRED for ``llm_structured``
+    (an LLM understanding without a referent is unverifiable, refused at load) and
+    welcome for ``deterministic`` (the regex baseline has one too).
+    """
+
+    mode: UnderstandingMode
+    bench_set: str | None = None
+
+    @model_validator(mode="after")
+    def _bench_set_integrity(self) -> UnderstandingSpec:
+        if self.mode is UnderstandingMode.LLM_STRUCTURED and not self.bench_set:
+            msg = (
+                "understanding mode 'llm_structured' requires bench_set — an LLM "
+                "understanding without a labeled referent is unverifiable (ADR 0053 §7)"
+            )
+            raise ValueError(msg)
+        return self
 
 
 class Capability(_Spec):
@@ -236,6 +274,11 @@ class AgentObservabilitySpec(_Spec):
     # key so every surface can render the blind spot in the reader's language.
     quality_regime: QualityRegime
     quality_regime_reason_key: str | None = None
+    # §3 Amendment 5 (ADR 0053): the understanding layer's own declaration. Optional —
+    # ``None`` means the agent has no understanding layer distinct from its answering
+    # plane to declare (the three chat-native agents); an agent that DOES split the
+    # planes must declare how the understanding one is ruled, no default.
+    understanding: UnderstandingSpec | None = None
     telemetry_capabilities: tuple[str, ...] = ()
     capabilities: tuple[Capability, ...] = ()
     policies: tuple[PolicyMetadata, ...] = ()

@@ -9,7 +9,9 @@
   by a 30-day recency window; a store's blindness now reaches the L0→L1 decision). Amended
   2026-08-21 (§Amendment 4: the declared quality regime — every agent names the ruler that
   judges its production answers; `unscored` is a declaration carrying its reason, never an
-  absence).**
+  absence). Amended 2026-08-23 (§Amendment 5: the declared understanding layer — an agent
+  that splits understanding from answering names how the understanding plane is ruled and
+  the labeled referent that measures it; ADR 0053).**
 - Date: 2026-07-06
 - Deciders: Tessera maintainers
 - Related: 0008 (agent audience and surface), 0010 (Recouvrement internal operator agent),
@@ -20,6 +22,45 @@
   `src/tessera/recouvrement/scoring.py`, `src/tessera/agent/agents.yaml`,
   the "ADR-001" vision draft (2026-07-06, chat-authored, outside the numbered corpus —
   harvested by §Amendment 1).
+
+## Amendment 5 (2026-08-23) — the declared understanding layer: a split plane names its own ruler
+
+**ADR 0053 splits recouvrement into three layers — an LLM understands, code decides, templates
+speak — which creates a plane §Amendment 4's regimes do not cover.** `quality_regime:
+business_scored` rules the SPOKEN plane (money and acts, ten deterministic signals). The new
+understanding layer is judged by a different ruler entirely: intent accuracy against a labeled
+set (`eval/intents/<set>.json`, ratcheted at n≥8 per language/intent cell) plus the shadow
+agreement telemetry in the business-event ledger (node `shadow_understanding`). Leaving that
+plane undeclared would recreate the exact defect A4 closed — a measured plane whose ruler no
+declaration names.
+
+### A5.1 — Decision: an optional block, but never a defaulted one
+
+`AgentObservabilitySpec` gains `understanding: {mode, bench_set}` —
+`mode ∈ {deterministic, llm_structured}`. Optional because most agents have no understanding
+layer distinct from their answering plane (the three chat-native agents ARE one LLM plane
+end-to-end); an agent that does split the planes declares how the understanding one is ruled,
+with no default (the ADR 0024 rule again: no ruler nobody chose).
+
+### A5.2 — Integrity
+
+- `llm_structured` ⇒ `bench_set` REQUIRED, refused at load: an LLM understanding without a
+  labeled referent is unverifiable (ADR 0053 §7), and an unverifiable plane may not declare
+  itself measured;
+- the declared `bench_set` must exist on disk and name the declaring agent — checked by the
+  conformance suite, since a spec validator must not touch the filesystem;
+- the declaration and the wiring are held together by witnesses on the thing (ADR 0026): the
+  conformance suite asserts the declaring agent's turn route actually spawns the shadow seam,
+  and the shadow tests assert the classifier's closed vocabulary IS the manifest's capability
+  ids, read from the registry at call time — a manifest change reaches the classifier's schema
+  with no human in the loop.
+
+### A5.3 — The two rulers stay two
+
+Understanding telemetry rides the ledger as `intent.routed` rows under node
+`shadow_understanding` — presence-checked by no business signal, counted by no business
+score. The understanding ruler's numbers (bench accuracy, shadow agreement) and the business
+ruler's numbers (the ten signals) never share a denominator, per A4.3 and insights 361–363.
 
 ## Amendment 4 (2026-08-21) — the declared quality regime: every agent names the ruler that judges it
 

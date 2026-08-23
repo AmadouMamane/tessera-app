@@ -142,6 +142,14 @@ agents:
     observability:
       spec_version: agentspec.v1
       quality_regime: business_scored
+      # `understanding` (§3 Amendment 5, ADR 0053): the hybrid split — an LLM classifies
+      # free text into the capability vocabulary below (structured output, never speaks),
+      # code decides, templates speak. Its ruler is the labeled referent
+      # eval/intents/recouvrement.json (bench: eval.intent_bench); the regex ladder stays
+      # as the unconditional fallback and the measured null floor (ADR 0021).
+      understanding:
+        mode: llm_structured
+        bench_set: recouvrement
       telemetry_capabilities: [graph_topology, tools]
       capabilities:
         - id: summarize_case

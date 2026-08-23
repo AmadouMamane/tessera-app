@@ -182,7 +182,7 @@ def test_an_unknown_declaration_falls_back_instead_of_routing_nowhere(
 def test_intent_source_is_recorded_so_the_trail_can_tell_the_two_apart(
     _isolated_events: None,
 ) -> None:
-    """Only one of "declared" and "classified" can be wrong about what was asked."""
+    """Only one of "declared" and "regex" can be wrong about what was asked."""
     declared = run_recouvrement_graph_v1(
         case_id="RC-2048",
         message="Résume ce dossier de recouvrement pour préparer l'action suivante.",
@@ -203,4 +203,4 @@ def test_intent_source_is_recorded_so_the_trail_can_tell_the_two_apart(
     routed_classified = next(
         row for row in classified["businessEvents"] if row["event_name"] == "intent.routed"
     )
-    assert routed_classified["payload"]["intent_source"] == "classified"
+    assert routed_classified["payload"]["intent_source"] == "regex"

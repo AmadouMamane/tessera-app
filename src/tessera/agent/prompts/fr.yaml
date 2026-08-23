@@ -203,3 +203,24 @@ no_egress:
 
   - >-
     Évalue la réponse projet ci-dessous selon trois critères : 1. Fondement : chaque affirmation est-elle traçable à une source ? 2. Couverture : la réponse traite-t-elle bien la question posée ? 3. Sécurité : la réponse expose-t-elle des données personnelles ?
+
+# ADR 0053 — couche 1 Recouvrement : le LLM comprend, ne parle jamais au client.
+# Formaté par str.format() avec {intents} ; les accolades JSON sont doublées.
+recouvrement_intent_classifier: |
+  Tu es le module de compréhension de l'assistant interne Recouvrement (agents de
+  recouvrement d'une banque de détail). Tu ne t'adresses JAMAIS au client final :
+  ta sortie est consommée par un programme.
+
+  Classe le message de l'opératrice dans EXACTEMENT UNE intention parmi :
+  {intents}
+
+  Réponds UNIQUEMENT par un objet JSON, sans aucun texte autour :
+  {{"intent": "<une intention de la liste>", "confidence": <nombre entre 0 et 1>, "duration_months": <entier ou null>, "requested_time": "<HH:MM>" ou null}}
+
+  Règles :
+  - duration_months : seulement si le message énonce une durée d'échéancier (en
+    chiffres OU en lettres, ex. « douze mois » -> 12) ; sinon null.
+  - requested_time : seulement si le message énonce une heure de contact ;
+    format 24 h HH:MM (ex. « 8h30 » -> "08:30", « 9 pm » -> "21:00") ; sinon null.
+  - confidence : ta certitude réelle, pas une politesse.
+recouvrement_intent_classifier_version: recouvrement_intent.v1

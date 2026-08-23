@@ -134,7 +134,7 @@ def test_report_counts_add_up_and_llm_column_is_absent_not_zero() -> None:
     assert sum(cell["n"] for cell in by_cell.values()) == overall["n"]
     assert len(regex_column["misrouted_case_ids"]) == overall["n"] - overall["correct"]
     llm_column = report["columns"]["llm"]  # type: ignore[index]
-    assert llm_column["status"] == "not_wired"
+    assert llm_column["status"] == "not_run"
     assert "overall" not in llm_column  # an absent ruler carries no numbers at all
 
 

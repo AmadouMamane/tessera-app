@@ -774,9 +774,10 @@ def route_recouvrement_intent(state: RecouvrementWorkflowState) -> dict[str, obj
             "intent": intent,
             "confidence": confidence,
             "active_task": active_task,
-            # The audit trail must be able to tell a CLASSIFIED intent from a DECLARED one:
-            # only one of the two can be wrong about what the operator asked for.
-            "intent_source": "declared" if declared_intent is not None else "classified",
+            # The audit trail must be able to tell how the turn was understood — only some
+            # sources can be wrong in some ways (ADR 0053 vocabulary: declared / llm /
+            # regex / regex_fallback; the LLM values arrive with active mode).
+            "intent_source": "declared" if declared_intent is not None else "regex",
         },
         **_event_common(
             state,
