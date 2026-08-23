@@ -1,0 +1,903 @@
+{
+  "schema_version": "intent_set.v1",
+  "agent_id": "recouvrement",
+  "set_version": "2026-08-23.1",
+  "description": "Labeled layer-1 understanding referent for the Recouvrement operator agent (ADR 0053 §7). 5 intents × 3 languages × 8 cases. Labels are what a human reader understands the operator to be asking — deliberately independent of any classifier's answer. Each cell mixes canonical phrasings (word lists should catch them) and paraphrases without magic words (the cases that justify an LLM, labeled truthfully either way). Fields are labeled only where the utterance states them and never where the value would be clock-dependent (\"maintenant\"/\"now\"/\"jetzt\").",
+  "cases": [
+    {
+      "id": "fr_schedule_01",
+      "language": "fr",
+      "utterance": "Propose un échéancier sur 6 mois pour ce dossier",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 6 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_schedule_02",
+      "language": "fr",
+      "utterance": "Peut-on étaler la dette en 4 mensualités ?",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 4 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_schedule_03",
+      "language": "fr",
+      "utterance": "Prépare un étalement du paiement sur douze mois",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 12 },
+      "provenance": "hand_authored",
+      "note": "Duration spelled out in words — a digit-only parser misses it; the truth is still 12."
+    },
+    {
+      "id": "fr_schedule_04",
+      "language": "fr",
+      "utterance": "Le client demande à régler en plusieurs fois, monte un plan",
+      "expected_intent": "propose_schedule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_schedule_05",
+      "language": "fr",
+      "utterance": "Découpe le montant dû en trois versements égaux",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 3 },
+      "provenance": "hand_authored",
+      "note": "No magic word from any list; 'versements' is common collections vocabulary."
+    },
+    {
+      "id": "fr_schedule_06",
+      "language": "fr",
+      "utterance": "Il faudrait lisser le remboursement sur 9 mois",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 9 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_schedule_07",
+      "language": "fr",
+      "utterance": "Mets en place un plan de remboursement indicatif",
+      "expected_intent": "propose_schedule",
+      "provenance": "hand_authored",
+      "note": "'remboursement' is not on the FR schedule list (only EN 'repayment' is)."
+    },
+    {
+      "id": "fr_schedule_08",
+      "language": "fr",
+      "utterance": "Un échéancier de 5 mensualités, c'est faisable ?",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 5 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_draft_01",
+      "language": "fr",
+      "utterance": "Rédige une relance amiable pour ce client",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_draft_02",
+      "language": "fr",
+      "utterance": "Prépare un brouillon d'email de rappel",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_draft_03",
+      "language": "fr",
+      "utterance": "Écris un message client pour l'informer du retard",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_draft_04",
+      "language": "fr",
+      "utterance": "Rends-le plus empathique",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "Edit of the current draft — the drawer's own rewrite phrasing."
+    },
+    {
+      "id": "fr_draft_05",
+      "language": "fr",
+      "utterance": "Fais une version courte du courrier",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_draft_06",
+      "language": "fr",
+      "utterance": "Il faut écrire au client au sujet de son impayé, prépare quelque chose",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "The object is a written message; 'écrire' is not on the drafting-verb list."
+    },
+    {
+      "id": "fr_draft_07",
+      "language": "fr",
+      "utterance": "Adoucis le ton de la dernière proposition de message",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_draft_08",
+      "language": "fr",
+      "utterance": "Prépare une lettre de rappel courtoise",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "'lettre' is not on the list ('courrier' is)."
+    },
+    {
+      "id": "fr_summary_01",
+      "language": "fr",
+      "utterance": "Résume ce dossier",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_summary_02",
+      "language": "fr",
+      "utterance": "Fais une synthèse de la situation du client",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_summary_03",
+      "language": "fr",
+      "utterance": "Quels sont les points clés à retenir ?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_summary_04",
+      "language": "fr",
+      "utterance": "Résume ce dossier pour préparer l'action suivante",
+      "expected_intent": "summarize_case",
+      "provenance": "production_incident",
+      "note": "Reproduced misroute on the deployed host, 2026-08-02: the bare verb 'préparer' matched the draft list and a summary request was answered with a reminder draft. Fixed by removing bare verbs (see _has_draft_intent docstring)."
+    },
+    {
+      "id": "fr_summary_05",
+      "language": "fr",
+      "utterance": "Où en est-on sur ce dossier ?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_summary_06",
+      "language": "fr",
+      "utterance": "Donne-moi l'essentiel avant mon appel",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored",
+      "note": "'appel' names the operator's next step, not a contact-rule question."
+    },
+    {
+      "id": "fr_summary_07",
+      "language": "fr",
+      "utterance": "Qu'est-ce que je dois savoir sur la situation de ce client ?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_summary_08",
+      "language": "fr",
+      "utterance": "Brief-moi sur le dossier RC-2048",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_01",
+      "language": "fr",
+      "utterance": "Puis-je appeler le client à 21h ?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "21:00" },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_02",
+      "language": "fr",
+      "utterance": "Est-ce que je peux le joindre maintenant ?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored",
+      "note": "No time label on purpose: 'maintenant' resolves against the clock."
+    },
+    {
+      "id": "fr_contact_03",
+      "language": "fr",
+      "utterance": "Quelle est la plage d'appel autorisée aujourd'hui ?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_04",
+      "language": "fr",
+      "utterance": "Rappelle-moi la règle de contact pour ce dossier",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_05",
+      "language": "fr",
+      "utterance": "Un appel à 7h30, c'est conforme ?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "07:30" },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_06",
+      "language": "fr",
+      "utterance": "Ai-je le droit de téléphoner au client ce soir à 19h ?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "19:00" },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_07",
+      "language": "fr",
+      "utterance": "Le cadre autorise-t-il un contact en soirée ?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_contact_08",
+      "language": "fr",
+      "utterance": "On peut le déranger là, tout de suite ?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored",
+      "note": "Colloquial; no word from any list."
+    },
+    {
+      "id": "fr_payment_01",
+      "language": "fr",
+      "utterance": "Quelles sont les options de paiement pour ce dossier ?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_payment_02",
+      "language": "fr",
+      "utterance": "Comment le client peut-il régler sa dette ?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored",
+      "note": "'régler' also sits on the schedule list — a word two lists claim."
+    },
+    {
+      "id": "fr_payment_03",
+      "language": "fr",
+      "utterance": "Liste les moyens de règlement possibles",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_payment_04",
+      "language": "fr",
+      "utterance": "Paiement total ou partiel, qu'est-ce qu'on peut lui proposer ?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_payment_05",
+      "language": "fr",
+      "utterance": "Quelles alternatives de règlement existent ?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_payment_06",
+      "language": "fr",
+      "utterance": "Le client veut savoir comment solder son impayé",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_payment_07",
+      "language": "fr",
+      "utterance": "Présente-lui les différentes façons de payer",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored",
+      "note": "'payer' also sits on the schedule list."
+    },
+    {
+      "id": "fr_payment_08",
+      "language": "fr",
+      "utterance": "Y a-t-il une solution de paiement adaptée à sa situation ?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_schedule_01",
+      "language": "en",
+      "utterance": "Set up a payment plan over 6 months",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 6 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_schedule_02",
+      "language": "en",
+      "utterance": "Can we spread the debt across 4 instalments?",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 4 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_schedule_03",
+      "language": "en",
+      "utterance": "Split what he owes into three equal parts",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 3 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_schedule_04",
+      "language": "en",
+      "utterance": "Propose monthly payments over nine months",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 9 },
+      "provenance": "hand_authored",
+      "note": "Duration spelled out in words."
+    },
+    {
+      "id": "en_schedule_05",
+      "language": "en",
+      "utterance": "Work out a repayment schedule for this case",
+      "expected_intent": "propose_schedule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_schedule_06",
+      "language": "en",
+      "utterance": "He wants to pay bit by bit — put together a plan",
+      "expected_intent": "propose_schedule",
+      "provenance": "hand_authored",
+      "note": "No magic word; 'plan' alone is on no list."
+    },
+    {
+      "id": "en_schedule_07",
+      "language": "en",
+      "utterance": "An instalment plan over 12 months, please",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 12 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_schedule_08",
+      "language": "en",
+      "utterance": "Ease the repayment over 10 months",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 10 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_01",
+      "language": "en",
+      "utterance": "Draft a friendly reminder for this client",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_02",
+      "language": "en",
+      "utterance": "Write a short customer message about the arrears",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_03",
+      "language": "en",
+      "utterance": "Prepare an email nudging him to respond",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_04",
+      "language": "en",
+      "utterance": "Make it more empathetic",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_05",
+      "language": "en",
+      "utterance": "A short version, please",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_06",
+      "language": "en",
+      "utterance": "Put together a polite letter about the missed payment",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "'letter' is not on the list."
+    },
+    {
+      "id": "en_draft_07",
+      "language": "en",
+      "utterance": "Reword the last draft so it sounds softer",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_draft_08",
+      "language": "en",
+      "utterance": "He needs a written heads-up about the overdue balance",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_01",
+      "language": "en",
+      "utterance": "Summarize this case",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_02",
+      "language": "en",
+      "utterance": "Give me the key points before I act",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_03",
+      "language": "en",
+      "utterance": "What's the customer situation?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_04",
+      "language": "en",
+      "utterance": "Where do we stand on this file?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_05",
+      "language": "en",
+      "utterance": "Brief me on RC-2048",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_06",
+      "language": "en",
+      "utterance": "What should I keep in mind about this debtor?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_07",
+      "language": "en",
+      "utterance": "Recap the situation for me",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_summary_08",
+      "language": "en",
+      "utterance": "Priority and key facts of this case, please",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_01",
+      "language": "en",
+      "utterance": "Can I call the client at 9:30?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "09:30" },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_02",
+      "language": "en",
+      "utterance": "Am I allowed to phone him now?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored",
+      "note": "No time label on purpose: 'now' resolves against the clock."
+    },
+    {
+      "id": "en_contact_03",
+      "language": "en",
+      "utterance": "What's the authorised contact window today?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_04",
+      "language": "en",
+      "utterance": "Is 21:15 within the allowed window?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "21:15" },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_05",
+      "language": "en",
+      "utterance": "When may I reach out to the debtor?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_06",
+      "language": "en",
+      "utterance": "Contact rules for this case, please",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_07",
+      "language": "en",
+      "utterance": "Would an evening call be compliant?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_contact_08",
+      "language": "en",
+      "utterance": "Can I ring him around 8 pm?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "20:00" },
+      "provenance": "hand_authored",
+      "note": "12-hour clock in words — a digit-plus-h parser misses it; the truth is still 20:00."
+    },
+    {
+      "id": "en_payment_01",
+      "language": "en",
+      "utterance": "What payment options does he have?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_02",
+      "language": "en",
+      "utterance": "How can the client settle this debt?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_03",
+      "language": "en",
+      "utterance": "Full payment or partial payment — what can we offer?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_04",
+      "language": "en",
+      "utterance": "List the ways to pay for this case",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_05",
+      "language": "en",
+      "utterance": "What settlement options are on the table?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_06",
+      "language": "en",
+      "utterance": "Walk me through how he could clear the balance",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_07",
+      "language": "en",
+      "utterance": "Payment methods available for this debtor?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_payment_08",
+      "language": "en",
+      "utterance": "Which repayment routes can I suggest?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored",
+      "note": "'repayment' also sits on the schedule list — a word two lists claim."
+    },
+    {
+      "id": "de_schedule_01",
+      "language": "de",
+      "utterance": "Erstelle einen Ratenplan über 6 Monate",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 6 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_schedule_02",
+      "language": "de",
+      "utterance": "Können wir die Schuld auf 4 Raten verteilen?",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 4 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_schedule_03",
+      "language": "de",
+      "utterance": "Teile den Betrag in drei gleiche Teile auf",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 3 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_schedule_04",
+      "language": "de",
+      "utterance": "Schlage eine monatliche Zahlung über zwölf Monate vor",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 12 },
+      "provenance": "hand_authored",
+      "note": "Duration spelled out in words."
+    },
+    {
+      "id": "de_schedule_05",
+      "language": "de",
+      "utterance": "Ein Zahlungsplan wäre gut",
+      "expected_intent": "propose_schedule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_schedule_06",
+      "language": "de",
+      "utterance": "Er möchte in mehreren Schritten zahlen — bau einen Plan",
+      "expected_intent": "propose_schedule",
+      "provenance": "hand_authored",
+      "note": "'zahlen' is on no list; 'Plan' alone neither."
+    },
+    {
+      "id": "de_schedule_07",
+      "language": "de",
+      "utterance": "Wie sähe eine Tilgung über 9 Monate aus?",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 9 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_schedule_08",
+      "language": "de",
+      "utterance": "Streck die Rückzahlung über 10 Monate",
+      "expected_intent": "propose_schedule",
+      "expected_fields": { "duration_months": 10 },
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_draft_01",
+      "language": "de",
+      "utterance": "Entwirf eine freundliche Mahnung",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_draft_02",
+      "language": "de",
+      "utterance": "Schreibe eine Kundennachricht zum Zahlungsverzug",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_draft_03",
+      "language": "de",
+      "utterance": "Bereite einen kurzen Erinnerungstext vor",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "'Erinnerung' is on no list ('Mahnung' is)."
+    },
+    {
+      "id": "de_draft_04",
+      "language": "de",
+      "utterance": "Mach den Entwurf einfühlsamer",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "The list token 'einfuehlsam' is spelled with 'ue' while normalization maps ü to 'u' — that token can never match normalized text; 'entwurf' carries the case."
+    },
+    {
+      "id": "de_draft_05",
+      "language": "de",
+      "utterance": "Formuliere ein kurzes Schreiben an den Kunden",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_draft_06",
+      "language": "de",
+      "utterance": "Eine kürzere Version bitte",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "Comparative form — the literal token 'kurze version' does not cover 'kürzere'."
+    },
+    {
+      "id": "de_draft_07",
+      "language": "de",
+      "utterance": "Ändere den Ton, bitte weniger förmlich",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored",
+      "note": "The list token 'aendern' is spelled with 'ae' while normalization maps Ä to 'a' — it can never match normalized text."
+    },
+    {
+      "id": "de_draft_08",
+      "language": "de",
+      "utterance": "Ein Entwurf für ein Mahnschreiben, bitte",
+      "expected_intent": "draft_reminder",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_01",
+      "language": "de",
+      "utterance": "Fasse den Fall zusammen",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored",
+      "note": "The most canonical German phrasing: the separable verb ('fasse … zusammen') matches neither 'zusammenfassen' nor any other token."
+    },
+    {
+      "id": "de_summary_02",
+      "language": "de",
+      "utterance": "Eine Fallzusammenfassung bitte",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_03",
+      "language": "de",
+      "utterance": "Was sind die Kernpunkte?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_04",
+      "language": "de",
+      "utterance": "Wie ist die Kundensituation?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_05",
+      "language": "de",
+      "utterance": "Worauf muss ich bei diesem Fall achten?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_06",
+      "language": "de",
+      "utterance": "Gib mir das Wichtigste vor dem Gespräch",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_07",
+      "language": "de",
+      "utterance": "Wo stehen wir bei diesem Dossier?",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_summary_08",
+      "language": "de",
+      "utterance": "Bitte alles Wichtige zusammenfassen",
+      "expected_intent": "summarize_case",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_contact_01",
+      "language": "de",
+      "utterance": "Darf ich den Kunden um 21 Uhr anrufen?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "21:00" },
+      "provenance": "hand_authored",
+      "note": "'21 Uhr' — the digit-plus-h parser does not read the German clock."
+    },
+    {
+      "id": "de_contact_02",
+      "language": "de",
+      "utterance": "Ist ein Anruf um 8:30 erlaubt?",
+      "expected_intent": "check_contact_rule",
+      "expected_fields": { "requested_time": "08:30" },
+      "provenance": "hand_authored",
+      "note": "'Anruf' (noun) is not covered by the token 'anrufen'."
+    },
+    {
+      "id": "de_contact_03",
+      "language": "de",
+      "utterance": "Wann darf ich ihn kontaktieren?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_contact_04",
+      "language": "de",
+      "utterance": "Welche Kontaktregel gilt für diesen Fall?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_contact_05",
+      "language": "de",
+      "utterance": "Ist das Zeitfenster für einen Anruf heute offen?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_contact_06",
+      "language": "de",
+      "utterance": "Kann ich ihn jetzt erreichen?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored",
+      "note": "No time label on purpose: 'jetzt' resolves against the clock."
+    },
+    {
+      "id": "de_contact_07",
+      "language": "de",
+      "utterance": "Ein Abendanruf — wäre das konform?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_contact_08",
+      "language": "de",
+      "utterance": "Darf ich den Schuldner heute noch telefonisch erreichen?",
+      "expected_intent": "check_contact_rule",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_01",
+      "language": "de",
+      "utterance": "Welche Zahlungsoptionen gibt es?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_02",
+      "language": "de",
+      "utterance": "Wie kann der Kunde die Schuld begleichen?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_03",
+      "language": "de",
+      "utterance": "Vollzahlung oder Teilzahlung — was können wir anbieten?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_04",
+      "language": "de",
+      "utterance": "Welche Zahlungsarten sind möglich?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_05",
+      "language": "de",
+      "utterance": "Zeig mir die Zahlungsmöglichkeiten",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored",
+      "note": "The list token 'zahlungsmoeglichkeiten' is spelled with 'oe' while normalization maps ö to 'o' — it can never match normalized text."
+    },
+    {
+      "id": "de_payment_06",
+      "language": "de",
+      "utterance": "Wie könnte er den Rückstand ausgleichen?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_07",
+      "language": "de",
+      "utterance": "Gibt es Alternativen zur Einmalzahlung?",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_payment_08",
+      "language": "de",
+      "utterance": "Optionen zur Begleichung des Betrags, bitte",
+      "expected_intent": "explain_payment_options",
+      "provenance": "hand_authored"
+    }
+  ]
+}

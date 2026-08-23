@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Labeled intent set (ADR 0053 §7)",
+  "description": "The referent for layer-1 understanding: operator utterances labeled with the intent and fields a human reader assigns. Labels are human truth, independent of what any classifier (regex or LLM) answers — the bench measures both columns against this file.",
+  "type": "object",
+  "required": ["schema_version", "agent_id", "set_version", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "intent_set.v1" },
+    "agent_id": { "type": "string", "minLength": 1 },
+    "set_version": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "language", "utterance", "expected_intent", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z]{2}_[a-z]+_[0-9]{2}$" },
+          "language": { "enum": ["fr", "en", "de"] },
+          "utterance": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "expected_intent": { "type": "string", "minLength": 1 },
+          "expected_fields": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "duration_months": { "type": "integer", "minimum": 1, "maximum": 999 },
+              "requested_time": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+            }
+          },
+          "provenance": { "enum": ["hand_authored", "reviewed_translation", "production_incident"] },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

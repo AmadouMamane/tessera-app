@@ -1,0 +1,336 @@
+"""Offline intent bench for Recouvrement layer-1 understanding (ADR 0053 §7).
+
+Two columns on the same labeled set: the deterministic regex baseline (the null
+floor, ADR 0021 applied to a classifier) and — once slice 3 wires it — the LLM
+classifier. This slice runs the regex column only; the LLM column reports itself
+absent rather than carrying a fabricated number (ADR 0026: a witness that cannot
+see never says "ok").
+
+The regex column scores the ROUTER'S answer, never the matcher's silence: a case
+no word list matches routes to :data:`tessera.agent.recouvrement.DEFAULT_TEXT_INTENT`,
+exactly as ``route_recouvrement_intent`` does for a turn with no drawer context,
+and the report counts those defaults separately.
+
+Run ``uv run python -m eval.intent_bench`` to print the table. ``--report PATH``
+additionally writes the JSON report — writing a report is a deliberate act of
+publication, never a side effect. Reports belong under ``eval/reports/intent_bench/``,
+a directory the gating-report sweep does not read (its globs are non-recursive
+over ``eval/reports/<env>/`` and the flat root).
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import cast
+
+import jsonschema
+
+from tessera.agent.recouvrement import (
+    DEFAULT_TEXT_INTENT,
+    classify_recouvrement_text,
+    extract_recouvrement_text_fields,
+)
+
+__all__ = [
+    "DEFAULT_SET_PATH",
+    "INTENTS_DIR",
+    "CaseVerdict",
+    "IntentCase",
+    "IntentSet",
+    "build_report",
+    "load_intent_set",
+    "main",
+    "score_regex_column",
+]
+
+INTENTS_DIR = Path(__file__).parent / "intents"
+DEFAULT_SET_PATH = INTENTS_DIR / "recouvrement.json"
+_SCHEMA_PATH = INTENTS_DIR / "_schema.json"
+
+#: The two field keys the labeled set may carry (mirrors the set schema).
+_FIELD_KEYS = ("duration_months", "requested_time")
+
+
+@dataclass(frozen=True, slots=True)
+class IntentCase:
+    """One labeled utterance: what a human reader understands the operator to ask."""
+
+    id: str
+    language: str
+    utterance: str
+    expected_intent: str
+    expected_fields: dict[str, object]
+    provenance: str
+    note: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class IntentSet:
+    """The loaded, schema-validated labeled set, with its content digest."""
+
+    agent_id: str
+    set_version: str
+    sha256: str
+    cases: tuple[IntentCase, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CaseVerdict:
+    """One classifier column's answer to one labeled case."""
+
+    case: IntentCase
+    predicted_intent: str
+    matched: bool
+    correct: bool
+    predicted_fields: dict[str, object]
+    field_exact: dict[str, bool]
+
+
+def load_intent_set(path: Path | None = None) -> IntentSet:
+    """Load and validate the labeled intent set.
+
+    Strict on purpose, like the eval-set loader: a set that does not validate, or
+    that carries a duplicate case id, fails loudly here rather than silently
+    shrinking the referent downstream.
+
+    Args:
+        path: Set file to load; defaults to :data:`DEFAULT_SET_PATH`.
+
+    Returns:
+        The validated set with a sha256 over its canonical JSON, so every report
+        can name exactly which referent produced its numbers.
+
+    Raises:
+        jsonschema.ValidationError: If the file does not match ``_schema.json``.
+        ValueError: If two cases share an id.
+    """
+    set_path = path or DEFAULT_SET_PATH
+    raw = json.loads(set_path.read_text(encoding="utf-8"))
+    schema = json.loads(_SCHEMA_PATH.read_text(encoding="utf-8"))
+    jsonschema.validate(raw, schema)
+    document = cast(dict[str, object], raw)
+    raw_cases = cast(list[dict[str, object]], document["cases"])
+    cases: list[IntentCase] = []
+    seen_ids: set[str] = set()
+    for entry in raw_cases:
+        case_id = str(entry["id"])
+        if case_id in seen_ids:
+            msg = f"duplicate intent case id {case_id!r} — a duplicated referent names nothing"
+            raise ValueError(msg)
+        seen_ids.add(case_id)
+        cases.append(
+            IntentCase(
+                id=case_id,
+                language=str(entry["language"]),
+                utterance=str(entry["utterance"]),
+                expected_intent=str(entry["expected_intent"]),
+                expected_fields=dict(cast(dict[str, object], entry.get("expected_fields", {}))),
+                provenance=str(entry["provenance"]),
+                note=str(entry["note"]) if "note" in entry else None,
+            )
+        )
+    digest = hashlib.sha256(
+        json.dumps(raw, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    return IntentSet(
+        agent_id=str(document["agent_id"]),
+        set_version=str(document["set_version"]),
+        sha256=digest,
+        cases=tuple(cases),
+    )
+
+
+def score_regex_column(cases: tuple[IntentCase, ...]) -> list[CaseVerdict]:
+    """Score the deterministic regex classifier — the router's actual answer.
+
+    ``matched`` records whether a word list answered; when none did, the verdict
+    is the router's default (:data:`DEFAULT_TEXT_INTENT`), scored as the answer
+    the operator would have received. Field exactness is judged only on the keys
+    the case labels: an unlabeled field claims nothing and scores nothing.
+
+    Args:
+        cases: The labeled cases to score.
+
+    Returns:
+        One verdict per case, in set order.
+    """
+    verdicts: list[CaseVerdict] = []
+    for case in cases:
+        text_verdict = classify_recouvrement_text(case.utterance)
+        matched = text_verdict is not None
+        predicted_intent = text_verdict[0] if text_verdict is not None else DEFAULT_TEXT_INTENT
+        predicted_fields = extract_recouvrement_text_fields(case.utterance)
+        field_exact = {
+            key: predicted_fields.get(key) == expected
+            for key, expected in case.expected_fields.items()
+        }
+        verdicts.append(
+            CaseVerdict(
+                case=case,
+                predicted_intent=predicted_intent,
+                matched=matched,
+                correct=predicted_intent == case.expected_intent,
+                predicted_fields=predicted_fields,
+                field_exact=field_exact,
+            )
+        )
+    return verdicts
+
+
+def _counts(verdicts: list[CaseVerdict]) -> dict[str, object]:
+    """Counts for one population: n, correct, defaulted, and the derived rate."""
+    n = len(verdicts)
+    correct = sum(1 for verdict in verdicts if verdict.correct)
+    defaulted = sum(1 for verdict in verdicts if not verdict.matched)
+    return {
+        "n": n,
+        "correct": correct,
+        "defaulted": defaulted,
+        "accuracy": round(correct / n, 4) if n else None,
+    }
+
+
+def build_report(intent_set: IntentSet, verdicts: list[CaseVerdict]) -> dict[str, object]:
+    """Assemble the two-column report; the absent column names itself absent.
+
+    Every number travels with its population (overall / by language / by cell),
+    cells stay COUNTS (a rate on a small n is a count in disguise), and the
+    report names its referent (set version + sha) and its window (one run, its
+    timestamp) — ADR 0026/0052 applied to a harness artifact.
+
+    Args:
+        intent_set: The referent the verdicts were scored against.
+        verdicts: The regex column's verdicts over that referent.
+
+    Returns:
+        The report document (``intent_bench.v1``).
+    """
+    languages = sorted({case.language for case in intent_set.cases})
+    intents = sorted({case.expected_intent for case in intent_set.cases})
+    by_language = {
+        language: _counts([v for v in verdicts if v.case.language == language])
+        for language in languages
+    }
+    by_cell: dict[str, dict[str, object]] = {}
+    for language in languages:
+        for intent in intents:
+            cell = [
+                v
+                for v in verdicts
+                if v.case.language == language and v.case.expected_intent == intent
+            ]
+            if cell:
+                by_cell[f"{language}/{intent}"] = {
+                    "n": len(cell),
+                    "correct": sum(1 for v in cell if v.correct),
+                }
+    fields: dict[str, dict[str, object]] = {}
+    for key in _FIELD_KEYS:
+        labeled = [v for v in verdicts if key in v.case.expected_fields]
+        if labeled:
+            fields[key] = {
+                "n": len(labeled),
+                "exact": sum(1 for v in labeled if v.field_exact.get(key, False)),
+            }
+    misrouted = [v.case.id for v in verdicts if not v.correct]
+    return {
+        "schema_version": "intent_bench.v1",
+        "run_at": datetime.now(tz=UTC).isoformat(timespec="seconds"),
+        "agent_id": intent_set.agent_id,
+        "set_version": intent_set.set_version,
+        "set_sha256": intent_set.sha256,
+        "columns": {
+            "regex": {
+                "status": "measured",
+                "classifier": "tessera.agent.recouvrement.classify_recouvrement_text",
+                "overall": _counts(verdicts),
+                "by_language": by_language,
+                "by_cell": by_cell,
+                "fields": fields,
+                "misrouted_case_ids": misrouted,
+            },
+            "llm": {
+                "status": "not_wired",
+                "reason": (
+                    "ADR 0053 slice 3 — no LLM classifier exists yet; "
+                    "this column must never carry a fabricated number"
+                ),
+            },
+        },
+    }
+
+
+def _format_counts(label: str, counts: dict[str, object]) -> str:
+    """One human line for one population's counts."""
+    accuracy = counts["accuracy"]
+    rate = f" ({float(cast(float, accuracy)) * 100:.1f} %)" if accuracy is not None else ""
+    return (
+        f"{label}: {counts['correct']}/{counts['n']} correct{rate}, "
+        f"{counts['defaulted']} answered by default"
+    )
+
+
+def _print_report(report: dict[str, object]) -> None:
+    """Print the two-column table; the absent column prints its absence."""
+    regex_column = cast(dict[str, object], cast(dict[str, object], report["columns"])["regex"])
+    llm_column = cast(dict[str, object], cast(dict[str, object], report["columns"])["llm"])
+    overall = cast(dict[str, object], regex_column["overall"])
+    print(
+        f"[intent-bench] {report['agent_id']} · set {report['set_version']} "
+        f"(sha {str(report['set_sha256'])[:12]}) · run {report['run_at']}"
+    )
+    print("  column regex — " + _format_counts("overall", overall))
+    for language, counts in cast(dict[str, dict[str, object]], regex_column["by_language"]).items():
+        print("    " + _format_counts(language, counts))
+    for key, stats in cast(dict[str, dict[str, object]], regex_column["fields"]).items():
+        print(f"    field {key}: {stats['exact']}/{stats['n']} exact")
+    misrouted = cast(list[str], regex_column["misrouted_case_ids"])
+    if misrouted:
+        print(f"    misrouted ({len(misrouted)}): " + ", ".join(misrouted))
+    print(f"  column llm — {llm_column['status']}: {llm_column['reason']}")
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Run the bench and optionally publish the JSON report.
+
+    Args:
+        argv: CLI arguments; ``None`` reads ``sys.argv``.
+
+    Returns:
+        Process exit code (0 — the bench measures, the ratchet judges).
+    """
+    parser = argparse.ArgumentParser(description="Recouvrement layer-1 intent bench (ADR 0053)")
+    parser.add_argument(
+        "--set",
+        dest="set_path",
+        type=Path,
+        default=None,
+        help=f"labeled set to score (default: {DEFAULT_SET_PATH})",
+    )
+    parser.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="write the JSON report to this path (publication is deliberate, never a side effect)",
+    )
+    args = parser.parse_args(argv)
+    intent_set = load_intent_set(args.set_path)
+    verdicts = score_regex_column(intent_set.cases)
+    report = build_report(intent_set, verdicts)
+    _print_report(report)
+    if args.report is not None:
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        print(f"  report written: {args.report}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
