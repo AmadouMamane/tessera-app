@@ -39,10 +39,36 @@ _EXTRA_METRICS: tuple[str, ...] = (GROUNDING, HALLUCINATION)
 
 @dataclass(frozen=True, slots=True)
 class OnlineEvalOutcome:
-    """Result of considering a turn for online evaluation."""
+    """Result of considering a turn for online evaluation.
+
+    ``skipped`` names the reason when the judge deliberately stayed out of the
+    turn (today only ``"quality_regime"``) — distinct from ``verdict is None``
+    by sampling, which is the dice, not a policy.
+    """
 
     verdict: JudgeVerdict | None
     disagreement: bool
+    skipped: str | None = None
+
+
+def _agent_is_llm_judged(agent_id: str) -> bool:
+    """Whether the agent DECLARES the online judge as its ruler.
+
+    Read from the manifest through the one projector (never inferred from wiring).
+    An id the registry does not know keeps today's behaviour (judged): the guard
+    narrows the population by declaration, it must not silently blind ad-hoc
+    callers that never had a manifest.
+    """
+    from tessera.agent.agentspec import QualityRegime
+    from tessera.agent.registry import get_agent
+    from tessera.observability.agentspec_projection import quality_regime_descriptor
+
+    try:
+        agent = get_agent(agent_id)
+    except Exception:
+        return True
+    descriptor = quality_regime_descriptor(agent)
+    return descriptor is not None and descriptor["regime"] == QualityRegime.LLM_JUDGED.value
 
 
 def should_judge(*, flagged: bool, sample_rate: float, roll: float | None = None) -> bool:
@@ -82,6 +108,14 @@ async def evaluate_turn(
 
     Returns an outcome with a ``None`` verdict when the turn was not sampled.
     """
+    if agent_id is not None and not _agent_is_llm_judged(agent_id):
+        # ADR 0017 §A4 / ADR 0053 §4 — the judge's population is DECLARED, never an
+        # accident of routing. An agent whose quality regime is not ``llm_judged``
+        # (template-assembled replies, or unscored) must never gain judged rows:
+        # measured leak, 2026-08-22 — one operator-side /chat turn routed to
+        # recouvrement was judged, and that single row became the whole per-agent
+        # SLO population (n=1 rendered as "100,0 %" on the quality page).
+        return OnlineEvalOutcome(verdict=None, disagreement=False, skipped="quality_regime")
     rate = (
         sample_rate
         if sample_rate is not None

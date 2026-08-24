@@ -145,6 +145,71 @@ def test_evaluate_turn_flags_guard_judge_disagreement() -> None:
     assert outcome.disagreement is True
 
 
+def test_evaluate_turn_respects_the_declared_quality_regime() -> None:
+    """ADR 0017 §A4 / ADR 0053 §4 — the judge's population is DECLARED.
+
+    Measured leak, 2026-08-22: one operator-side /chat turn routed to recouvrement
+    (declared ``business_scored``, template-assembled replies) was judged and its
+    single row became the whole per-agent SLO population. The guard makes that
+    unrepresentable: a non-``llm_judged`` agent is skipped even when FLAGGED, with
+    the reason named — while a declared ``llm_judged`` agent and an id the registry
+    does not know keep today's behaviour.
+    """
+    emitted: list[object] = []
+
+    def _record(verdict: object, **_kwargs: object) -> None:
+        emitted.append(verdict)
+
+    original_emit = online.scores.emit_score
+    online.scores.emit_score = _record  # type: ignore[assignment]
+    try:
+        skipped = asyncio.run(
+            online.evaluate_turn(
+                question="q",
+                answer="a",
+                context="c",
+                language="fr",
+                agent_id="recouvrement",
+                flagged=True,
+                judge=_StubJudge(0.1),
+                roll=0.0,
+            )
+        )
+        assert skipped.verdict is None
+        assert skipped.skipped == "quality_regime"
+        assert emitted == []
+
+        judged = asyncio.run(
+            online.evaluate_turn(
+                question="q",
+                answer="a",
+                context="c",
+                language="fr",
+                agent_id="support-client",
+                judge=_StubJudge(0.9),
+                roll=0.0,
+            )
+        )
+        assert judged.verdict is not None
+        assert judged.skipped is None
+        assert emitted != []
+
+        unknown = asyncio.run(
+            online.evaluate_turn(
+                question="q",
+                answer="a",
+                context="c",
+                language="fr",
+                agent_id="not-a-registry-agent",
+                judge=_StubJudge(0.9),
+                roll=0.0,
+            )
+        )
+        assert unknown.verdict is not None
+    finally:
+        online.scores.emit_score = original_emit  # type: ignore[assignment]
+
+
 def test_evaluate_turn_no_disagreement_when_grounded() -> None:
     outcome = asyncio.run(
         online.evaluate_turn(
