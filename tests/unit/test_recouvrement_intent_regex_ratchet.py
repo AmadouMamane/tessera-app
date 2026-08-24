@@ -18,13 +18,19 @@ from __future__ import annotations
 
 from eval.intent_bench import build_report, load_intent_set, score_regex_column
 
-#: Measured 2026-08-23 (uv run python -m eval.intent_bench), set 2026-08-23.1.
+#: Measured 2026-08-24 (uv run python -m eval.intent_bench), set 2026-08-23.1 — a
+#: deliberate re-pin: the dead German tokens (ae/oe/ue transliterations the normalizer
+#: never produces, the separable « fasse … zusammen », the nominal forms Anruf/Rückruf/
+#: Zusammenfassung/Begleichung) were fixed in the word lists, and ONLY the German column
+#: moved: de 26 → 32 correct. fr and en are unchanged to the case, the remaining misses
+#: are genuine paraphrases (the LLM layer's job), and the referent itself is untouched
+#: (same sha). Previous pin, 2026-08-23: overall 83/120, de 26/40, defaulted 43.
 _PINNED_SET_SHA = "63a4a5aba8e5dfca24cf49e6f54b915fff2cc3ae91ec49cbc806dc768b0bbe67"
-_PINNED_OVERALL = {"n": 120, "correct": 83, "defaulted": 43}
+_PINNED_OVERALL = {"n": 120, "correct": 89, "defaulted": 35}
 _PINNED_BY_LANGUAGE = {
     "fr": {"n": 40, "correct": 28, "defaulted": 11},
     "en": {"n": 40, "correct": 29, "defaulted": 12},
-    "de": {"n": 40, "correct": 26, "defaulted": 20},
+    "de": {"n": 40, "correct": 32, "defaulted": 12},
 }
 _PINNED_FIELDS = {
     "duration_months": {"n": 18, "exact": 12},

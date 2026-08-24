@@ -6,7 +6,9 @@
   floor 69.2 % pinned · gemma3:27b **96.7 % composite, p50 4.1 s** — served since the operator
   flip (mode `active`, 2026-08-24 10:47 UTC) citing the bench and 24/24 live verdicts, p50
   2.3 s. gpt-5.5 measured 99.2 % p50 1.7 s stays one governed knob-write away, at the cost of
-  external egress.)
+  external egress. Same day, the dead German fallback tokens were fixed and the pair
+  re-measured on the same referent: regex floor 69.2 → 74.2 %, composite 96.7 → 97.5 %,
+  threshold sweep still 0.)
 - Date: 2026-08-22
 - Supersedes: none
 - Superseded by: none

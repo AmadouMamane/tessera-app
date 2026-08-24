@@ -471,8 +471,13 @@ def _has_draft_intent(normalized_message: str) -> bool:
             r"\b(relance|brouillon|courrier|email|mail|rediger|redige|"
             r"message client|version courte|empathique|modifier|modifie|rends-le|rend le|"
             r"reminder|customer message|client message|draft|short version|"
-            r"empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|"
-            r"kurze version|einfuehlsam|aendern)\b",
+            r"empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|erinnerungstext|"
+            # The umlaut tokens exist in BOTH spellings on purpose: the normalizer strips
+            # combining marks (einfühlsam → einfuhlsam), so the ae/oe/ue transliterations
+            # alone never matched real German — measured dead on the labeled referent
+            # (2026-08-23 game notes; re-measured and re-pinned 2026-08-24).
+            r"kurze version|kurzere version|kuerzere version|"
+            r"einfuehlsam|einfuhlsam|aendern|andern)\b",
             normalized_message,
         )
         is not None
@@ -485,11 +490,14 @@ def _has_summary_intent(normalized_message: str) -> bool:
         re.search(
             r"\b(resume|resumer|synthese|synthetise|points cles|prioritaire|priorite|"
             r"situation du client|que dois je retenir|a retenir|summary|summarise|summarize|"
-            r"key points|priority|customer situation|fallzusammenfassung|zusammenfassen|"
-            r"kernpunkte|prioritaet|kundensituation)\b",
+            r"key points|priority|customer situation|fallzusammenfassung|zusammenfassung|"
+            r"zusammenfassen|kernpunkte|prioritaet|prioritat|kundensituation)\b",
             normalized_message,
         )
         is not None
+        # zusammenfassen is SEPARABLE: "Fasse den Fall zusammen" carries the verb in two
+        # pieces, and no token list sees a split word (measured dead, 2026-08-23 notes).
+        or re.search(r"\bfass\w*\b.*\bzusammen\b", normalized_message) is not None
     )
 
 
@@ -502,7 +510,8 @@ def _has_payment_options_intent(normalized_message: str) -> bool:
             r"paiement en plusieurs fois|echeancier possible|alternatives? de reglement|"
             r"solution de paiement|options? de reglement|moyens? de reglement|payment options?|"
             r"payment methods?|ways? to pay|full payment|partial payment|settlement options?|"
-            r"zahlungsoptionen?|zahlungsarten?|zahlungsmoeglichkeiten|vollzahlung|teilzahlung)\b",
+            r"zahlungsoptionen?|zahlungsarten?|zahlungsmoeglichkeiten|zahlungsmoglichkeiten|"
+            r"vollzahlung|teilzahlung|begleichen|begleichung)\b",
             normalized_message,
         )
         is not None
@@ -514,7 +523,9 @@ def _has_contact_rule_intent(normalized_message: str) -> bool:
     has_contact_action = (
         re.search(
             r"\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail|"
-            r"call|phone|reach|anrufen|telefon|kontaktieren|erreichen)\b",
+            # anrufen's NOMINAL forms (der Anruf, der Rückruf) are how the question is
+            # usually asked; the infinitive alone missed them (2026-08-23 game notes).
+            r"call|phone|reach|anrufen|anruf|ruckruf|rueckruf|telefon|kontaktieren|erreichen)\b",
             normalized_message,
         )
         is not None
@@ -524,7 +535,7 @@ def _has_contact_rule_intent(normalized_message: str) -> bool:
             r"\b(regle|regles|autorise|autorisation|interdit|peux|peut|puis|comment|quand|"
             r"heure|plage|cadre|conforme|conformite|rule|rules|allowed|authorised|authorized|"
             r"forbidden|may|can|when|time|window|compliant|regel|regeln|erlaubt|zulaessig|"
-            r"verboten|wann|uhrzeit|zeitfenster|konform)\b",
+            r"zulassig|verboten|wann|uhrzeit|zeitfenster|konform)\b",
             normalized_message,
         )
         is not None

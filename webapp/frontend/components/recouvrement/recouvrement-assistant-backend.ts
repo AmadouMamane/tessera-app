@@ -97,18 +97,18 @@ function hasScheduleIntent(normalized: string): boolean {
 }
 
 function hasPaymentOptionsIntent(normalized: string): boolean {
-  return /\b(options? de paiement|moyens? de paiement|comment peut[- ]?il payer|comment peut[- ]?il regler|paiement total|paiement partiel|paiement en plusieurs fois|echeancier possible|alternatives? de reglement|solution de paiement|options? de reglement|moyens? de reglement|payment options?|payment methods?|ways? to pay|full payment|partial payment|settlement options?|zahlungsoptionen?|zahlungsarten?|zahlungsmoeglichkeiten|vollzahlung|teilzahlung)\b/.test(
+  return /\b(options? de paiement|moyens? de paiement|comment peut[- ]?il payer|comment peut[- ]?il regler|paiement total|paiement partiel|paiement en plusieurs fois|echeancier possible|alternatives? de reglement|solution de paiement|options? de reglement|moyens? de reglement|payment options?|payment methods?|ways? to pay|full payment|partial payment|settlement options?|zahlungsoptionen?|zahlungsarten?|zahlungsmoeglichkeiten|zahlungsmoglichkeiten|vollzahlung|teilzahlung|begleichen|begleichung)\b/.test(
     normalized,
   );
 }
 
 function hasContactRuleIntent(normalized: string): boolean {
   const hasContactAction =
-    /\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail|call|phone|contact|reach|anrufen|telefon|kontaktieren|erreichen)\b/.test(
+    /\b(appel|appeler|telephone|telephoner|contacter|contact|joindre|email|mail|call|phone|contact|reach|anrufen|anruf|ruckruf|rueckruf|telefon|kontaktieren|erreichen)\b/.test(
       normalized,
     );
   const hasRuleSignal =
-    /\b(regle|regles|autorise|autorisation|interdit|peux|peut|puis|comment|quand|heure|plage|cadre|conforme|conformite|rule|rules|allowed|authorised|authorized|forbidden|may|can|when|time|window|compliant|regel|regeln|erlaubt|zulaessig|verboten|wann|uhrzeit|zeitfenster|konform)\b/.test(
+    /\b(regle|regles|autorise|autorisation|interdit|peux|peut|puis|comment|quand|heure|plage|cadre|conforme|conformite|rule|rules|allowed|authorised|authorized|forbidden|may|can|when|time|window|compliant|regel|regeln|erlaubt|zulaessig|zulassig|verboten|wann|uhrzeit|zeitfenster|konform)\b/.test(
       normalized,
     ) || /(?:[01]?\d|2[0-3])(?:h|:)/.test(normalized);
 
@@ -126,16 +126,17 @@ function hasContactRuleIntent(normalized: string): boolean {
 // the agent's `_has_draft_intent`: the two must agree, or the front parses one artifact while
 // the agent returns another.
 function hasDraftIntent(normalized: string): boolean {
-  return /\b(relance|message client|brouillon|email|mail|courrier|rediger|redige|version courte|empathique|modifier|modifie|rends-le|rend le|reminder|customer message|client message|draft|short version|empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|kurze version|einfuehlsam|aendern)\b/.test(
+  return /\b(relance|message client|brouillon|email|mail|courrier|rediger|redige|version courte|empathique|modifier|modifie|rends-le|rend le|reminder|customer message|client message|draft|short version|empathetic|edit|mahnung|kundennachricht|entwurf|schreiben|erinnerungstext|kurze version|kurzere version|kuerzere version|einfuehlsam|einfuhlsam|aendern|andern)\b/.test(
     normalized,
   );
 }
 
 /** Verbs that can only act on something that already exists. */
-const DRAFT_EDIT_VERB = /\b(modifier|modifie|rends-le|rend le|edit|rewrite|aendern|umschreiben)\b/;
+const DRAFT_EDIT_VERB =
+  /\b(modifier|modifie|rends-le|rend le|edit|rewrite|aendern|andern|umschreiben)\b/;
 /** Tone and format qualifiers. They describe an edit — or a creation. */
 const DRAFT_TONE_QUALIFIER =
-  /\b(version courte|empathique|short version|empathetic|kurze version|einfuehlsam)\b/;
+  /\b(version courte|empathique|short version|empathetic|kurze version|kurzere version|kuerzere version|einfuehlsam|einfuhlsam)\b/;
 /** Words that NAME the thing to write, i.e. that make the turn a creation. */
 const DRAFT_OBJECT =
   /\b(relance|message client|brouillon|courrier|reminder|customer message|client message|mahnung|kundennachricht|entwurf|rediger|redige|schreiben|draft)\b/;
@@ -156,8 +157,13 @@ function hasDraftEditIntent(normalized: string): boolean {
 }
 
 function hasSummaryIntent(normalized: string): boolean {
-  return /\b(resume|resumer|synthese|synthetise|points cles|prioritaire|priorite|situation du client|que dois je retenir|a retenir|summary|summarise|summarize|key points|priority|customer situation|fallzusammenfassung|zusammenfassen|kernpunkte|prioritaet|kundensituation)\b/.test(
-    normalized,
+  return (
+    /\b(resume|resumer|synthese|synthetise|points cles|prioritaire|priorite|situation du client|que dois je retenir|a retenir|summary|summarise|summarize|key points|priority|customer situation|fallzusammenfassung|zusammenfassung|zusammenfassen|kernpunkte|prioritaet|prioritat|kundensituation)\b/.test(
+      normalized,
+    ) ||
+    // zusammenfassen is SEPARABLE: "Fasse den Fall zusammen" splits the verb in two —
+    // kept in lockstep with the agent's `_has_summary_intent`.
+    /\bfass\w*\b.*\bzusammen\b/.test(normalized)
   );
 }
 
