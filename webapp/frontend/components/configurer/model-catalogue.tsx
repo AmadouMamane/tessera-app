@@ -20,7 +20,7 @@ import {
   mutateSettingsOverride,
   mutateSettingsOverrideRevert,
 } from "@/lib/api/client";
-import type { ModelCatalogue as Data } from "@/lib/api/schemas";
+import type { ModelCatalogue as Data, OverrideKnob } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 type Row = NonNullable<Data["models"]>[number];
@@ -198,6 +198,16 @@ export function ModelCatalogue() {
   );
 }
 
+// ADR 0053 — the four understanding knobs are keyed rows: each names itself in the
+// reader's language (the métier card's own title, "Compréhension du langage"), never
+// the raw registry key and never the org-scope label the model rows fall back to.
+const KNOB_LABEL_IDS: Record<string, string> = {
+  "recouvrement.understanding.mode": "understandingMode",
+  "recouvrement.understanding.confidence_threshold": "understandingThreshold",
+  "recouvrement.understanding.timeout_s": "understandingTimeout",
+  "recouvrement.understanding.model": "understandingModel",
+};
+
 /** The governed serving-model panel (ADR 0030): org + per-agent chat model.
  *  Every effective value is base-or-override with visible provenance; the set /
  *  revert mutations are superadmin-only (verified assertion, mandatory reason)
@@ -257,6 +267,19 @@ function ServingModels() {
     setError(null);
   };
 
+  // A usable starting value for the edit control: knobs whose base is a
+  // locale-neutral token ("—") must not seed the input with a non-value, and a
+  // closed choice must start inside its own list.
+  const editSeed = (k: OverrideKnob, kind: string, effective: string): string => {
+    if (k.override) return k.override.value;
+    if (kind === "budget_eur") return "10";
+    if (kind === "overrun") return "block";
+    if (kind === "choice")
+      return (k.options ?? []).includes(effective) ? effective : (k.options?.[0] ?? effective);
+    if (kind === "decimal") return Number.isFinite(Number(effective)) ? effective : "0";
+    return effective;
+  };
+
   return (
     <section
       data-testid="serving-models"
@@ -272,14 +295,18 @@ function ServingModels() {
         {data.knobs.map((k) => {
           const effective = k.override?.value ?? k.base;
           const isEditing = editing?.key === k.key;
-          // ADR 0034 — the knob family binds the row label and the control.
+          // ADR 0034 — the knob family binds the row label and the control;
+          // ADR 0053 — a keyed row (the understanding knobs) names ITSELF first.
           const kind = k.kind ?? "model";
+          const keyedLabel = KNOB_LABEL_IDS[k.key];
           const rowLabel =
-            kind === "budget_eur"
-              ? t("budgetDaily")
-              : kind === "overrun"
-                ? t("budgetOverrun")
-                : (k.agent_id ?? t("org"));
+            keyedLabel !== undefined
+              ? t(keyedLabel)
+              : kind === "budget_eur"
+                ? t("budgetDaily")
+                : kind === "overrun"
+                  ? t("budgetOverrun")
+                  : (k.agent_id ?? t("org"));
           return (
             <li
               key={k.key}
@@ -311,20 +338,7 @@ function ServingModels() {
                       <button
                         type="button"
                         disabled={busy}
-                        onClick={() =>
-                          // Budget knobs with no override start from a usable
-                          // value, not the "—" / "block" base token.
-                          startEdit(
-                            k.key,
-                            "set",
-                            k.override?.value ??
-                              (kind === "budget_eur"
-                                ? "10"
-                                : kind === "overrun"
-                                  ? "block"
-                                  : effective),
-                          )
-                        }
+                        onClick={() => startEdit(k.key, "set", editSeed(k, kind, effective))}
                         className="text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
                       >
                         {t("change")}
@@ -382,10 +396,10 @@ function ServingModels() {
                         onChange={(e) => setValue(e.target.value)}
                         className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
                       />
-                    ) : kind === "overrun" ? (
-                      // ADR 0034 — a closed behaviour list, never free text.
+                    ) : kind === "overrun" || kind === "choice" ? (
+                      // ADR 0034/0053 — a closed value list, never free text.
                       <select
-                        aria-label={t("budgetOverrun")}
+                        aria-label={rowLabel}
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
@@ -396,6 +410,18 @@ function ServingModels() {
                           </option>
                         ))}
                       </select>
+                    ) : kind === "decimal" ? (
+                      // ADR 0053 — a plain decimal; the store validates the
+                      // family's own range (threshold [0,1], timeout (0,60] s).
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        aria-label={rowLabel}
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                      />
                     ) : (
                       <select
                         aria-label={t("modelLabel")}

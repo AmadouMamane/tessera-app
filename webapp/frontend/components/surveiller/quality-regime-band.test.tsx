@@ -173,8 +173,10 @@ describe("the answer-quality rating band", () => {
     expect(container.innerHTML).toMatch(/agents\/support-client/);
     expect(container.innerHTML).toMatch(/agents\/hello-agent/);
     // The honest-scope sentence: the band must never read as "recouvrement is outside
-    // quality altogether" — cross-cutting controls cover the whole fleet.
-    expect(text).toMatch(/couvrent tous les agents/);
+    // quality altogether" — cross-cutting controls cover the whole fleet. (Reworded
+    // 2026-08-24: the subtitle informs the reader, it no longer describes the two-rulers
+    // doctrine to itself — the structure keeps enforcing it.)
+    expect(text).toMatch(/pour tous les agents/);
     expect(text).toMatch(/Réponses notées par un juge IA/);
     expect(text).toMatch(/Support Client/);
     expect(text).toMatch(/Onboarding/);

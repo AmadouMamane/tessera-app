@@ -8715,15 +8715,14 @@
     },
     "understanding": {
       "title": "Sprachverständnis",
-      "subtitle": "Wie der Assistent schriftliche Anfragen versteht — eigenständig gemessen, nie mit den Fachkontrollen darunter vermengt.",
-      "population": "Über die letzten {observed} klassifizierten Anfragen",
-      "agreement": "gaben Modell und Wortlisten {agree} Mal dieselbe Antwort, bei {disagree} Abweichungen.",
-      "failures": "{count} benannte Fehlschläge: {detail}",
-      "noFailures": "keine Fehlschläge",
-      "latency": "mittlere Modellantwort {seconds} s",
-      "freshness": "letzte klassifizierte Anfrage: {date}",
-      "modeActive": "das Modell entscheidet",
-      "modeShadow": "beobachtend — die Wortlisten entscheiden",
+      "subtitle": "Der Assistent liest jede schriftliche Anfrage, um die passende Aktion zu wählen. Diese Karte verfolgt, wie zuverlässig dieses Lesen ist.",
+      "counts": "{observed} Anfragen analysiert: {verdicts} vom Modell gelesen — {agree} mit demselben Schluss wie die Stichworterkennung, {disagree} mit einem anderen Schluss.",
+      "failures": "{count} Mal gab das Modell keine Lesart ({detail}); die Stichworterkennung hat stattdessen geantwortet.",
+      "noFailures": "das Modell hat jedes Mal eine Lesart geliefert",
+      "latency": "Lesen des Textes: {seconds} s im Median",
+      "freshness": "letzte analysierte Anfrage: {date}",
+      "modeActive": "das Modell liest und entscheidet",
+      "modeShadow": "beobachtend — die Stichworterkennung entscheidet",
       "kind": {
         "timeout": "Zeitüberschreitung",
         "schema_invalid": "ungültige Antwort",
@@ -9685,7 +9684,11 @@
       "revertTo": "Kehrt zur Basis zurück: {base}",
       "superadminOnly": "Nur Superadmin",
       "budgetDaily": "Budget-Limit (€/Tag)",
-      "budgetOverrun": "Budget-Überschreitung (Verhalten)"
+      "budgetOverrun": "Budget-Überschreitung (Verhalten)",
+      "understandingMode": "Sprachverständnis (Recouvrement) — Modus",
+      "understandingThreshold": "Sprachverständnis (Recouvrement) — Vertrauensschwelle",
+      "understandingTimeout": "Sprachverständnis (Recouvrement) — Zeitlimit (s)",
+      "understandingModel": "Sprachverständnis (Recouvrement) — Modell"
     }
   },
   "guardrailCatalogue": {
@@ -11211,7 +11214,7 @@
   },
   "qualityRegimes": {
     "title": "Wie die Qualität bewertet wird",
-    "subtitle": "Übergreifende Kontrollen — Sicherheit, Konformität, Kosten — decken alle Agenten ab. Für die Antwortqualität deklariert jeder Agent seine Bewertungsmethode, und Zahlen zweier Methoden werden nie vermischt.",
+    "subtitle": "Sicherheit, Konformität und Kosten werden für alle Agenten kontrolliert. Die Antwortqualität wird nach der eigenen Methode jedes Agenten bewertet.",
     "agentCount": "{count, plural, one {# Agent} other {# Agenten}}",
     "moreNames": "{count, plural, one {+# weiterer} other {+# weitere}}",
     "llm_judged": {

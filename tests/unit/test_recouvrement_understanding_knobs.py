@@ -107,6 +107,31 @@ def test_model_knob_shares_the_closed_catalogue() -> None:
         _validated_value(UNDERSTANDING_MODEL_KEY, "mistral-uncatalogued:1b")
 
 
+def test_panel_rows_carry_their_own_family_and_base() -> None:
+    """ADR 0053 — the cockpit rows for the understanding knobs bind the right control.
+
+    Until 2026-08-24 the four keys fell into the default ``model`` family: the panel
+    labeled each row with the org fallback, offered the chat-model select for a mode,
+    and announced the chat model as the base a revert would restore — three wrong
+    answers on one governed surface.
+    """
+    from tessera.api.routes.settings import _knob_out
+    from tessera.recouvrement.understanding import DEFAULT_TIMEOUT_S
+
+    mode = _knob_out(UNDERSTANDING_MODE_KEY, None)
+    assert (mode.kind, mode.options, mode.base) == ("choice", ["shadow", "active"], "shadow")
+
+    threshold = _knob_out(UNDERSTANDING_THRESHOLD_KEY, None)
+    assert (threshold.kind, threshold.options, threshold.base) == ("decimal", None, "—")
+
+    timeout = _knob_out(UNDERSTANDING_TIMEOUT_KEY, None)
+    assert (timeout.kind, timeout.base) == ("decimal", f"{DEFAULT_TIMEOUT_S:g}")
+
+    # The shared catalogue select IS the right control for the model knob: its value
+    # space is the same closed catalogue the chat-model rows edit against.
+    assert _knob_out(UNDERSTANDING_MODEL_KEY, None).kind == "model"
+
+
 def test_model_row_reaches_the_resolved_config() -> None:
     config = _interpret_understanding_rows(
         {UNDERSTANDING_MODEL_KEY: "gemma3:27b"}, default_timeout_s=8.0

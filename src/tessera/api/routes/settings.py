@@ -34,6 +34,10 @@ from tessera.api.config_overrides import (
     BUDGET_OVERRUN_BEHAVIOURS,
     BUDGET_OVERRUN_KEY,
     DAILY_BUDGET_KEY,
+    UNDERSTANDING_MODE_KEY,
+    UNDERSTANDING_MODES,
+    UNDERSTANDING_THRESHOLD_KEY,
+    UNDERSTANDING_TIMEOUT_KEY,
     KnobError,
     Override,
     OverrideNotStoredError,
@@ -119,14 +123,15 @@ class KnobOut(BaseModel):
     """One registry knob: its frozen base and its override, if any.
 
     ``kind`` names the knob family so the UI binds the right control (a model
-    select, a numeric EUR input, a closed behaviour select — never free text);
-    ``options`` is the closed value list for enum knobs (ADR 0034).
+    select, a numeric EUR input, a closed behaviour select, a closed ``choice``
+    select, a plain ``decimal`` input — never free text); ``options`` is the
+    closed value list for enum knobs (ADR 0034, ADR 0053).
     """
 
     key: str
     agent_id: str | None
     base: str
-    kind: Literal["model", "budget_eur", "overrun"] = "model"
+    kind: Literal["model", "budget_eur", "overrun", "choice", "decimal"] = "model"
     options: list[str] | None = None
     override: OverrideOut | None
 
@@ -161,24 +166,45 @@ def _base_of(key: str) -> str:
     """The knob's frozen base, per family (ADR 0034) — the value a revert restores.
 
     Locale-neutral tokens for the budget knobs: "—" = no ceiling (the
-    historical truth), "block" = the default overrun behaviour.
+    historical truth), "block" = the default overrun behaviour. The ADR 0053
+    understanding knobs restore what the resolver serves with no row stored:
+    fail-open shadow mode, no confidence threshold ("—" — active mode refuses
+    to exist without one), and the coded default timeout. Their model knob
+    falls through to the chat-model base: with no row the layer reads the
+    profile's own backend, exactly like the chat path.
     """
     if key == DAILY_BUDGET_KEY:
         return "—"
     if key == BUDGET_OVERRUN_KEY:
         return "block"
+    if key == UNDERSTANDING_MODE_KEY:
+        return "shadow"
+    if key == UNDERSTANDING_THRESHOLD_KEY:
+        return "—"
+    if key == UNDERSTANDING_TIMEOUT_KEY:
+        # Lazy on purpose: config_overrides reads this module the same way, and a
+        # route module must not pull the LLM stack in at import time.
+        from tessera.recouvrement.understanding import DEFAULT_TIMEOUT_S
+
+        return f"{DEFAULT_TIMEOUT_S:g}"
     return base_chat_model()
 
 
 def _knob_out(key: str, override: Override | None) -> KnobOut:
     # ADR 0034 — each knob family carries its own kind, base and value space.
-    kind: Literal["model", "budget_eur", "overrun"] = "model"
+    kind: Literal["model", "budget_eur", "overrun", "choice", "decimal"] = "model"
     base = _base_of(key)
     options: list[str] | None = None
     if key == DAILY_BUDGET_KEY:
         kind = "budget_eur"
     elif key == BUDGET_OVERRUN_KEY:
         kind, options = "overrun", list(BUDGET_OVERRUN_BEHAVIOURS)
+    elif key == UNDERSTANDING_MODE_KEY:
+        # ADR 0053 — the mode is a closed pair, never free text on screen either.
+        kind, options = "choice", list(UNDERSTANDING_MODES)
+    elif key in (UNDERSTANDING_THRESHOLD_KEY, UNDERSTANDING_TIMEOUT_KEY):
+        # ADR 0053 — plain decimals; the store validates the family's own range.
+        kind = "decimal"
     return KnobOut(
         key=key,
         agent_id=agent_of_key(key),

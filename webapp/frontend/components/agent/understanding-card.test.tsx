@@ -56,11 +56,18 @@ describe("UnderstandingCard", () => {
     const { container } = mount(<UnderstandingCard data={SUMMARY} />);
     const text = container.textContent ?? "";
     expect(text).toContain("Compréhension du langage");
-    expect(text).toContain("24");
+    // The arithmetic is GIVEN, never left to the reader (operator feedback 2026-08-24):
+    // observed, verdicts, agree and disagree all appear on one line, and the failures
+    // line closes the sum (22 read + 2 without a reading = 24 analysed).
+    expect(text).toContain("24 demandes analysées");
+    expect(text).toContain("22 lues par le modèle");
     expect(text).toContain("12");
+    expect(text).toContain("2 fois, le modèle n'a pas donné de lecture");
     expect(text).toContain("délai dépassé 2");
+    // The latency names WHAT it times — the model's reading of the text, not the turn.
+    expect(text).toContain("lecture du texte");
     expect(text).toContain("gemma3:27b");
-    expect(text).toContain("le modèle décide");
+    expect(text).toContain("le modèle lit et décide");
     expect(text).not.toContain("%");
     expect(text).not.toContain("agentMetier.understanding");
   });

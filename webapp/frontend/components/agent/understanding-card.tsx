@@ -7,10 +7,13 @@ import type { UnderstandingSummary } from "@/lib/api/schemas";
 
 /**
  * The layer-1 understanding plane on SCREEN (ADR 0053, ADR 0017 §A5.3): over the recent
- * classified turns, how often the model and the word lists agreed, every failure NAMED
- * by kind, the model's median latency, the last classified turn's date, and whether the
- * model decides (active) or observes (shadow). COUNTS only — this ruler never shares a
- * denominator with the business signals beside it, so no percentage may appear here.
+ * classified turns, how often the model and the keyword detection agreed, every failure
+ * NAMED by kind, the model's median latency, the last classified turn's date, and whether
+ * the model decides (active) or observes (shadow). COUNTS only — this ruler never shares
+ * a denominator with the business signals beside it, so no percentage may appear here.
+ * The arithmetic is GIVEN, never left to the reader: the counts line carries observed,
+ * verdicts, agree and disagree together, and the failures line closes the sum
+ * (verdicts + failures = observed) — operator feedback, 2026-08-24.
  * `null` data means the agent has no classified turns: the card renders nothing rather
  * than an empty score.
  */
@@ -44,8 +47,12 @@ export function UnderstandingCard({ data }: { data: UnderstandingSummary | null 
       <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{t("subtitle")}</p>
       <ul className="mt-2 flex flex-col gap-1 text-sm">
         <li>
-          {t("population", { observed: data.observed })}{" "}
-          {t("agreement", { agree: data.agree, disagree: data.disagree })}
+          {t("counts", {
+            observed: data.observed,
+            verdicts: data.verdicts,
+            agree: data.agree,
+            disagree: data.disagree,
+          })}
         </li>
         <li className="text-[var(--tessera-text-muted)]">
           {failureCount > 0

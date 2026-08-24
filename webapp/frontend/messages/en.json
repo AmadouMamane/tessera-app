@@ -8715,15 +8715,14 @@
     },
     "understanding": {
       "title": "Language understanding",
-      "subtitle": "How the assistant understands written requests — measured on its own, never merged with the business checks below.",
-      "population": "Over the last {observed} classified turns,",
-      "agreement": "the model and the word lists gave the same answer {agree} times, with {disagree} disagreements.",
-      "failures": "{count} named failures: {detail}",
-      "noFailures": "no failures",
-      "latency": "median model response {seconds} s",
-      "freshness": "last classified turn: {date}",
-      "modeActive": "the model decides",
-      "modeShadow": "observing — the word lists decide",
+      "subtitle": "The assistant reads each written request to choose the right action. This card tracks how reliable that reading is.",
+      "counts": "{observed} requests analysed: {verdicts} read by the model — {agree} reaching the same conclusion as the keyword detection, {disagree} reaching a different one.",
+      "failures": "{count} times the model gave no reading ({detail}); the keyword detection answered instead.",
+      "noFailures": "the model gave a reading every time",
+      "latency": "text reading: median {seconds} s",
+      "freshness": "last request analysed: {date}",
+      "modeActive": "the model reads and decides",
+      "modeShadow": "observing — the keyword detection decides",
       "kind": {
         "timeout": "timed out",
         "schema_invalid": "invalid answer",
@@ -9685,7 +9684,11 @@
       "revertTo": "Reverts to base: {base}",
       "superadminOnly": "Superadmin only",
       "budgetDaily": "Budget ceiling (€/day)",
-      "budgetOverrun": "Budget overrun (behaviour)"
+      "budgetOverrun": "Budget overrun (behaviour)",
+      "understandingMode": "Language understanding (Recouvrement) — mode",
+      "understandingThreshold": "Language understanding (Recouvrement) — confidence threshold",
+      "understandingTimeout": "Language understanding (Recouvrement) — time limit (s)",
+      "understandingModel": "Language understanding (Recouvrement) — model"
     }
   },
   "guardrailCatalogue": {
@@ -11197,7 +11200,7 @@
   },
   "qualityRegimes": {
     "title": "How quality is rated",
-    "subtitle": "Cross-cutting controls — security, compliance, cost — cover every agent. For answer quality, each agent declares its rating method, and figures from two methods are never blended.",
+    "subtitle": "Security, compliance and costs are checked for every agent. Answer quality is rated with each agent's own method.",
     "agentCount": "{count, plural, one {# agent} other {# agents}}",
     "moreNames": "{count, plural, one {+# more} other {+# more}}",
     "llm_judged": {

@@ -8715,15 +8715,14 @@
     },
     "understanding": {
       "title": "Compréhension du langage",
-      "subtitle": "Comment l'assistant comprend les demandes écrites — un plan mesuré à part, jamais fondu avec les contrôles métier ci-dessous.",
-      "population": "Sur les {observed} derniers tours classifiés,",
-      "agreement": "le modèle et les listes de mots donnent la même réponse {agree} fois, avec {disagree} désaccords.",
-      "failures": "{count} échecs nommés : {detail}",
-      "noFailures": "aucun échec",
-      "latency": "réponse médiane du modèle {seconds} s",
-      "freshness": "dernier tour classifié : {date}",
-      "modeActive": "le modèle décide",
-      "modeShadow": "en observation — les listes de mots décident",
+      "subtitle": "L'assistant lit chaque demande écrite pour choisir la bonne action. Cette carte suit la fiabilité de cette lecture.",
+      "counts": "{observed} demandes analysées : {verdicts} lues par le modèle — {agree} avec la même conclusion que la détection par mots-clés, {disagree} avec une conclusion différente.",
+      "failures": "{count} fois, le modèle n'a pas donné de lecture ({detail}) ; la détection par mots-clés a répondu à sa place.",
+      "noFailures": "le modèle a donné une lecture à chaque fois",
+      "latency": "lecture du texte : {seconds} s en médiane",
+      "freshness": "dernière demande analysée : {date}",
+      "modeActive": "le modèle lit et décide",
+      "modeShadow": "en observation — la détection par mots-clés décide",
       "kind": {
         "timeout": "délai dépassé",
         "schema_invalid": "réponse invalide",
@@ -9685,7 +9684,11 @@
       "revertTo": "Revient à la base : {base}",
       "superadminOnly": "Réservé au superadmin",
       "budgetDaily": "Plafond budget (€/jour)",
-      "budgetOverrun": "Dépassement budget (comportement)"
+      "budgetOverrun": "Dépassement budget (comportement)",
+      "understandingMode": "Compréhension du langage (Recouvrement) — mode",
+      "understandingThreshold": "Compréhension du langage (Recouvrement) — seuil de confiance",
+      "understandingTimeout": "Compréhension du langage (Recouvrement) — délai max (s)",
+      "understandingModel": "Compréhension du langage (Recouvrement) — modèle"
     }
   },
   "guardrailCatalogue": {
@@ -11211,7 +11214,7 @@
   },
   "qualityRegimes": {
     "title": "Comment la qualité est notée",
-    "subtitle": "Les contrôles transverses — sécurité, conformité, coûts — couvrent tous les agents. Pour la qualité des réponses, chaque agent déclare sa méthode de notation, et les chiffres de deux méthodes ne se mélangent jamais.",
+    "subtitle": "Sécurité, conformité et coûts sont contrôlés pour tous les agents. La qualité des réponses est notée selon la méthode propre à chaque agent.",
     "agentCount": "{count, plural, one {# agent} other {# agents}}",
     "moreNames": "{count, plural, one {+# autre} other {+# autres}}",
     "llm_judged": {
