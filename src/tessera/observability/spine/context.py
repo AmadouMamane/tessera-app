@@ -117,8 +117,7 @@ def _non_judged_agent_ids() -> frozenset[str]:
     an agent the projector cannot describe stays in the judged plane, the same
     unknown-keeps-today's-behaviour rule the write-side guard applies.
     """
-    from tessera.agent.agentspec import QualityRegime
-    from tessera.agent.registry import list_agents
+    from tessera.agent.registry import QualityRegime, list_agents
     from tessera.observability.agentspec_projection import quality_regime_descriptor
 
     excluded: set[str] = set()

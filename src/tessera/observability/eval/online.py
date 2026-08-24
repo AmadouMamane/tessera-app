@@ -62,8 +62,7 @@ def _skip_reason_for(agent_id: str) -> str | None:
     bare bool so the outcome can carry it verbatim (the verdict-debt rule: a
     refusal owes its reason, not a naked False).
     """
-    from tessera.agent.agentspec import QualityRegime
-    from tessera.agent.registry import get_agent
+    from tessera.agent.registry import QualityRegime, get_agent
     from tessera.observability.agentspec_projection import quality_regime_descriptor
 
     try:

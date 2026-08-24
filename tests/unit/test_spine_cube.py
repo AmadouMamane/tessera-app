@@ -41,7 +41,10 @@ def _seeded_reader() -> Iterator[None]:
             scores=[
                 _score("support-client", "fr", 0.90),
                 _score("support-client", "de", 0.50),
-                _score("recouvrement", "fr", 0.80),
+                # onboarding, not recouvrement: the scores plane is kept to agents that
+                # DECLARE the judge (SnapshotContext filter, ADR 0017 §A4) — this file's
+                # subject is dimension composition, so it seeds a declared-judged agent.
+                _score("onboarding", "fr", 0.80),
             ]
         )
     )
@@ -65,9 +68,9 @@ async def test_language_slices_the_scores_signal() -> None:
 
 
 async def test_cube_composes_agent_and_language() -> None:
-    snap = await compute_snapshot(Scope(agent_id="recouvrement", language="fr"), ("scores",))
+    snap = await compute_snapshot(Scope(agent_id="onboarding", language="fr"), ("scores",))
     rows = _rows(snap)
-    assert [r["agent_id"] for r in rows] == ["recouvrement"]
+    assert [r["agent_id"] for r in rows] == ["onboarding"]
     assert [r["language"] for r in rows] == ["fr"]  # agent AND language both applied
 
 
