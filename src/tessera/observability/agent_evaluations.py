@@ -23,7 +23,7 @@ cross-page navigation, verified end to end. Free-text data is verbatim French
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
@@ -569,6 +569,158 @@ def _judge_block(agent_id: str) -> dict[str, object]:
         "grounding": scores.grounding,
         "hallucination": scores.hallucination,
         "n": scores.n,
+    }
+
+
+_INTENT_BENCH_DIR = Path(__file__).resolve().parents[3] / "eval" / "reports" / "intent_bench"
+
+
+def _latest_intent_bench(agent_id: str) -> dict[str, object] | None:
+    """The agent's most recent published intent-bench report, by its own run stamp."""
+    try:
+        candidates = sorted(_INTENT_BENCH_DIR.glob("*.json"))
+    except OSError:
+        return None
+    latest: dict[str, object] | None = None
+    latest_run = ""
+    for path in candidates:
+        try:
+            report = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(report, dict) or report.get("agent_id") != agent_id:
+            continue
+        run_at = str(report.get("run_at") or "")
+        if run_at >= latest_run:
+            latest, latest_run = report, run_at
+    return latest
+
+
+def _understanding_bench_block(agent_id: str, lang: str) -> dict[str, object] | None:
+    """The reading layer's EVALUATION plane (ADR 0053 §7): the latest published intent bench.
+
+    Distinct on purpose from the continuous counts the quality band and the Métier card
+    carry (suivi continu vs évaluation — operator rule, 2026-08-24): the bench is measured
+    against the labeled referent (human ground truth), so this is where a rate is honest —
+    its denominator is the referent's own case count, stamped with the run instant, the
+    referent's sha and the measured model. ``None`` when no full report (regex + llm
+    columns) was published for the agent: publication is a deliberate act (the bench's
+    ``--report`` flag), so the section does not exist rather than showing an invented zero.
+    """
+    latest = _latest_intent_bench(agent_id)
+    if latest is None:
+        return None
+    columns = latest.get("columns")
+    if not isinstance(columns, dict):
+        return None
+    regex_column = columns.get("regex")
+    llm_column = columns.get("llm")
+    if not isinstance(regex_column, dict) or not isinstance(llm_column, dict):
+        return None
+
+    def pct(value: float) -> str:
+        text = f"{value * 100:.1f}"
+        return (text if lang == "en" else text.replace(".", ",")) + " %"
+
+    def seconds(ms: float) -> str:
+        return _dot(ms / 1000) if lang == "en" else _comma(ms / 1000)
+
+    def score(block: object) -> tuple[str, float] | None:
+        if not isinstance(block, dict):
+            return None
+        correct, n = int(block.get("correct", 0)), int(block.get("n", 0))
+        return f"{correct}/{n}", float(block.get("accuracy", 0.0))
+
+    regex_overall = score(regex_column.get("overall"))
+    llm_overall = score(llm_column.get("overall"))
+    composite = score(llm_column.get("with_regex_fallback"))
+    if regex_overall is None or llm_overall is None or composite is None:
+        return None
+    models = llm_column.get("models")
+    model = str(models[0]) if isinstance(models, list) and models else ""
+    run_at = str(latest.get("run_at") or "")
+    try:
+        run_dt = datetime.fromisoformat(run_at)
+        stamp = run_dt.strftime("%Y-%m-%d %H:%M" if lang == "en" else "%d/%m/%Y %H:%M")
+    except ValueError:
+        stamp = run_at
+    sha = str(latest.get("set_sha256") or "")[:8]
+    set_version = str(latest.get("set_version") or "")
+    referent = f"{set_version} — " + str(regex_column.get("overall", {}).get("n", ""))
+    rows = [
+        {
+            "label": _loc(
+                lang,
+                "Détection par mots-clés (repli)",
+                "Stichworterkennung (Rückfall)",
+                "Keyword detection (fallback)",
+            ),
+            "value": f"{regex_overall[0]} — {pct(regex_overall[1])}",
+        },
+        {
+            "label": _loc(lang, "Modèle seul", "Modell allein", "Model alone"),
+            "value": f"{llm_overall[0]} — {pct(llm_overall[1])}",
+        },
+        {
+            "label": _loc(
+                lang,
+                "Servi — modèle avec repli",
+                "Serviert — Modell mit Rückfall",
+                "Served — model with fallback",
+            ),
+            "value": f"{composite[0]} — {pct(composite[1])}",
+            "tone": "served",
+        },
+    ]
+    per_language: list[str] = []
+    by_language = llm_column.get("by_language")
+    if isinstance(by_language, dict):
+        for code in ("fr", "en", "de"):
+            cell = score(by_language.get(code))
+            if cell is not None:
+                per_language.append(f"{code.upper()} {cell[0]}")
+    languages = _loc(
+        lang,
+        f"par langue (modèle seul) : {' · '.join(per_language)}",
+        f"nach Sprache (Modell allein): {' · '.join(per_language)}",
+        f"by language (model alone): {' · '.join(per_language)}",
+    )
+    latency_block = llm_column.get("latency_ms")
+    latency = ""
+    if isinstance(latency_block, dict) and latency_block.get("p50") is not None:
+        p50 = seconds(float(latency_block["p50"]))
+        peak = seconds(float(latency_block.get("max", 0.0)))
+        latency = _loc(
+            lang,
+            f"lecture du texte au banc : {p50} s en médiane · max {peak} s",
+            f"Lesen des Textes im Prüfstand: {p50} s im Median · max {peak} s",
+            f"text reading on the bench: median {p50} s · max {peak} s",
+        )
+    return {
+        "title": _loc(
+            lang,
+            "Banc d'essai — lecture des demandes",
+            "Prüfstand — Lesen der Anfragen",
+            "Test bench — request reading",
+        ),
+        "note": _loc(
+            lang,
+            "Chaque lecture est comparée à une étiquette posée par un humain ; "
+            "le chiffre servi est celui du modèle avec repli mots-clés.",
+            "Jede Lesart wird mit einem menschlich gesetzten Etikett verglichen; "
+            "die servierte Zahl ist das Modell mit Stichwort-Rückfall.",
+            "Each reading is compared to a human-set label; "
+            "the served figure is the model with keyword fallback.",
+        ),
+        "meta": _loc(
+            lang,
+            f"Exécuté le {stamp} · référent {referent} cas (sha {sha}) · {model}",
+            f"Ausgeführt am {stamp} · Referent {referent} Fälle (sha {sha}) · {model}",
+            f"Run {stamp} · referent {referent} cases (sha {sha}) · {model}",
+        ),
+        "rows": rows,
+        "languages": languages,
+        "latency": latency,
     }
 
 
@@ -1287,6 +1439,7 @@ def compute_agent_evaluations(
         "scoped": bool(snap.agent_id),
         "gate": _gate_block(snap, lang),
         "judge": _judge_block(snap.agent_id or agent_id),
+        "understanding_bench": _understanding_bench_block(snap.agent_id or agent_id, lang),
         "runs": _runs_rail(snap.agent_id or agent_id, lang),
         "sets": _sets_block(snap, lang),
         "results": _results_block(snap, lang),

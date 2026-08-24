@@ -1,0 +1,297 @@
+{
+  "schema_version": "intent_bench.v1",
+  "run_at": "2026-08-24T13:05:13+00:00",
+  "agent_id": "recouvrement",
+  "set_version": "2026-08-23.1",
+  "set_sha256": "63a4a5aba8e5dfca24cf49e6f54b915fff2cc3ae91ec49cbc806dc768b0bbe67",
+  "columns": {
+    "regex": {
+      "status": "measured",
+      "classifier": "tessera.agent.recouvrement.classify_recouvrement_text",
+      "overall": {
+        "n": 120,
+        "correct": 89,
+        "defaulted": 35,
+        "accuracy": 0.7417
+      },
+      "by_language": {
+        "de": {
+          "n": 40,
+          "correct": 32,
+          "defaulted": 12,
+          "accuracy": 0.8
+        },
+        "en": {
+          "n": 40,
+          "correct": 29,
+          "defaulted": 12,
+          "accuracy": 0.725
+        },
+        "fr": {
+          "n": 40,
+          "correct": 28,
+          "defaulted": 11,
+          "accuracy": 0.7
+        }
+      },
+      "by_cell": {
+        "de/check_contact_rule": {
+          "n": 8,
+          "correct": 8
+        },
+        "de/draft_reminder": {
+          "n": 8,
+          "correct": 7
+        },
+        "de/explain_payment_options": {
+          "n": 8,
+          "correct": 6
+        },
+        "de/propose_schedule": {
+          "n": 8,
+          "correct": 6
+        },
+        "de/summarize_case": {
+          "n": 8,
+          "correct": 5
+        },
+        "en/check_contact_rule": {
+          "n": 8,
+          "correct": 8
+        },
+        "en/draft_reminder": {
+          "n": 8,
+          "correct": 6
+        },
+        "en/explain_payment_options": {
+          "n": 8,
+          "correct": 5
+        },
+        "en/propose_schedule": {
+          "n": 8,
+          "correct": 6
+        },
+        "en/summarize_case": {
+          "n": 8,
+          "correct": 4
+        },
+        "fr/check_contact_rule": {
+          "n": 8,
+          "correct": 8
+        },
+        "fr/draft_reminder": {
+          "n": 8,
+          "correct": 5
+        },
+        "fr/explain_payment_options": {
+          "n": 8,
+          "correct": 5
+        },
+        "fr/propose_schedule": {
+          "n": 8,
+          "correct": 6
+        },
+        "fr/summarize_case": {
+          "n": 8,
+          "correct": 4
+        }
+      },
+      "fields": {
+        "duration_months": {
+          "n": 18,
+          "exact": 12
+        },
+        "requested_time": {
+          "n": 8,
+          "exact": 6
+        }
+      },
+      "misrouted_case_ids": [
+        "fr_schedule_05",
+        "fr_schedule_07",
+        "fr_draft_06",
+        "fr_draft_07",
+        "fr_draft_08",
+        "fr_summary_05",
+        "fr_summary_06",
+        "fr_summary_07",
+        "fr_summary_08",
+        "fr_payment_02",
+        "fr_payment_06",
+        "fr_payment_07",
+        "en_schedule_03",
+        "en_schedule_06",
+        "en_draft_06",
+        "en_draft_08",
+        "en_summary_04",
+        "en_summary_05",
+        "en_summary_06",
+        "en_summary_07",
+        "en_payment_02",
+        "en_payment_06",
+        "en_payment_08",
+        "de_schedule_03",
+        "de_schedule_06",
+        "de_draft_07",
+        "de_summary_05",
+        "de_summary_06",
+        "de_summary_07",
+        "de_payment_06",
+        "de_payment_07"
+      ]
+    },
+    "llm": {
+      "status": "measured",
+      "classifier": "tessera.recouvrement.understanding.classify_intent_llm",
+      "models": [
+        "gemma3:27b"
+      ],
+      "prompt_versions": [
+        "recouvrement_intent.v1"
+      ],
+      "overall": {
+        "n": 120,
+        "correct": 115,
+        "accuracy": 0.9583
+      },
+      "by_language": {
+        "de": {
+          "n": 40,
+          "correct": 39,
+          "accuracy": 0.975
+        },
+        "en": {
+          "n": 40,
+          "correct": 38,
+          "accuracy": 0.95
+        },
+        "fr": {
+          "n": 40,
+          "correct": 38,
+          "accuracy": 0.95
+        }
+      },
+      "failures": {
+        "schema_invalid": 2
+      },
+      "fields": {
+        "duration_months": {
+          "n": 18,
+          "exact": 17
+        },
+        "requested_time": {
+          "n": 8,
+          "exact": 8
+        }
+      },
+      "latency_ms": {
+        "p50": 4217.3,
+        "max": 11916.9
+      },
+      "with_regex_fallback": {
+        "n": 120,
+        "correct": 117,
+        "accuracy": 0.975
+      },
+      "threshold_sweep": {
+        "points": [
+          {
+            "threshold": 0.0,
+            "correct": 117
+          },
+          {
+            "threshold": 0.05,
+            "correct": 117
+          },
+          {
+            "threshold": 0.1,
+            "correct": 117
+          },
+          {
+            "threshold": 0.15,
+            "correct": 117
+          },
+          {
+            "threshold": 0.2,
+            "correct": 117
+          },
+          {
+            "threshold": 0.25,
+            "correct": 117
+          },
+          {
+            "threshold": 0.3,
+            "correct": 117
+          },
+          {
+            "threshold": 0.35,
+            "correct": 117
+          },
+          {
+            "threshold": 0.4,
+            "correct": 117
+          },
+          {
+            "threshold": 0.45,
+            "correct": 117
+          },
+          {
+            "threshold": 0.5,
+            "correct": 117
+          },
+          {
+            "threshold": 0.55,
+            "correct": 117
+          },
+          {
+            "threshold": 0.6,
+            "correct": 117
+          },
+          {
+            "threshold": 0.65,
+            "correct": 117
+          },
+          {
+            "threshold": 0.7,
+            "correct": 117
+          },
+          {
+            "threshold": 0.75,
+            "correct": 117
+          },
+          {
+            "threshold": 0.8,
+            "correct": 117
+          },
+          {
+            "threshold": 0.85,
+            "correct": 117
+          },
+          {
+            "threshold": 0.9,
+            "correct": 117
+          },
+          {
+            "threshold": 0.95,
+            "correct": 117
+          },
+          {
+            "threshold": 1.0,
+            "correct": 89
+          }
+        ],
+        "suggested": {
+          "threshold": 0.0,
+          "correct": 117
+        }
+      },
+      "misrouted_case_ids": [
+        "fr_draft_04",
+        "fr_draft_07",
+        "en_draft_04",
+        "en_draft_05",
+        "de_draft_06"
+      ]
+    }
+  }
+}

@@ -6504,6 +6504,23 @@ export const AgentEvaluationsSchema = z.object({
       }),
     })
     .optional(),
+  // ADR 0053 §7 — the reading layer's evaluation: the latest PUBLISHED intent bench
+  // (run · referent sha · model, three measured columns), backend-localized like the
+  // rest of this payload. Absent/null when no report was published for the agent —
+  // declared here or zod strips it silently (the fleet-field lesson).
+  understanding_bench: z
+    .object({
+      title: z.string(),
+      note: z.string(),
+      meta: z.string(),
+      rows: z.array(
+        z.object({ label: z.string(), value: z.string(), tone: z.string().optional() }),
+      ),
+      languages: z.string(),
+      latency: z.string(),
+    })
+    .nullable()
+    .optional(),
 });
 export type AgentEvaluations = z.infer<typeof AgentEvaluationsSchema>;
 

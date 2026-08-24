@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
+  Brain,
   CalendarClock,
   ChevronDown,
   ChevronLeft,
@@ -282,12 +283,62 @@ function OverviewTab({
         <JudgeMetrics data={data} className="xl:col-span-4" />
       </div>
 
+      {/* ADR 0053 §7 — the reading layer's own bench, when one was published. */}
+      {data.understanding_bench ? <UnderstandingBench bench={data.understanding_bench} /> : null}
+
       <div className="grid gap-2.5 md:grid-cols-3">
         <Watch data={data} />
         <Quick data={data} />
         <Trend data={data} />
       </div>
     </div>
+  );
+}
+
+/**
+ * ADR 0053 §7 — the reading layer's evaluation: the latest PUBLISHED intent bench for
+ * this agent. The evaluation plane, kept apart from the continuous counts the Métier
+ * card and the quality band carry (suivi continu vs évaluation — operator rule,
+ * 2026-08-24): every figure here is measured against the labeled referent, and the
+ * section is stamped with its run instant, referent sha and model. Labels arrive
+ * backend-localized like the rest of this payload; absent block, absent section.
+ */
+function UnderstandingBench({ bench }: { bench: NonNullable<Data["understanding_bench"]> }) {
+  return (
+    <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+          <Brain className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" aria-hidden />
+          {bench.title}
+        </h3>
+        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{bench.meta}</span>
+      </div>
+      <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{bench.note}</p>
+      <ul className="flex max-w-md flex-col gap-1 text-xs">
+        {bench.rows.map((row) => (
+          <li key={row.label} className="flex items-baseline justify-between gap-3">
+            <span
+              className={
+                row.tone === "served"
+                  ? "font-medium text-[var(--tessera-text)]"
+                  : "text-[var(--tessera-text-muted)]"
+              }
+            >
+              {row.label}
+            </span>
+            <span className="tabular-nums">{row.value}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[0.66rem] tabular-nums text-[var(--tessera-text-muted)]">
+        {bench.languages}
+      </p>
+      {bench.latency ? (
+        <p className="text-[0.66rem] tabular-nums text-[var(--tessera-text-muted)]">
+          {bench.latency}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

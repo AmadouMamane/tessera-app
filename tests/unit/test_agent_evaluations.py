@@ -189,3 +189,31 @@ def test_results_labels_are_accented() -> None:
     labels = compute_agent_evaluations("recouvrement")["results"]["labels"]  # type: ignore[index]
     assert labels["question"] == "Requête de test"
     assert labels["response"] == "Réponse du modèle"
+
+
+def test_the_reading_bench_block_serves_the_latest_published_report() -> None:
+    """ADR 0053 §7 — the evaluation plane of the reading layer, from the PUBLISHED report.
+
+    The block exists exactly for the agent the report names (publication is a deliberate
+    act; no report, no section — never an invented zero), carries the three measured
+    columns with the served one marked, and stamps run · referent sha · model so the
+    figure can be traced to its measurement.
+    """
+    from tessera.observability.agent_evaluations import _understanding_bench_block
+
+    block = _understanding_bench_block("recouvrement", "fr")
+    assert block is not None
+    assert "63a4a5ab" in str(block["meta"])
+    assert "gemma3:27b" in str(block["meta"])
+    rows = block["rows"]
+    assert isinstance(rows, list)
+    served = [row for row in rows if row.get("tone") == "served"]
+    assert len(served) == 1
+    assert "117/120" in str(served[0]["value"])
+    # The other two measured columns ride along, unmarked: fallback floor and model alone.
+    values = " ".join(str(row["value"]) for row in rows)
+    assert "89/120" in values
+    assert "115/120" in values
+
+    # An agent nobody published a bench for has no section at all.
+    assert _understanding_bench_block("support-client", "fr") is None
