@@ -241,7 +241,11 @@ class TestRouteContract:
             org = await call_route(obs.observability_slo, agent="all")
             support = await call_route(obs.observability_slo, agent="support-client")
             absent = await call_route(obs.observability_slo, agent="nonexistent")
-            assert org["n"] == 3
+            # The seeded recouvrement row is the 2026-08-22 leak scenario: recouvrement
+            # declares business_scored, so its row never enters the judged plane — the
+            # org view counts 2, not 3 (ADR 0017 §A4; filter witnessed next door in
+            # test_judged_plane_is_declared.py).
+            assert org["n"] == 2
             assert support["n"] == 2 and support["agent"] == "support-client"
             # An agent with no scored turns reads honestly empty, never the org rows.
             assert absent["n"] == 0 and absent["breaching"] is False
