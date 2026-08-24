@@ -51,13 +51,16 @@ class OnlineEvalOutcome:
     skipped: str | None = None
 
 
-def _agent_is_llm_judged(agent_id: str) -> bool:
-    """Whether the agent DECLARES the online judge as its ruler.
+def _skip_reason_for(agent_id: str) -> str | None:
+    """A NAMED reason to keep the judge out of this turn, or ``None`` to proceed.
 
-    Read from the manifest through the one projector (never inferred from wiring).
-    An id the registry does not know keeps today's behaviour (judged): the guard
-    narrows the population by declaration, it must not silently blind ad-hoc
-    callers that never had a manifest.
+    ``"quality_regime"`` when the agent's DECLARED regime (read from the manifest
+    through the one projector, never inferred from wiring) is not ``llm_judged``.
+    An id the registry does not know yields ``None`` — today's behaviour (judged):
+    the guard narrows the population by declaration, it must not silently blind
+    ad-hoc callers that never had a manifest. Returns the reason rather than a
+    bare bool so the outcome can carry it verbatim (the verdict-debt rule: a
+    refusal owes its reason, not a naked False).
     """
     from tessera.agent.agentspec import QualityRegime
     from tessera.agent.registry import get_agent
@@ -66,9 +69,11 @@ def _agent_is_llm_judged(agent_id: str) -> bool:
     try:
         agent = get_agent(agent_id)
     except Exception:
-        return True
+        return None
     descriptor = quality_regime_descriptor(agent)
-    return descriptor is not None and descriptor["regime"] == QualityRegime.LLM_JUDGED.value
+    if descriptor is None or descriptor["regime"] == QualityRegime.LLM_JUDGED.value:
+        return None
+    return "quality_regime"
 
 
 def should_judge(*, flagged: bool, sample_rate: float, roll: float | None = None) -> bool:
@@ -108,14 +113,14 @@ async def evaluate_turn(
 
     Returns an outcome with a ``None`` verdict when the turn was not sampled.
     """
-    if agent_id is not None and not _agent_is_llm_judged(agent_id):
-        # ADR 0017 §A4 / ADR 0053 §4 — the judge's population is DECLARED, never an
-        # accident of routing. An agent whose quality regime is not ``llm_judged``
-        # (template-assembled replies, or unscored) must never gain judged rows:
-        # measured leak, 2026-08-22 — one operator-side /chat turn routed to
-        # recouvrement was judged, and that single row became the whole per-agent
-        # SLO population (n=1 rendered as "100,0 %" on the quality page).
-        return OnlineEvalOutcome(verdict=None, disagreement=False, skipped="quality_regime")
+    # ADR 0017 §A4 / ADR 0053 §4 — the judge's population is DECLARED, never an
+    # accident of routing. An agent whose quality regime is not ``llm_judged``
+    # (template-assembled replies, or unscored) must never gain judged rows:
+    # measured leak, 2026-08-22 — one operator-side /chat turn routed to
+    # recouvrement was judged, and that single row became the whole per-agent
+    # SLO population (n=1 rendered as "100,0 %" on the quality page).
+    if agent_id is not None and (skip_reason := _skip_reason_for(agent_id)) is not None:
+        return OnlineEvalOutcome(verdict=None, disagreement=False, skipped=skip_reason)
     rate = (
         sample_rate
         if sample_rate is not None
