@@ -626,6 +626,13 @@ def _level_payload(
     }
 
 
+def _understanding_block(agent_id: str) -> dict[str, object] | None:
+    """The ADR 0053 layer-1 summary for one agent (deferred import: read-side only)."""
+    from tessera.observability.understanding_read import understanding_summary
+
+    return understanding_summary(agent_id)
+
+
 def business_capability_aggregate(
     *,
     at: str | None = None,
@@ -686,6 +693,9 @@ def business_capability_aggregate(
         "source": fact_source("business_events"),
         "fact": "business_events",
         "business_signals": _business_signals(agent_id, rows),
+        # ADR 0053 / ADR 0017 §A5.3: the understanding plane's own counts — a third ruler,
+        # scoped to ONE agent, never aggregated across a fleet (an "all" read says None).
+        "understanding": (_understanding_block(agent_id) if agent_id else None),
         **level_payload,
         "unknown_capability_id": UNKNOWN_CAPABILITY_ID,
         "unknown_capability_label": UNKNOWN_CAPABILITY_LABEL,

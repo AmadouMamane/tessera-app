@@ -8712,6 +8712,24 @@
           "source": "Signaux métier."
         }
       }
+    },
+    "understanding": {
+      "title": "Compréhension du langage",
+      "subtitle": "Comment l'assistant comprend les demandes écrites — un plan mesuré à part, jamais fondu avec les contrôles métier ci-dessous.",
+      "population": "Sur les {observed} derniers tours classifiés,",
+      "agreement": "le modèle et les listes de mots donnent la même réponse {agree} fois, avec {disagree} désaccords.",
+      "failures": "{count} échecs nommés : {detail}",
+      "noFailures": "aucun échec",
+      "latency": "réponse médiane du modèle {seconds} s",
+      "freshness": "dernier tour classifié : {date}",
+      "modeActive": "le modèle décide",
+      "modeShadow": "en observation — les listes de mots décident",
+      "kind": {
+        "timeout": "délai dépassé",
+        "schema_invalid": "réponse invalide",
+        "llm_error": "erreur du modèle",
+        "budget_ceiling": "plafond budget atteint"
+      }
     }
   },
   "agentEvaluations": {

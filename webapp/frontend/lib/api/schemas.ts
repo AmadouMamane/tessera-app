@@ -1293,9 +1293,26 @@ export const BusinessSignalValueSchema = z.object({
 });
 export type BusinessSignalValue = z.infer<typeof BusinessSignalValueSchema>;
 
+// ADR 0053 — the understanding plane's own counts (third ruler, one agent, never fleet-wide).
+export const UnderstandingSummarySchema = z.object({
+  observed: z.number().int(),
+  window: z.number().int(),
+  total_rows: z.number().int(),
+  verdicts: z.number().int(),
+  agree: z.number().int(),
+  disagree: z.number().int(),
+  failures: z.record(z.string(), z.number().int()).default({}),
+  latency_ms_p50: z.number().nullable().optional(),
+  latest_at: z.string().nullable().optional(),
+  latest_mode: z.string().nullable().optional(),
+  latest_model: z.string().nullable().optional(),
+});
+export type UnderstandingSummary = z.infer<typeof UnderstandingSummarySchema>;
+
 export const BusinessCapabilitiesResponseSchema = z.object({
   capabilities: z.array(BusinessCapabilityRowSchema),
   business_signals: z.array(BusinessSignalValueSchema).default([]),
+  understanding: UnderstandingSummarySchema.nullable().optional(),
   event_count: z.number().int(),
   as_of: z.string().nullable().optional(),
   agent: z.string(),

@@ -8712,6 +8712,24 @@
           "source": "Business signals."
         }
       }
+    },
+    "understanding": {
+      "title": "Language understanding",
+      "subtitle": "How the assistant understands written requests — measured on its own, never merged with the business checks below.",
+      "population": "Over the last {observed} classified turns,",
+      "agreement": "the model and the word lists gave the same answer {agree} times, with {disagree} disagreements.",
+      "failures": "{count} named failures: {detail}",
+      "noFailures": "no failures",
+      "latency": "median model response {seconds} s",
+      "freshness": "last classified turn: {date}",
+      "modeActive": "the model decides",
+      "modeShadow": "observing — the word lists decide",
+      "kind": {
+        "timeout": "timed out",
+        "schema_invalid": "invalid answer",
+        "llm_error": "model error",
+        "budget_ceiling": "budget ceiling reached"
+      }
     }
   },
   "agentEvaluations": {

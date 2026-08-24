@@ -20,6 +20,7 @@ import { useIntFormat } from "@/lib/format-number";
 import { useSearchParams } from "next/navigation";
 import { type KeyboardEvent, useCallback, useMemo } from "react";
 
+import { UnderstandingCard } from "@/components/agent/understanding-card";
 import { CardInfo } from "@/components/cockpit/card-info";
 import { MetricCard } from "@/components/cockpit/metric-card";
 import { WorkflowRunsPanel } from "@/components/observability/workflow-runs-panel";
@@ -207,6 +208,8 @@ export function AgentMetier() {
   return (
     <div className="flex min-w-0 flex-col gap-2.5 text-[var(--tessera-text)]">
       <SignalKpiStrip data={data} signals={data.business_signals} asOf={asOf} />
+
+      <UnderstandingCard data={data.understanding ?? null} />
 
       <CapabilitiesTable
         capabilities={data.capabilities}

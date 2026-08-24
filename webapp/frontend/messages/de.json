@@ -8712,6 +8712,24 @@
           "source": "Fachliche Signale."
         }
       }
+    },
+    "understanding": {
+      "title": "Sprachverständnis",
+      "subtitle": "Wie der Assistent schriftliche Anfragen versteht — eigenständig gemessen, nie mit den Fachkontrollen darunter vermengt.",
+      "population": "Über die letzten {observed} klassifizierten Anfragen",
+      "agreement": "gaben Modell und Wortlisten {agree} Mal dieselbe Antwort, bei {disagree} Abweichungen.",
+      "failures": "{count} benannte Fehlschläge: {detail}",
+      "noFailures": "keine Fehlschläge",
+      "latency": "mittlere Modellantwort {seconds} s",
+      "freshness": "letzte klassifizierte Anfrage: {date}",
+      "modeActive": "das Modell entscheidet",
+      "modeShadow": "beobachtend — die Wortlisten entscheiden",
+      "kind": {
+        "timeout": "Zeitüberschreitung",
+        "schema_invalid": "ungültige Antwort",
+        "llm_error": "Modellfehler",
+        "budget_ceiling": "Budgetgrenze erreicht"
+      }
     }
   },
   "agentEvaluations": {
