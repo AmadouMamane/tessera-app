@@ -214,6 +214,7 @@ async def _shadow_understanding(
     language: str,
     routed_intent: str,
     mode: str,
+    model: str | None,
     outcome: UnderstandingOutcome | None,
     surface: str,
     conversation_id: str,
@@ -233,7 +234,7 @@ async def _shadow_understanding(
     """
     try:
         if outcome is None:
-            outcome = await classify_intent_llm(message, language=language)
+            outcome = await classify_intent_llm(message, language=language, model=model)
         text_verdict = classify_recouvrement_text(message)
         regex_intent = text_verdict[0] if text_verdict is not None else DEFAULT_TEXT_INTENT
         verdict = outcome.verdict
@@ -278,6 +279,7 @@ def _spawn_shadow_understanding(
     *,
     message: str | None = None,
     mode: str = "shadow",
+    model: str | None = None,
     outcome: UnderstandingOutcome | None = None,
 ) -> None:
     """Fire the layer-1 comparison off the hot path; the reply never waits for it.
@@ -302,6 +304,7 @@ def _spawn_shadow_understanding(
             language=payload.language,
             routed_intent=routed_intent,
             mode=mode,
+            model=model,
             outcome=outcome,
             surface=str(first.get("surface", payload.surface)),
             conversation_id=str(first.get("conversation_id", "")),
@@ -370,6 +373,7 @@ async def recouvrement_assistant_message(
             check.sanitised_text,
             language=payload.language,
             timeout_s=understanding_config.timeout_s,
+            model=understanding_config.model,
         )
         verdict = active_outcome.verdict
         threshold = understanding_config.threshold
@@ -419,6 +423,7 @@ async def recouvrement_assistant_message(
         guarded,
         message=check.sanitised_text,
         mode=understanding_config.mode,
+        model=understanding_config.model,
         outcome=active_outcome,
     )
     return dict(guarded)

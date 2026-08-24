@@ -43,6 +43,7 @@ __all__ = [
     "CHAT_MODEL_KEY",
     "DAILY_BUDGET_KEY",
     "UNDERSTANDING_MODES",
+    "UNDERSTANDING_MODEL_KEY",
     "UNDERSTANDING_MODE_KEY",
     "UNDERSTANDING_THRESHOLD_KEY",
     "UNDERSTANDING_TIMEOUT_KEY",
@@ -85,6 +86,10 @@ UNDERSTANDING_MODES: Final[tuple[str, ...]] = ("shadow", "active")
 UNDERSTANDING_THRESHOLD_KEY: Final[str] = "recouvrement.understanding.confidence_threshold"
 #: ADR 0053 — the per-call bound on the layer-1 model, seconds (measured, then governed).
 UNDERSTANDING_TIMEOUT_KEY: Final[str] = "recouvrement.understanding.timeout_s"
+#: ADR 0053 — the model layer 1 classifies with. Same closed value space as the chat-model
+#: knobs (the catalogue); no override stored means the profile base serves. Measured before
+#: named: gemma3:27b entered the catalogue on its bench run (115/120, 2026-08-24).
+UNDERSTANDING_MODEL_KEY: Final[str] = "recouvrement.understanding.model"
 
 
 class KnobError(ValueError):
@@ -128,6 +133,7 @@ def knob_keys() -> list[str]:
         UNDERSTANDING_MODE_KEY,
         UNDERSTANDING_THRESHOLD_KEY,
         UNDERSTANDING_TIMEOUT_KEY,
+        UNDERSTANDING_MODEL_KEY,
     ]
 
 
@@ -231,6 +237,8 @@ def _validated_value(key: str, value: str) -> str:
     understood = _validated_understanding_value(key, value)
     if understood is not None:
         return understood
+    # The fallthrough serves every model-valued knob: the chat-model family AND the
+    # understanding-model knob share one closed catalogue.
     if value not in allowed_chat_models():
         raise KnobError(f"model {value!r} is not in the catalogue — refused, never stored")
     return value
@@ -508,6 +516,8 @@ class UnderstandingConfig:
     mode: Literal["shadow", "active"]
     threshold: float | None
     timeout_s: float
+    #: ``None`` = the profile base serves (the same meaning as no chat-model override).
+    model: str | None = None
 
 
 #: How long a read of the understanding knobs stays good (the ADR 0034 ceiling pattern:
@@ -549,7 +559,12 @@ async def _read_understanding_config() -> UnderstandingConfig:
     """One uncached read of the three understanding knobs (see the resolver's contract)."""
     from tessera.recouvrement.understanding import DEFAULT_TIMEOUT_S
 
-    keys = [UNDERSTANDING_MODE_KEY, UNDERSTANDING_THRESHOLD_KEY, UNDERSTANDING_TIMEOUT_KEY]
+    keys = [
+        UNDERSTANDING_MODE_KEY,
+        UNDERSTANDING_THRESHOLD_KEY,
+        UNDERSTANDING_TIMEOUT_KEY,
+        UNDERSTANDING_MODEL_KEY,
+    ]
     try:
         await ensure_overrides_schema()
         pool = get_pool()
@@ -563,7 +578,9 @@ async def _read_understanding_config() -> UnderstandingConfig:
         sys.stderr.write(
             f"tessera.config_overrides: understanding read failed, serving shadow: {exc}\n"
         )
-        return UnderstandingConfig(mode="shadow", threshold=None, timeout_s=DEFAULT_TIMEOUT_S)
+        return UnderstandingConfig(
+            mode="shadow", threshold=None, timeout_s=DEFAULT_TIMEOUT_S, model=None
+        )
     by_key = {str(r["key"]): str(r["value"]) for r in rows}
     return _interpret_understanding_rows(by_key, default_timeout_s=DEFAULT_TIMEOUT_S)
 
@@ -586,4 +603,9 @@ def _interpret_understanding_rows(
         )
         mode = "shadow"
     resolved_mode: Literal["shadow", "active"] = "active" if mode == "active" else "shadow"
-    return UnderstandingConfig(mode=resolved_mode, threshold=threshold, timeout_s=timeout_s)
+    return UnderstandingConfig(
+        mode=resolved_mode,
+        threshold=threshold,
+        timeout_s=timeout_s,
+        model=by_key.get(UNDERSTANDING_MODEL_KEY),
+    )

@@ -23,6 +23,7 @@ from eval.intent_bench import (
 from tessera.api import config_overrides
 from tessera.api.config_overrides import (
     UNDERSTANDING_MODE_KEY,
+    UNDERSTANDING_MODEL_KEY,
     UNDERSTANDING_THRESHOLD_KEY,
     UNDERSTANDING_TIMEOUT_KEY,
     KnobError,
@@ -97,6 +98,21 @@ async def test_threshold_is_undeletable_under_active_mode(
 
 
 # ── the resolver: shadow by default, degradations spoken ───────────────────────────────
+
+
+def test_model_knob_shares_the_closed_catalogue() -> None:
+    """The understanding model is validated by the same catalogue as the chat knobs."""
+    assert _validated_value(UNDERSTANDING_MODEL_KEY, "gemma3:27b") == "gemma3:27b"
+    with pytest.raises(KnobError, match="not in the catalogue"):
+        _validated_value(UNDERSTANDING_MODEL_KEY, "mistral-uncatalogued:1b")
+
+
+def test_model_row_reaches_the_resolved_config() -> None:
+    config = _interpret_understanding_rows(
+        {UNDERSTANDING_MODEL_KEY: "gemma3:27b"}, default_timeout_s=8.0
+    )
+    assert config.model == "gemma3:27b"
+    assert config.mode == "shadow"  # naming a model flips nothing by itself
 
 
 def test_no_rows_resolve_to_shadow_defaults() -> None:

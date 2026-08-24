@@ -176,9 +176,12 @@ async def classify_intent_llm(
             latency_ms=(time.perf_counter() - started) * 1000.0,
         )
 
-    from tessera.llm.router import ChatMessage, get_chat_backend
+    from tessera.llm.router import ChatMessage, backend_for_model
 
-    backend = get_chat_backend()
+    # The picker's own resolution (ADR 0030): a model in the OpenAI registry routes to
+    # the OpenAI backend, anything else — including None — serves the profile backend.
+    # One seam for the bench's --llm-model, the governed model knob, and the base.
+    backend = backend_for_model(model)
     try:
         async with asyncio.timeout(timeout_s):
             response = await backend.chat(

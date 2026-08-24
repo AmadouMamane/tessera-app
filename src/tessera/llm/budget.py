@@ -124,6 +124,12 @@ _PRICES: dict[tuple[str, str], _Price] = {
         eur_per_million_input=Decimal("0"),
         eur_per_million_output=Decimal("0"),
     ),
+    # Layer-1 understanding candidate (ADR 0053): measured 2026-08-24 at 115/120 on the
+    # labeled intent set — catalogued so the understanding-model knob may name it.
+    ("ollama", "gemma3:27b"): _Price(
+        eur_per_million_input=Decimal("0"),
+        eur_per_million_output=Decimal("0"),
+    ),
     # OpenAI frontier — indicative EUR/million tokens (estimate; adjust to the
     # real GPT-5.5 tariff). Lets the budget dashboard show real spend.
     ("openai", "gpt-5.5"): _Price(
