@@ -59,3 +59,20 @@ def test_the_shared_read_stays_single() -> None:
     context.scores(scope)
     context.scores(scope)
     assert context.upstream_reads == 1
+
+
+def test_both_read_doors_apply_the_same_filter() -> None:
+    """`read_scores` — the routes' direct seam — filters exactly like the snapshot's door.
+
+    The parity ratchet caught the first version of this filter covering only the
+    snapshot context: routes read through `read_scores` and served the leak while the
+    snapshot did not. Both doors now call the one shared filter; this witness holds the
+    second door on its own, so a future refactor cannot quietly reopen it.
+    """
+    from tessera.observability.spine.adapters import read_scores, set_reader
+
+    set_reader(FakeSpineReader(scores=[_row("support-client"), _row("recouvrement")]))
+    try:
+        assert [r["agent_id"] for r in read_scores()] == ["support-client"]
+    finally:
+        set_reader(None)

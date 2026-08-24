@@ -9,10 +9,10 @@ snapshot a signal read creates its own one-shot context, so it still works stand
 from __future__ import annotations
 
 import contextvars
-from functools import cache
 from typing import TYPE_CHECKING
 
 from tessera.observability.spine.adapters import SpineReader, get_reader
+from tessera.observability.spine.judged_plane import declared_judged_rows
 
 if TYPE_CHECKING:
     from tessera.observability.replay import ReplayBundle
@@ -53,7 +53,7 @@ class SnapshotContext:
         cached = self._scores.get(cache_key)
         if cached is None:
             self.upstream_reads += 1
-            cached = _declared_judged_rows(self._reader.scores(scope))
+            cached = declared_judged_rows(self._reader.scores(scope))
             self._scores[cache_key] = cached
         return cached
 
@@ -106,41 +106,3 @@ def bind_context(ctx: SnapshotContext) -> contextvars.Token[SnapshotContext | No
 def reset_context(token: contextvars.Token[SnapshotContext | None]) -> None:
     """Unbind the snapshot context (pair with :func:`bind_context`)."""
     _current.reset(token)
-
-
-@cache
-def _non_judged_agent_ids() -> frozenset[str]:
-    """Registry agents whose DECLARED quality regime is not ``llm_judged``.
-
-    Read once per process through the one projector (the registry is static for a
-    process's lifetime). Only an explicit non-judged declaration excludes an id —
-    an agent the projector cannot describe stays in the judged plane, the same
-    unknown-keeps-today's-behaviour rule the write-side guard applies.
-    """
-    from tessera.agent.registry import QualityRegime, list_agents
-    from tessera.observability.agentspec_projection import quality_regime_descriptor
-
-    excluded: set[str] = set()
-    for agent in list_agents():
-        descriptor = quality_regime_descriptor(agent)
-        if descriptor is not None and descriptor["regime"] != QualityRegime.LLM_JUDGED.value:
-            excluded.add(agent.id)
-    return frozenset(excluded)
-
-
-def _declared_judged_rows(rows: list[dict[str, object]]) -> list[dict[str, object]]:
-    """Keep the judge's plane to the agents that DECLARE it (ADR 0017 §A4, ADR 0053 §4).
-
-    A score row attributed to an agent whose declared regime is not ``llm_judged``
-    never enters a score-backed signal: the judged population is a declaration,
-    not an accident of routing. Measured leak, 2026-08-22 — one operator-side
-    /chat turn routed to recouvrement was judged, and that single row became the
-    whole per-agent SLO population ("100,0 %" on n=1). Nothing is destroyed: the
-    durable log keeps every row; the plane the surfaces read simply excludes them.
-    Rows with no ``agent_id`` (pre-tagging history) and rows naming an id the
-    registry does not know are kept — the filter narrows by declaration only.
-    """
-    excluded = _non_judged_agent_ids()
-    if not excluded:
-        return rows
-    return [row for row in rows if str(row.get("agent_id") or "") not in excluded]

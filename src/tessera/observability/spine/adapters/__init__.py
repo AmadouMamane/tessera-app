@@ -188,10 +188,14 @@ def read_scores(
     """
     from datetime import UTC, datetime
 
+    from tessera.observability.spine.judged_plane import declared_judged_rows
     from tessera.observability.spine.scope import Scope
 
     cutoff = at if at is not None else (datetime.now(UTC).isoformat() if full else None)
-    return get_reader().scores(Scope(at=cutoff, agent_id=agent_id, period_days=days))
+    # The judged plane is DECLARED (ADR 0017 §A4): both read doors — this one and the
+    # snapshot context's — apply the same filter, or the parity ratchet turns red.
+    rows = get_reader().scores(Scope(at=cutoff, agent_id=agent_id, period_days=days))
+    return declared_judged_rows(rows)
 
 
 def set_reader(reader: SpineReader | None) -> None:
