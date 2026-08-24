@@ -52,6 +52,8 @@ interface Entry {
     last_scored_at: string | null;
     languages: { fr: number; de: number; en: number };
   } | null;
+  /** §A5 — present only when the agent's manifest declares an LLM understanding layer. */
+  understanding?: { mode: string; summary: Record<string, unknown> | null } | null;
 }
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
@@ -104,6 +106,23 @@ function servedFleet(): { regimes: Entry[]; as_of: null; window: { period_days: 
           last_event_at: daysAgo(20),
         },
         judged: null,
+        // The declared reading plane (ADR 0053 §A5) — the served shape of 2026-08-24.
+        understanding: {
+          mode: "llm_structured",
+          summary: {
+            observed: 74,
+            window: 200,
+            total_rows: 74,
+            verdicts: 29,
+            agree: 13,
+            disagree: 16,
+            failures: { timeout: 45 },
+            latency_ms_p50: 2357.6,
+            latest_at: daysAgo(1),
+            latest_mode: "active",
+            latest_model: "gemma3:27b",
+          },
+        },
       },
       {
         agent_id: "hello-agent",
@@ -257,6 +276,29 @@ describe("the answer-quality rating band", () => {
     expect(text).toMatch(/Réponses notées par un juge IA/);
     expect(text).not.toMatch(/Exécutions vérifiées/);
     expect(text).not.toMatch(/Réponses non notées/);
+    // …and the reading plane rides by DECLARATION: nobody declares it here, no card.
+    expect(text).not.toMatch(/Demandes lues/);
+  });
+
+  it("renders the declared reading plane as its own card — counts in its own unit", () => {
+    // §A5 (ADR 0053): the agent whose manifest declares an LLM understanding layer gets
+    // a card of its own on this band — a THIRD ruler with its own noun (requests), its
+    // arithmetic GIVEN (74 = 29 read + 45 without a reading), the model's reading median
+    // named for what it times, and a chip dooring to the Métier view where the full
+    // reading card lives. Still no rate anywhere: the reading's measured accuracy is the
+    // evaluation plane's number (the labeled bench), never a percentage beside the judge.
+    regimes.data = servedFleet();
+    const { container } = render(wrap(<QualityRegimeBand />));
+
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(/Demandes lues par une IA/);
+    expect(text).toMatch(/74 demandes analysées : 29 lues par le modèle/);
+    expect(text).toMatch(/13 même conclusion que la détection par mots-clés/);
+    expect(text).toMatch(/45 demandes sans lecture du modèle/);
+    expect(text).toMatch(/lecture du texte : 2,4 s en médiane/);
+    expect(text).toMatch(/dernière demande analysée : il y a 1 jour/);
+    expect(container.innerHTML).toMatch(/agents\/recouvrement\/metier/);
+    expect(text).not.toMatch(/%/);
   });
 
   it("stays legible with a 200-agent fleet: counts and overflows, never 200 names", () => {

@@ -2247,6 +2247,15 @@ export const QualityRegimeEntrySchema = z.object({
   observable: z.boolean(),
   business: QualityRegimeBusinessSchema.nullable(),
   judged: QualityRegimeJudgedSchema.nullable(),
+  // §A5 (ADR 0053) — present only for an agent whose MANIFEST declares an LLM
+  // understanding layer: its online reading counts (the same reader the Métier card
+  // quotes), a third ruler with its own unit (requests read), never blended with the
+  // judged or business fields beside it. `summary` is null until a turn was classified.
+  // Optional: older payloads simply have no understanding plane to show.
+  understanding: z
+    .object({ mode: z.string(), summary: UnderstandingSummarySchema.nullable() })
+    .nullable()
+    .optional(),
 });
 export const QualityRegimesSchema = z.object({
   regimes: z.array(QualityRegimeEntrySchema),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Clock, EyeOff, Gavel, Ruler } from "lucide-react";
+import { Brain, Clock, EyeOff, Gavel, Ruler } from "lucide-react";
 import type { Route } from "next";
 import { useFormatter, useTranslations } from "next-intl";
 
@@ -218,6 +218,11 @@ export function QualityRegimeBand() {
     byRegime.set(regime, bucket);
   }
   const presentRegimes = REGIME_ORDER.filter((r) => (byRegime.get(r)?.length ?? 0) > 0);
+  // §A5 (ADR 0053) — the reading plane rides BY DECLARATION: agents whose manifest
+  // declares an LLM understanding layer get one extra card, a third ruler with its own
+  // unit (requests read) — never a field on a neighbour's card, never a rate.
+  const readingEntries = data.regimes.filter((entry) => entry.understanding != null);
+  const cardCount = presentRegimes.length + (readingEntries.length > 0 ? 1 : 0);
 
   // "since {a named date}" — vague "since the beginning" only when the ruler never spoke.
   // The date comes through next-intl's formatter, never a bare toLocaleString (the
@@ -236,8 +241,8 @@ export function QualityRegimeBand() {
       <div
         className={cn(
           "mt-2 grid grid-cols-1 gap-2.5",
-          presentRegimes.length === 2 && "md:grid-cols-2",
-          presentRegimes.length >= 3 && "md:grid-cols-3",
+          cardCount === 2 && "md:grid-cols-2",
+          cardCount >= 3 && "md:grid-cols-3",
         )}
       >
         {presentRegimes.map((regime) => {
@@ -430,7 +435,105 @@ export function QualityRegimeBand() {
             </article>
           );
         })}
+        {readingEntries.length > 0 ? <ReadingPlaneCard entries={readingEntries} /> : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * §A5 (ADR 0053) — the reading plane's card: the agents whose MANIFEST declares an LLM
+ * understanding layer (`understanding: llm_structured`), by declaration, never by what a
+ * score table happens to hold. COUNTS only, like every card here — the reading's measured
+ * accuracy lives on the evaluation plane (the labeled bench, quoted on the agent's
+ * Évaluations view), never as a rate beside the judge's. Chips door to each agent's
+ * Métier view, where the full reading card lives.
+ */
+function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
+  const t = useTranslations("qualityRegimes");
+  const format = useFormatter();
+  const summaries = entries
+    .map((entry) => entry.understanding?.summary)
+    .filter((summary): summary is NonNullable<typeof summary> => summary != null);
+  const sum = (pick: (summary: (typeof summaries)[number]) => number) =>
+    summaries.reduce((total, summary) => total + pick(summary), 0);
+  const observed = sum((summary) => summary.observed);
+  const verdicts = sum((summary) => summary.verdicts);
+  const agree = sum((summary) => summary.agree);
+  const disagree = sum((summary) => summary.disagree);
+  const failures = sum((summary) =>
+    Object.values(summary.failures).reduce((total, n) => total + n, 0),
+  );
+  // The model's median reading time does not SUM across agents: shown while ONE agent
+  // declares the plane (today's fleet), dropped past that — never a fake fleet median.
+  const soleLatency = entries.length === 1 ? (summaries[0]?.latency_ms_p50 ?? null) : null;
+  const lastRead = latest(summaries.map((summary) => summary.latest_at));
+  return (
+    <article className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-3">
+      <div className="flex items-center gap-2.5">
+        <span
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border",
+            "border-sky-500/40 bg-sky-500/10 text-[var(--tessera-text)]",
+          )}
+        >
+          <Brain className="h-4 w-4" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1 text-[0.72rem] font-semibold leading-snug">
+          {t("understanding.label")}
+        </span>
+        <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
+          {t("agentCount", { count: entries.length })}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        {entries.slice(0, MAX_NAMES).map((entry) => (
+          // The chip doors to the Métier view: that is where the full reading card
+          // (failures named by kind, mode, model) lives.
+          <Link
+            key={entry.agent_id}
+            href={`/agents/${entry.agent_id}/metier` as Route}
+            className={cn(
+              CHIP_CLASS,
+              "transition-colors hover:border-sky-500/50 hover:text-[var(--tessera-text-strong)]",
+            )}
+          >
+            <ChipInner entry={entry} observedLabel={t("observedChip")} />
+          </Link>
+        ))}
+        {entries.length > MAX_NAMES ? (
+          <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+            {t("moreNames", { count: entries.length - MAX_NAMES })}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+        {summaries.length === 0 ? (
+          // Declared but nothing read yet — an honest empty, never an invented zero rate.
+          <p>{t("understanding.empty")}</p>
+        ) : (
+          <>
+            <p className="tabular-nums">
+              {t("understanding.counts", { observed, verdicts, agree, disagree })}
+            </p>
+            {failures > 0 ? (
+              <p className="tabular-nums">{t("understanding.failures", { count: failures })}</p>
+            ) : null}
+            {soleLatency != null ? (
+              <p className="tabular-nums">
+                {t("understanding.latency", {
+                  seconds: format.number(soleLatency / 1000, { maximumFractionDigits: 1 }),
+                })}
+              </p>
+            ) : null}
+            <FreshnessLine
+              lastIso={lastRead}
+              agoKey="freshness.readAgo"
+              neverKey="freshness.neverRead"
+            />
+          </>
+        )}
+      </div>
+    </article>
   );
 }

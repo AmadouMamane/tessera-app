@@ -45,6 +45,7 @@ from tessera.observability.spine.adapters import read_scores
 from tessera.observability.spine.availability import dimension_availability
 from tessera.observability.spine.scope import Scope, parse_period_days, window_days
 from tessera.observability.spine.snapshot import compute_snapshot
+from tessera.observability.understanding_read import understanding_summary
 
 router = APIRouter()
 
@@ -367,6 +368,21 @@ def observability_quality_regimes(at: str | None = None) -> dict[str, object]:
                 "since": stamps[0] if stamps else None,
                 "last_event_at": stamps[-1] if stamps else None,
             }
+        # §A5 (ADR 0053) — the understanding plane rides along BY DECLARATION: an agent
+        # whose manifest declares an LLM understanding layer carries its online counts
+        # (the same reader the Métier card quotes, so the two surfaces cannot disagree —
+        # ADR 0026), its own ruler with its own unit (requests read), never blended with
+        # the judged or business fields beside it. ``summary`` is None until the ledger
+        # holds a classified turn — a declared plane with nothing read yet, said as such.
+        spec = agent.observability
+        declared_understanding = spec.understanding if spec is not None else None
+        if declared_understanding is not None and declared_understanding.mode == "llm_structured":
+            entry["understanding"] = {
+                "mode": str(declared_understanding.mode),
+                "summary": understanding_summary(agent.id),
+            }
+        else:
+            entry["understanding"] = None
         regimes.append(entry)
     return {"regimes": regimes, "as_of": at, "window": {"period_days": None}}
 

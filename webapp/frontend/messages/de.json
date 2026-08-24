@@ -11253,11 +11253,20 @@
       "ratedAgo": "{days, plural, =0 {zuletzt bewertet: heute} one {zuletzt bewertet: vor # Tag} other {zuletzt bewertet: vor # Tagen}}",
       "checkedAgo": "{days, plural, =0 {letzte Kontrolle: heute} one {letzte Kontrolle: vor # Tag} other {letzte Kontrolle: vor # Tagen}}",
       "neverRated": "noch nichts bewertet",
-      "neverChecked": "noch nichts kontrolliert"
+      "neverChecked": "noch nichts kontrolliert",
+      "readAgo": "{days, plural, =0 {letzte analysierte Anfrage: heute} one {letzte analysierte Anfrage: vor # Tag} other {letzte analysierte Anfrage: vor # Tagen}}",
+      "neverRead": "noch keine Anfrage analysiert"
     },
     "chipStale": {
       "rated": "{days, plural, one {seit # Tag nichts bewertet} other {seit # Tagen nichts bewertet}}",
       "checked": "{days, plural, one {seit # Tag nichts kontrolliert} other {seit # Tagen nichts kontrolliert}}"
+    },
+    "understanding": {
+      "label": "Von einer KI gelesene Anfragen",
+      "counts": "{observed, plural, one {# Anfrage analysiert} other {# Anfragen analysiert}}: {verdicts} vom Modell gelesen — {agree} mit demselben Schluss wie die Stichworterkennung, {disagree} mit einem anderen",
+      "failures": "{count, plural, one {# Anfrage ohne Lesart des Modells — die Stichworterkennung hat geantwortet} other {# Anfragen ohne Lesart des Modells — die Stichworterkennung hat geantwortet}}",
+      "latency": "Lesen des Textes: {seconds} s im Median",
+      "empty": "noch keine Anfrage analysiert"
     }
   }
 }

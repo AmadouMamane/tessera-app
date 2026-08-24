@@ -11239,11 +11239,20 @@
       "ratedAgo": "{days, plural, =0 {last rated: today} one {last rated: # day ago} other {last rated: # days ago}}",
       "checkedAgo": "{days, plural, =0 {last checked: today} one {last checked: # day ago} other {last checked: # days ago}}",
       "neverRated": "nothing rated yet",
-      "neverChecked": "nothing checked yet"
+      "neverChecked": "nothing checked yet",
+      "readAgo": "{days, plural, =0 {last request analysed: today} one {last request analysed: # day ago} other {last request analysed: # days ago}}",
+      "neverRead": "no request analysed yet"
     },
     "chipStale": {
       "rated": "{days, plural, one {nothing rated for # day} other {nothing rated for # days}}",
       "checked": "{days, plural, one {nothing checked for # day} other {nothing checked for # days}}"
+    },
+    "understanding": {
+      "label": "Requests read by an AI",
+      "counts": "{observed, plural, one {# request analysed} other {# requests analysed}}: {verdicts} read by the model — {agree} same conclusion as the keyword detection, {disagree} different",
+      "failures": "{count, plural, one {# request with no model reading — the keyword detection answered} other {# requests with no model reading — the keyword detection answered}}",
+      "latency": "text reading: median {seconds} s",
+      "empty": "no request analysed yet"
     }
   }
 }

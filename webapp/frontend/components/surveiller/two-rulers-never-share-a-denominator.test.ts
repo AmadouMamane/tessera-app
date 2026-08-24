@@ -30,6 +30,7 @@ interface RegimeCatalogue {
   llm_judged: { label: string; note: string; counts: string };
   business_scored: { label: string; counts: string; aggregate: string; link: string };
   unscored: { label: string };
+  understanding: { label: string; counts: string; failures: string };
 }
 
 const catalogue = (locale: Locale): RegimeCatalogue =>
@@ -46,6 +47,12 @@ const RUNS_NOUN: Record<Locale, RegExp> = {
   fr: /exécutions?/iu,
   en: /\bruns?\b/iu,
   de: /ausführung/iu,
+};
+// The reading plane's own noun (ADR 0053 §A5): requests READ, never responses or runs.
+const REQUESTS_NOUN: Record<Locale, RegExp> = {
+  fr: /demandes?/iu,
+  en: /\brequests?\b/iu,
+  de: /anfragen?/iu,
 };
 
 describe("the band's source cannot reach the LLM plane", () => {
@@ -95,6 +102,19 @@ describe("one population, one noun", () => {
       expect(line).not.toMatch(/\{rate\}/);
       expect(line).not.toMatch(/%/);
     }
+  });
+});
+
+describe("one population, one noun — the reading plane", () => {
+  it.each(LOCALES)("%s: the understanding lines say requests and borrow no noun", (locale) => {
+    const { understanding } = catalogue(locale);
+    for (const line of [understanding.label, understanding.counts, understanding.failures]) {
+      expect(line).toMatch(REQUESTS_NOUN[locale]);
+      expect(line).not.toMatch(RESPONSES_NOUN[locale]);
+      expect(line).not.toMatch(RUNS_NOUN[locale]);
+    }
+    expect(understanding.counts).not.toMatch(/\{rate\}/);
+    expect(understanding.counts).not.toMatch(/%/);
   });
 });
 

@@ -11253,11 +11253,20 @@
       "ratedAgo": "{days, plural, =0 {dernière notation : aujourd'hui} one {dernière notation : il y a # jour} other {dernière notation : il y a # jours}}",
       "checkedAgo": "{days, plural, =0 {dernier contrôle : aujourd'hui} one {dernier contrôle : il y a # jour} other {dernier contrôle : il y a # jours}}",
       "neverRated": "aucune notation encore",
-      "neverChecked": "aucun contrôle encore"
+      "neverChecked": "aucun contrôle encore",
+      "readAgo": "{days, plural, =0 {dernière demande analysée : aujourd'hui} one {dernière demande analysée : il y a # jour} other {dernière demande analysée : il y a # jours}}",
+      "neverRead": "aucune demande analysée encore"
     },
     "chipStale": {
       "rated": "{days, plural, one {aucune notation depuis # jour} other {aucune notation depuis # jours}}",
       "checked": "{days, plural, one {aucun contrôle depuis # jour} other {aucun contrôle depuis # jours}}"
+    },
+    "understanding": {
+      "label": "Demandes lues par une IA",
+      "counts": "{observed, plural, one {# demande analysée} other {# demandes analysées}} : {verdicts} lues par le modèle — {agree} même conclusion que la détection par mots-clés, {disagree} différente",
+      "failures": "{count, plural, one {# demande sans lecture du modèle — la détection par mots-clés a répondu} other {# demandes sans lecture du modèle — la détection par mots-clés a répondu}}",
+      "latency": "lecture du texte : {seconds} s en médiane",
+      "empty": "aucune demande analysée encore"
     }
   }
 }

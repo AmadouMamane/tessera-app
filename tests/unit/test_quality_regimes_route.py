@@ -47,6 +47,32 @@ def test_every_registry_agent_appears_with_its_declared_regime() -> None:
         assert entry["observable"] == declares_telemetry(agent)
 
 
+def test_the_reading_plane_rides_by_declaration_only() -> None:
+    """§A5 (ADR 0053) — `understanding` is present exactly on the agents whose MANIFEST
+    declares an LLM understanding layer, and carries the declared mode. Presence is a
+    declaration, never an accident of what a score table happens to hold (the 2026-08-22
+    lesson, applied to this plane before it can repeat)."""
+    entries = _entries()
+    for agent in list_agents():
+        spec = agent.observability
+        declared = spec.understanding if spec is not None else None
+        block = entries[agent.id]["understanding"]
+        if declared is not None and str(declared.mode) == "llm_structured":
+            assert isinstance(block, dict)
+            assert block["mode"] == "llm_structured"
+            # `summary` is the Métier reader's own aggregate (one witness, ADR 0026):
+            # a dict when the ledger holds classified turns, None until then — never
+            # a fabricated zero.
+            assert block["summary"] is None or isinstance(block["summary"], dict)
+        else:
+            assert block is None
+    # The shipped registry exercises BOTH branches, or this test would pass over a
+    # registry where nobody declares the plane (a witness that cannot see, ADR 0026).
+    blocks = [entry["understanding"] for entry in entries.values()]
+    assert any(block is not None for block in blocks)
+    assert any(block is None for block in blocks)
+
+
 def test_each_plane_carries_counts_in_its_own_field_and_no_other() -> None:
     # Disjointness at the seam: `business` exists exactly on the business_scored entries,
     # `judged` exactly on the llm_judged ones — so no consumer can even reach for a figure
