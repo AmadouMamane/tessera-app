@@ -8419,7 +8419,8 @@
           "started": "Exécuté",
           "no_question": "Requête indisponible"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -13664,7 +13665,8 @@
           "started": "Ausgefuehrt",
           "no_question": "Anfrage nicht verfuegbar"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -18909,7 +18911,8 @@
           "started": "Executed",
           "no_question": "Query unavailable"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -22964,7 +22967,8 @@
           "started": "Exécuté",
           "no_question": "Requête indisponible"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -27019,7 +27023,8 @@
           "started": "Ausgefuehrt",
           "no_question": "Anfrage nicht verfuegbar"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -31074,7 +31079,8 @@
           "started": "Executed",
           "no_question": "Query unavailable"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -35416,6 +35422,30 @@
           "started": "Exécuté",
           "no_question": "Requête indisponible"
         }
+      },
+      "understanding_bench": {
+        "title": "Banc d'essai — lecture des demandes",
+        "note": "Chaque lecture est comparée à une étiquette posée par un humain ; le chiffre servi est celui du modèle avec repli mots-clés.",
+        "meta": "Exécuté le 24/08/2026 13:05 · référent 2026-08-23.1 — 120 cas (sha 63a4a5ab) · gemma3:27b",
+        "rows": [
+          {
+            "label": "Détection par mots-clés (repli)",
+            "value": "89/120 — 74,2 %",
+            "tone": null
+          },
+          {
+            "label": "Modèle seul",
+            "value": "115/120 — 95,8 %",
+            "tone": null
+          },
+          {
+            "label": "Servi — modèle avec repli",
+            "value": "117/120 — 97,5 %",
+            "tone": "served"
+          }
+        ],
+        "languages": "par langue (modèle seul) : FR 38/40 · EN 38/40 · DE 39/40",
+        "latency": "lecture du texte au banc : 4,2 s en médiane · max 11,9 s"
       }
     },
     {
@@ -39758,6 +39788,30 @@
           "started": "Ausgefuehrt",
           "no_question": "Anfrage nicht verfuegbar"
         }
+      },
+      "understanding_bench": {
+        "title": "Prüfstand — Lesen der Anfragen",
+        "note": "Jede Lesart wird mit einem menschlich gesetzten Etikett verglichen; die servierte Zahl ist das Modell mit Stichwort-Rückfall.",
+        "meta": "Ausgeführt am 24/08/2026 13:05 · Referent 2026-08-23.1 — 120 Fälle (sha 63a4a5ab) · gemma3:27b",
+        "rows": [
+          {
+            "label": "Stichworterkennung (Rückfall)",
+            "value": "89/120 — 74,2 %",
+            "tone": null
+          },
+          {
+            "label": "Modell allein",
+            "value": "115/120 — 95,8 %",
+            "tone": null
+          },
+          {
+            "label": "Serviert — Modell mit Rückfall",
+            "value": "117/120 — 97,5 %",
+            "tone": "served"
+          }
+        ],
+        "languages": "nach Sprache (Modell allein): FR 38/40 · EN 38/40 · DE 39/40",
+        "latency": "Lesen des Textes im Prüfstand: 4,2 s im Median · max 11,9 s"
       }
     },
     {
@@ -44100,6 +44154,30 @@
           "started": "Executed",
           "no_question": "Query unavailable"
         }
+      },
+      "understanding_bench": {
+        "title": "Test bench — request reading",
+        "note": "Each reading is compared to a human-set label; the served figure is the model with keyword fallback.",
+        "meta": "Run 2026-08-24 13:05 · referent 2026-08-23.1 — 120 cases (sha 63a4a5ab) · gemma3:27b",
+        "rows": [
+          {
+            "label": "Keyword detection (fallback)",
+            "value": "89/120 — 74.2 %",
+            "tone": null
+          },
+          {
+            "label": "Model alone",
+            "value": "115/120 — 95.8 %",
+            "tone": null
+          },
+          {
+            "label": "Served — model with fallback",
+            "value": "117/120 — 97.5 %",
+            "tone": "served"
+          }
+        ],
+        "languages": "by language (model alone): FR 38/40 · EN 38/40 · DE 39/40",
+        "latency": "text reading on the bench: median 4.2 s · max 11.9 s"
       }
     },
     {
@@ -51017,7 +51095,8 @@
           "started": "Exécuté",
           "no_question": "Requête indisponible"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -57934,7 +58013,8 @@
           "started": "Ausgefuehrt",
           "no_question": "Anfrage nicht verfuegbar"
         }
-      }
+      },
+      "understanding_bench": null
     },
     {
       "available": true,
@@ -64851,7 +64931,8 @@
           "started": "Executed",
           "no_question": "Query unavailable"
         }
-      }
+      },
+      "understanding_bench": null
     }
   ]
 }

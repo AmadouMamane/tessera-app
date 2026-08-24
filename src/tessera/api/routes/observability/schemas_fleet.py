@@ -1077,6 +1077,25 @@ class AgentEvaluationsUnavailable(BaseModel):
     available: Literal[False]
 
 
+class AgentEvaluationsBenchRow(BaseModel):
+    """One measured column of the reading bench (ADR 0053 §7)."""
+
+    label: str
+    value: str
+    tone: str | None = None
+
+
+class AgentEvaluationsUnderstandingBench(BaseModel):
+    """The reading layer's latest published intent bench — stamped, backend-localized."""
+
+    title: str
+    note: str
+    meta: str
+    rows: list[AgentEvaluationsBenchRow]
+    languages: str
+    latency: str
+
+
 class AgentEvaluationsPayload(BaseModel):
     """`available: True` GUARANTEES every field below. That is the point of the union."""
 
@@ -1101,3 +1120,8 @@ class AgentEvaluationsPayload(BaseModel):
     runs: AgentEvaluationsRuns
     sets: AgentEvaluationsSets
     results: AgentEvaluationsResults
+    # ADR 0053 §7 — nullable, never defaulted (`| None` oui, `= None` jamais): the key is
+    # always present, null when no bench report was published for the agent. Undeclared it
+    # would be SILENTLY STRIPPED by response_model — the exact trap that hid the section
+    # on the served stack (2026-08-24) while the builder worked in-container.
+    understanding_bench: AgentEvaluationsUnderstandingBench | None

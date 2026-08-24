@@ -217,3 +217,23 @@ def test_the_reading_bench_block_serves_the_latest_published_report() -> None:
 
     # An agent nobody published a bench for has no section at all.
     assert _understanding_bench_block("support-client", "fr") is None
+
+
+def test_the_response_model_does_not_strip_the_bench() -> None:
+    """response_model strips undeclared fields SILENTLY — the recorded trap, paid again.
+
+    On 2026-08-24 the served route answered without understanding_bench while the
+    builder worked perfectly in-container: the field was missing from
+    AgentEvaluationsPayload, so FastAPI removed it without a word. This witness
+    round-trips the REAL payload through the route's own model, so the model and the
+    builder can no longer drift apart on this field.
+    """
+    from tessera.api.routes.observability.schemas_fleet import AgentEvaluationsPayload
+    from tessera.observability.agent_evaluations import compute_agent_evaluations
+
+    payload = AgentEvaluationsPayload.model_validate(
+        {"available": True, **compute_agent_evaluations("recouvrement", "fr")}
+    )
+    dumped = payload.model_dump()
+    assert dumped["understanding_bench"] is not None
+    assert "117/120" in str(dumped["understanding_bench"]["rows"])

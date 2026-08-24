@@ -656,10 +656,14 @@ def _understanding_bench_block(agent_id: str, lang: str) -> dict[str, object] | 
                 "Keyword detection (fallback)",
             ),
             "value": f"{regex_overall[0]} — {pct(regex_overall[1])}",
+            # Explicit None, not an absent key: the response model serialises the field,
+            # and the byte-parity witness compares what is SERVED, key for key.
+            "tone": None,
         },
         {
             "label": _loc(lang, "Modèle seul", "Modell allein", "Model alone"),
             "value": f"{llm_overall[0]} — {pct(llm_overall[1])}",
+            "tone": None,
         },
         {
             "label": _loc(

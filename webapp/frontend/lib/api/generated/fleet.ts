@@ -139,6 +139,12 @@ export const AgentEvaluationsActionsSchema = z.object({
   create: z.string(),
 });
 
+export const AgentEvaluationsBenchRowSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  tone: z.string().nullable().optional(),
+});
+
 export const AgentEvaluationsDetailLabelsSchema = z.object({
   eyebrow: z.string(),
   tabs: z.array(z.string()),
@@ -558,6 +564,15 @@ export const AgentEvaluationsResultsSchema = z.object({
   labels: AgentEvaluationsResultsLabelsSchema,
 });
 
+export const AgentEvaluationsUnderstandingBenchSchema = z.object({
+  title: z.string(),
+  note: z.string(),
+  meta: z.string(),
+  rows: z.array(AgentEvaluationsBenchRowSchema),
+  languages: z.string(),
+  latency: z.string(),
+});
+
 export const AgentEvaluationsPayloadSchema = z.object({
   available: z.literal(true),
   title: z.string(),
@@ -580,6 +595,7 @@ export const AgentEvaluationsPayloadSchema = z.object({
   runs: AgentEvaluationsRunsSchema,
   sets: AgentEvaluationsSetsSchema,
   results: AgentEvaluationsResultsSchema,
+  understanding_bench: AgentEvaluationsUnderstandingBenchSchema.nullable(),
 });
 
 export const AgentEvaluationsUnavailableSchema = z.object({
