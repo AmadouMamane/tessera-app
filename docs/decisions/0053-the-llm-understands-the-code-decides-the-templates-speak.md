@@ -1,6 +1,12 @@
 # 0053 — Recouvrement goes hybrid: the LLM understands, the code decides, the templates speak
 
-- Status: accepted (validated by the operator, 2026-08-22)
+- Status: **accepted — implemented & flipped 2026-08-24** (decision 2026-08-22; slices 1-4
+  landed `f9bddd08` → `90d02371`; the model became the fourth governed knob `921383d0`; the
+  cockpit card landed `aed3e5f0`. Measured on the 120-case referent, sha `63a4a5ab`: regex
+  floor 69.2 % pinned · gemma3:27b **96.7 % composite, p50 4.1 s** — served since the operator
+  flip (mode `active`, 2026-08-24 10:47 UTC) citing the bench and 24/24 live verdicts, p50
+  2.3 s. gpt-5.5 measured 99.2 % p50 1.7 s stays one governed knob-write away, at the cost of
+  external egress.)
 - Date: 2026-08-22
 - Supersedes: none
 - Superseded by: none
