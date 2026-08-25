@@ -747,6 +747,16 @@ export function SignalsTable({
                                   ? tq(`signalsTable.na.${r.unavailable}`)
                                   : tq(`signalsTable.status.${r.status}`)}
                               </Badge>
+                              {/* The measured emptiness, when the source can name one: "96
+                                  turns read · no citation to check" is a different fact from
+                                  a mute source, and the bare no-data badge folded the two
+                                  (served 2026-08-25 — all three na rows read as unexplained
+                                  holes while every source had answered). */}
+                              {r.status === "na" && r.sample !== "—" ? (
+                                <span className="mt-0.5 block max-w-[13rem] text-[0.6rem] leading-snug text-[var(--muted-foreground)]">
+                                  {r.sample}
+                                </span>
+                              ) : null}
                             </td>
                             <td className="px-2 py-2 text-[var(--muted-foreground)]">
                               {/* The curve, where one can honestly be drawn; otherwise the

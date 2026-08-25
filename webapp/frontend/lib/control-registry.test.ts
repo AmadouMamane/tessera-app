@@ -318,6 +318,67 @@ describe("an unmeasured control says so instead of showing a zero", () => {
     expect(readControl("firewall", {})).toBeNull();
     expect(readControls({})).toEqual([]);
   });
+
+  it("names the measured emptiness where the source can — turns read, nothing of their kind", () => {
+    // The quality page's three na rows (served 2026-08-25): each source ANSWERED — the
+    // window simply held nothing of the thing it measures. That fact travels as the
+    // reading's detail; a bare dash would fold it into "the source said nothing".
+    const fmt = controlFmt("fr");
+    const slo = readControl("faithfulness", {
+      slo: {
+        metric: "rag.faithfulness.mean",
+        threshold: 0.7,
+        target: 0.95,
+        n: 0,
+        n_good: 0,
+        n_bad: 0,
+        good_rate: 0,
+        error_budget: 0.05,
+        budget_consumed: 0,
+        budget_remaining: 1,
+        burn_rate: 0,
+        burn_rate_fast: 0,
+        breaching: false,
+      },
+    });
+    expect(slo?.noData).toBe(true);
+    expect(slo?.detail).toEqual({ key: "sloEmpty", values: {} });
+
+    const citations = readControl("citations", {
+      citations: {
+        n_turns: 96,
+        n_citations: 0,
+        n_unsupported: 0,
+        validity_rate: 1,
+        unsupported_examples: [],
+      },
+    });
+    expect(citations?.noData).toBe(true);
+    expect(citations?.detail).toEqual({
+      key: "citationsEmpty",
+      values: { turns: fmt.num(96, 0) },
+    });
+
+    const locale = readControl("localeFormat", {
+      localeFormat: {
+        n_turns: 96,
+        n_amounts: 0,
+        n_violations: 0,
+        correctness_rate: 1,
+        examples: [],
+      },
+    });
+    expect(locale?.noData).toBe(true);
+    expect(locale?.detail).toEqual({
+      key: "localeFormatEmpty",
+      values: { turns: fmt.num(96, 0) },
+    });
+
+    // The negative control: a source that carries no empty-shape stays a plain dash —
+    // the detail is never invented for it.
+    expect(readControl("toxicity", EMPTY)?.noData).toBe(true);
+    expect(readControl("toxicity", EMPTY)?.detail).toBeNull();
+  });
 });
 
 describe("the registry is the join key with the signal catalogue", () => {
