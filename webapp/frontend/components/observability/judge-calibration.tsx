@@ -105,15 +105,18 @@ function ConfusionMatrix({ tp, fp, fn, tn }: { tp: number; fp: number; fn: numbe
   );
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      {/* House table mould (data-premium-table): this and the case table below were the
+          view's two text-sm outliers — every sibling data table (runs, datasets, failed
+          cases, the signals registry) already wears the marker (operator ask 2026-08-25). */}
+      <table data-premium-table="true" className="w-full">
         <thead>
-          <tr className="text-[0.7rem] text-[var(--muted-foreground)]">
+          <tr className="text-[var(--muted-foreground)]">
             <th className="px-2 py-1" />
             <th className="px-2 py-1 font-medium" colSpan={2}>
               {tq("judge.refHuman")}
             </th>
           </tr>
-          <tr className="text-[0.7rem] text-[var(--muted-foreground)]">
+          <tr className="text-[var(--muted-foreground)]">
             <th className="px-2 py-1" />
             <th className="px-2 py-1 font-medium">{tq("judge.humanGood")}</th>
             <th className="px-2 py-1 font-medium">{tq("judge.humanBad")}</th>
@@ -695,9 +698,9 @@ export function JudgeCalibration({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table data-premium-table="true" className="w-full">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                <tr className="border-b border-[var(--border)] text-left uppercase text-[var(--muted-foreground)]">
                   <th className="py-2 pr-3 font-medium">{tq("judge.cols.id")}</th>
                   <th className="py-2 pr-3 font-medium">{tq("judge.cols.statement")}</th>
                   <th className="py-2 pr-3 font-medium">{tq("judge.cols.category")}</th>
