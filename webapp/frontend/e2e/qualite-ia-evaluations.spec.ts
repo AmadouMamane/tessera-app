@@ -323,7 +323,7 @@ test("the rating band names its methods — or names its blind spot — and carr
   await expect(band).toBeVisible();
   await expect(
     band
-      .getByText(/Réponses notées par un juge IA/)
+      .getByText(/Réponses envoyées — notées par un juge IA/)
       .or(band.getByText(/Impossible de lire qui est noté comment/)),
   ).toBeVisible({ timeout: 15_000 });
 

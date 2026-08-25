@@ -59,8 +59,8 @@ describe("UnderstandingCard", () => {
     // The arithmetic is GIVEN, never left to the reader (operator feedback 2026-08-24):
     // observed, verdicts, agree and disagree all appear on one line, and the failures
     // line closes the sum (22 read + 2 without a reading = 24 analysed).
-    expect(text).toContain("24 demandes analysées");
-    expect(text).toContain("22 lues par le modèle");
+    expect(text).toContain("24 messages analysés");
+    expect(text).toContain("22 lus par le modèle");
     expect(text).toContain("12");
     expect(text).toContain("2 fois, le modèle n'a pas donné de lecture");
     expect(text).toContain("délai dépassé 2");

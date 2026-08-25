@@ -199,7 +199,7 @@ describe("the answer-quality rating band", () => {
       (messages as unknown as { quality: { explain: { regimes: { what: string } } } }).quality
         .explain.regimes.what,
     ).toMatch(/pour tous les agents/);
-    expect(text).toMatch(/Réponses notées par un juge IA/);
+    expect(text).toMatch(/Réponses envoyées — notées par un juge IA/);
     expect(text).toMatch(/Support Client/);
     expect(text).toMatch(/Onboarding/);
     expect(text).toMatch(/Exécutions vérifiées par des contrôles métier/);
@@ -231,6 +231,12 @@ describe("the answer-quality rating band", () => {
     // NEVER a rate: a percentage here would invite the cross-method comparison the
     // two-rulers rule forbids (insights 361-363). The hero owns the page's only rate.
     expect(text).not.toMatch(/%/);
+    // The figures step forward, the labels stay muted (operator grief 2026-08-25: number
+    // and label in one weight read as a wall) — each count renders in the strong span.
+    const strong = Array.from(container.querySelectorAll("span.font-medium")).map(
+      (el) => el.textContent,
+    );
+    expect(strong).toEqual(expect.arrayContaining(["67", "10", "6", "2"]));
   });
 
   it("a ruler that never spoke says so — 'since the beginning' and 'nothing rated yet'", () => {
@@ -276,16 +282,16 @@ describe("the answer-quality rating band", () => {
     render(wrap(<QualityRegimeBand />));
 
     const text = document.body.textContent ?? "";
-    expect(text).toMatch(/Réponses notées par un juge IA/);
+    expect(text).toMatch(/Réponses envoyées — notées par un juge IA/);
     expect(text).not.toMatch(/Exécutions vérifiées/);
     expect(text).not.toMatch(/Réponses non notées/);
     // …and the reading plane rides by DECLARATION: nobody declares it here, no card.
-    expect(text).not.toMatch(/Demandes lues/);
+    expect(text).not.toMatch(/Messages reçus/);
   });
 
   it("renders the declared reading plane as its own card — counts in its own unit", () => {
     // §A5 (ADR 0053): the agent whose manifest declares an LLM understanding layer gets
-    // a card of its own on this band — a THIRD ruler with its own noun (requests), its
+    // a card of its own on this band — a THIRD ruler with its own noun (messages), its
     // arithmetic GIVEN (74 = 29 read + 45 without a reading), the model's reading median
     // named for what it times, and a chip dooring to the Métier view where the full
     // reading card lives. Still no rate anywhere: the reading's measured accuracy is the
@@ -294,14 +300,19 @@ describe("the answer-quality rating band", () => {
     const { container } = render(wrap(<QualityRegimeBand />));
 
     const text = document.body.textContent ?? "";
-    expect(text).toMatch(/Demandes lues par une IA/);
-    expect(text).toMatch(/74 demandes analysées : 29 lues par le modèle/);
+    expect(text).toMatch(/Messages reçus — lus par l'IA de l'agent/);
+    expect(text).toMatch(/74 messages analysés : 29 lus par le modèle/);
     expect(text).toMatch(/13 même conclusion que la détection par mots-clés/);
-    expect(text).toMatch(/45 demandes sans lecture du modèle/);
+    expect(text).toMatch(/45 messages sans lecture du modèle/);
     expect(text).toMatch(/lecture du texte : 2,4 s en médiane/);
-    expect(text).toMatch(/dernière demande analysée : il y a 1 jour/);
+    expect(text).toMatch(/dernier message analysé : il y a 1 jour/);
     expect(container.innerHTML).toMatch(/agents\/recouvrement\/metier/);
     expect(text).not.toMatch(/%/);
+    // Same typography rule on the reading card: the figures render in the strong span.
+    const strong = Array.from(container.querySelectorAll("span.font-medium")).map(
+      (el) => el.textContent,
+    );
+    expect(strong).toEqual(expect.arrayContaining(["74", "29", "45", "2,4"]));
   });
 
   it("stays legible with a 200-agent fleet: counts and overflows, never 200 names", () => {
@@ -386,7 +397,7 @@ describe("the answer-quality rating band", () => {
     const text = container.textContent ?? "";
     // Since the zone-mould move the visible label belongs to the Zone wrapper (the
     // dashboard's), so the pending content claims NOTHING at all — not even a title.
-    expect(text).not.toMatch(/Réponses notées|Exécutions vérifiées|Réponses non notées/);
+    expect(text).not.toMatch(/Réponses envoyées|Exécutions vérifiées|Réponses non notées/);
     expect(text).not.toMatch(/\d/);
     expect(container.querySelector("[aria-busy='true']")).not.toBeNull();
     expect(container.querySelectorAll(".animate-pulse").length).toBe(3);
@@ -432,7 +443,7 @@ describe("the answer-quality rating band", () => {
     render(wrap(<QualityRegimeBand />));
     const text = document.body.textContent ?? "";
     expect(text).toMatch(/Impossible de lire qui est noté comment/);
-    expect(text).not.toMatch(/Réponses notées|Exécutions vérifiées|Réponses non notées/);
+    expect(text).not.toMatch(/Réponses envoyées|Exécutions vérifiées|Réponses non notées/);
     regimes.isError = false;
   });
 });

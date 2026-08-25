@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Brain, Clock, EyeOff, Gavel, Ruler } from "lucide-react";
 import type { Route } from "next";
 import { useFormatter, useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 
 import { Link } from "@/i18n/navigation";
 import { fetchQualityRegimes } from "@/lib/api/client";
@@ -77,6 +78,15 @@ function latest(instants: Array<string | null | undefined>): string | undefined 
   const known = instants.filter((value): value is string => !!value);
   return known.length ? known.reduce((a, b) => (a > b ? a : b)) : undefined;
 }
+
+/**
+ * The count lines' figures step forward, the words around them stay muted (operator
+ * feedback 2026-08-25: number and label in one weight read as a wall of text). The
+ * catalogue lines carry `<v>` around each figure; this renders them.
+ */
+const figure = (chunks: ReactNode) => (
+  <span className="font-medium text-[var(--tessera-text)]">{chunks}</span>
+);
 
 /** Shared chip chrome — every chip is a Link (Métier view or agent page). */
 const CHIP_CLASS =
@@ -343,14 +353,17 @@ export function QualityRegimeBand() {
               <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
                 {regime === "llm_judged" ? (
                   <p className="tabular-nums">
-                    {t("llm_judged.counts", {
+                    {t.rich("llm_judged.counts", {
                       n: judgedResponsesTotal,
                       since: sinceText(planeSince),
+                      v: figure,
                     })}
                   </p>
                 ) : null}
                 {regime === "llm_judged" ? (
-                  <p className="tabular-nums">{t("llm_judged.languages", judgedLanguages)}</p>
+                  <p className="tabular-nums">
+                    {t.rich("llm_judged.languages", { ...judgedLanguages, v: figure })}
+                  </p>
                 ) : null}
                 {regime === "llm_judged" ? (
                   <FreshnessLine
@@ -365,13 +378,14 @@ export function QualityRegimeBand() {
                   // six-figure sentence is still legible.
                   <p className="flex flex-wrap items-baseline gap-x-2">
                     <span className="tabular-nums">
-                      {t("business_scored.counts", {
+                      {t.rich("business_scored.counts", {
                         runs: soleBusiness.business.runs_total,
                         declared: soleBusiness.business.signals_declared,
                         scored: soleBusiness.business.signals_scored,
                         unknown: soleBusiness.business.signals_unknown,
                         na: soleBusiness.business.signals_not_applicable,
                         since: sinceText(planeSince),
+                        v: figure,
                       })}
                     </span>
                     <Link
@@ -384,9 +398,10 @@ export function QualityRegimeBand() {
                 ) : null}
                 {businessEntries.length > 1 ? (
                   <p className="tabular-nums">
-                    {t("business_scored.aggregate", {
+                    {t.rich("business_scored.aggregate", {
                       runs: businessRunsTotal,
                       since: sinceText(planeSince),
+                      v: figure,
                     })}
                   </p>
                 ) : null}
@@ -406,7 +421,9 @@ export function QualityRegimeBand() {
                       className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
                       aria-hidden
                     />
-                    <span>{t("unscored.observedNote", { observed: observedCount })}</span>
+                    <span>
+                      {t.rich("unscored.observedNote", { observed: observedCount, v: figure })}
+                    </span>
                   </p>
                 ) : null}
               </div>
@@ -485,15 +502,18 @@ function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
         ) : (
           <>
             <p className="tabular-nums">
-              {t("understanding.counts", { observed, verdicts, agree, disagree })}
+              {t.rich("understanding.counts", { observed, verdicts, agree, disagree, v: figure })}
             </p>
             {failures > 0 ? (
-              <p className="tabular-nums">{t("understanding.failures", { count: failures })}</p>
+              <p className="tabular-nums">
+                {t.rich("understanding.failures", { count: failures, v: figure })}
+              </p>
             ) : null}
             {soleLatency != null ? (
               <p className="tabular-nums">
-                {t("understanding.latency", {
+                {t.rich("understanding.latency", {
                   seconds: format.number(soleLatency / 1000, { maximumFractionDigits: 1 }),
+                  v: figure,
                 })}
               </p>
             ) : null}

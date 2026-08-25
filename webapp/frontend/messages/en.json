@@ -2818,7 +2818,7 @@
         "source": "Governed-actions policy."
       },
       "regimes": {
-        "what": "Security, compliance and costs are checked for every agent. Answer quality is rated with each agent's own method — every card counts in its own unit, never blended with its neighbours.",
+        "what": "Security, compliance and costs are checked for every agent. Answer quality is rated with each agent's own method — every card counts in its own unit.",
         "how": "Counts per method over all history, independent of the temporal rail's window. Each agent chip opens its page (the Métier view for business checks and AI reading).",
         "source": "/observability/quality-regimes — each agent's manifest declaration."
       }
@@ -2861,8 +2861,8 @@
       "signals": "{n}/200 quality signals",
       "noFailing": "No failing category",
       "live": "live",
-      "signalsFunnel": "{sampled} signals measured out of {wired} wired · {declared} declared in the catalogue for this page",
-      "signalsFunnelUnread": "{sampled} sampled of {wired} wired · the catalogue could not be read — the declared share is unknown"
+      "signalsFunnel": "{sampled} signals measured · {wired} tracked live · {declared} planned for this page",
+      "signalsFunnelUnread": "{sampled} measured · {wired} tracked live · the planned total for this page could not be read"
     },
     "kpi": {
       "score": "Quality score",
@@ -8721,12 +8721,12 @@
     },
     "understanding": {
       "title": "Language understanding",
-      "subtitle": "The assistant reads each written request to choose the right action. This card tracks how reliable that reading is.",
-      "counts": "{observed} requests analysed: {verdicts} read by the model — {agree} reaching the same conclusion as the keyword detection, {disagree} reaching a different one.",
+      "subtitle": "The assistant reads each incoming message to choose the right action. This card tracks how reliable that reading is.",
+      "counts": "{observed} messages analysed: {verdicts} read by the model — {agree} reaching the same conclusion as the keyword detection, {disagree} reaching a different one.",
       "failures": "{count} times the model gave no reading ({detail}); the keyword detection answered instead.",
       "noFailures": "the model gave a reading every time",
       "latency": "text reading: median {seconds} s",
-      "freshness": "last request analysed: {date}",
+      "freshness": "last message analysed: {date}",
       "modeActive": "the model reads and decides",
       "modeShadow": "observing — the keyword detection decides",
       "kind": {
@@ -11209,20 +11209,20 @@
     "agentCount": "{count, plural, one {# agent} other {# agents}}",
     "moreNames": "{count, plural, one {+# more} other {+# more}}",
     "llm_judged": {
-      "label": "Responses rated by an AI judge",
-      "counts": "{n, plural, one {# response rated by the judge} other {# responses rated by the judge}} · {since}",
+      "label": "Responses sent — rated by an AI judge",
+      "counts": "{n, plural, one {<v>#</v> response rated by the judge} other {<v>#</v> responses rated by the judge}} · {since}",
       "note": "the gauge above measures these agents",
-      "languages": "by language: FR {fr} · DE {de} · EN {en}"
+      "languages": "by language: FR <v>{fr}</v> · DE <v>{de}</v> · EN <v>{en}</v>"
     },
     "business_scored": {
       "label": "Runs checked by automated business controls",
-      "counts": "{runs, plural, one {# checked run} other {# checked runs}} · {declared} controls · {scored} evaluated · {unknown} undetermined · {na} not applicable · {since}",
-      "aggregate": "{runs, plural, one {# checked run in total} other {# checked runs in total}} · {since} — click an agent to open its business view",
+      "counts": "{runs, plural, one {<v>#</v> checked run} other {<v>#</v> checked runs}} · <v>{declared}</v> controls · <v>{scored}</v> evaluated · <v>{unknown}</v> undetermined · <v>{na}</v> not applicable · {since}",
+      "aggregate": "{runs, plural, one {<v>#</v> checked run in total} other {<v>#</v> checked runs in total}} · {since} — click an agent to open its business view",
       "link": "Business view"
     },
     "unscored": {
       "label": "Responses not rated (a declared choice)",
-      "observedNote": "{observed, plural, one {# of these agents already publishes its activity and appears in the cockpit's metrics — only its answer rating is missing} other {# of these agents already publish their activity and appear in the cockpit's metrics — only their answer rating is missing}}"
+      "observedNote": "{observed, plural, one {<v>#</v> of these agents already publishes its activity and appears in the cockpit's metrics — only its answer rating is missing} other {<v>#</v> of these agents already publish their activity and appear in the cockpit's metrics — only their answer rating is missing}}"
     },
     "unreadable": "Cannot read who is rated how — the information is unavailable right now.",
     "observedChip": "Publishes its activity — tracked in the cockpit's metrics",
@@ -11245,19 +11245,19 @@
       "checkedAgo": "{days, plural, =0 {last checked: today} one {last checked: # day ago} other {last checked: # days ago}}",
       "neverRated": "nothing rated yet",
       "neverChecked": "nothing checked yet",
-      "readAgo": "{days, plural, =0 {last request analysed: today} one {last request analysed: # day ago} other {last request analysed: # days ago}}",
-      "neverRead": "no request analysed yet"
+      "readAgo": "{days, plural, =0 {last message analysed: today} one {last message analysed: # day ago} other {last message analysed: # days ago}}",
+      "neverRead": "no message analysed yet"
     },
     "chipStale": {
       "rated": "{days, plural, one {nothing rated for # day} other {nothing rated for # days}}",
       "checked": "{days, plural, one {nothing checked for # day} other {nothing checked for # days}}"
     },
     "understanding": {
-      "label": "Requests read by an AI",
-      "counts": "{observed, plural, one {# request analysed} other {# requests analysed}}: {verdicts} read by the model — {agree} same conclusion as the keyword detection, {disagree} different",
-      "failures": "{count, plural, one {# request with no model reading — the keyword detection answered} other {# requests with no model reading — the keyword detection answered}}",
-      "latency": "text reading: median {seconds} s",
-      "empty": "no request analysed yet"
+      "label": "Messages received — read by the agent's AI",
+      "counts": "{observed, plural, one {<v>#</v> message analysed} other {<v>#</v> messages analysed}}: <v>{verdicts}</v> read by the model — <v>{agree}</v> same conclusion as the keyword detection, <v>{disagree}</v> different",
+      "failures": "{count, plural, one {<v>#</v> message with no model reading — the keyword detection answered} other {<v>#</v> messages with no model reading — the keyword detection answered}}",
+      "latency": "text reading: median <v>{seconds}</v> s",
+      "empty": "no message analysed yet"
     }
   }
 }

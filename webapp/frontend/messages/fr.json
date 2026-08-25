@@ -2818,7 +2818,7 @@
         "source": "Politique d'actions gouvernées."
       },
       "regimes": {
-        "what": "Sécurité, conformité et coûts sont contrôlés pour tous les agents. La qualité des réponses est notée selon la méthode propre à chaque agent — chaque carte compte dans sa propre unité, jamais fondue avec les voisines.",
+        "what": "Sécurité, conformité et coûts sont contrôlés pour tous les agents. La qualité des réponses est notée selon la méthode propre à chaque agent — chaque carte compte dans sa propre unité.",
         "how": "Comptes par méthode sur tout l'historique, indépendants de la fenêtre du rail temporel. Chaque pastille d'agent ouvre sa page (vue Métier pour les contrôles métier et la lecture IA).",
         "source": "/observability/quality-regimes — la déclaration du manifeste de chaque agent."
       }
@@ -2861,8 +2861,8 @@
       "signals": "{n}/200 signaux qualité",
       "noFailing": "Aucune catégorie en échec",
       "live": "live",
-      "signalsFunnel": "{sampled} signaux mesurés sur {wired} branchés · {declared} déclarés au catalogue pour cette page",
-      "signalsFunnelUnread": "{sampled} mesurés sur {wired} branchés · le catalogue n'a pas pu être lu — la part déclarée est inconnue"
+      "signalsFunnel": "{sampled} signaux mesurés · {wired} suivis en continu · {declared} prévus pour cette page",
+      "signalsFunnelUnread": "{sampled} mesurés · {wired} suivis en continu · le total prévu pour cette page n'a pas pu être lu"
     },
     "kpi": {
       "score": "Score qualité",
@@ -8721,12 +8721,12 @@
     },
     "understanding": {
       "title": "Compréhension du langage",
-      "subtitle": "L'assistant lit chaque demande écrite pour choisir la bonne action. Cette carte suit la fiabilité de cette lecture.",
-      "counts": "{observed} demandes analysées : {verdicts} lues par le modèle — {agree} avec la même conclusion que la détection par mots-clés, {disagree} avec une conclusion différente.",
+      "subtitle": "L'assistant lit chaque message reçu pour choisir la bonne action. Cette carte suit la fiabilité de cette lecture.",
+      "counts": "{observed} messages analysés : {verdicts} lus par le modèle — {agree} avec la même conclusion que la détection par mots-clés, {disagree} avec une conclusion différente.",
       "failures": "{count} fois, le modèle n'a pas donné de lecture ({detail}) ; la détection par mots-clés a répondu à sa place.",
       "noFailures": "le modèle a donné une lecture à chaque fois",
       "latency": "lecture du texte : {seconds} s en médiane",
-      "freshness": "dernière demande analysée : {date}",
+      "freshness": "dernier message analysé : {date}",
       "modeActive": "le modèle lit et décide",
       "modeShadow": "en observation — la détection par mots-clés décide",
       "kind": {
@@ -11223,20 +11223,20 @@
     "agentCount": "{count, plural, one {# agent} other {# agents}}",
     "moreNames": "{count, plural, one {+# autre} other {+# autres}}",
     "llm_judged": {
-      "label": "Réponses notées par un juge IA",
-      "counts": "{n, plural, one {# réponse notée par le juge} other {# réponses notées par le juge}} · {since}",
+      "label": "Réponses envoyées — notées par un juge IA",
+      "counts": "{n, plural, one {<v>#</v> réponse notée par le juge} other {<v>#</v> réponses notées par le juge}} · {since}",
       "note": "la jauge ci-dessus mesure ces agents",
-      "languages": "par langue : FR {fr} · DE {de} · EN {en}"
+      "languages": "par langue : FR <v>{fr}</v> · DE <v>{de}</v> · EN <v>{en}</v>"
     },
     "business_scored": {
       "label": "Exécutions vérifiées par des contrôles métier automatiques",
-      "counts": "{runs, plural, one {# exécution contrôlée} other {# exécutions contrôlées}} · {declared} contrôles · {scored} évalués · {unknown} indéterminés · {na} sans objet · {since}",
-      "aggregate": "{runs, plural, one {# exécution contrôlée en tout} other {# exécutions contrôlées en tout}} · {since} — cliquez un agent pour ouvrir sa vue métier",
+      "counts": "{runs, plural, one {<v>#</v> exécution contrôlée} other {<v>#</v> exécutions contrôlées}} · <v>{declared}</v> contrôles · <v>{scored}</v> évalués · <v>{unknown}</v> indéterminés · <v>{na}</v> sans objet · {since}",
+      "aggregate": "{runs, plural, one {<v>#</v> exécution contrôlée en tout} other {<v>#</v> exécutions contrôlées en tout}} · {since} — cliquez un agent pour ouvrir sa vue métier",
       "link": "Vue métier"
     },
     "unscored": {
       "label": "Réponses non notées (choix déclaré)",
-      "observedNote": "{observed, plural, one {# de ces agents publie déjà son activité et apparaît dans les métriques du cockpit — seule la notation de ses réponses est absente} other {# de ces agents publient déjà leur activité et apparaissent dans les métriques du cockpit — seule la notation de leurs réponses est absente}}"
+      "observedNote": "{observed, plural, one {<v>#</v> de ces agents publie déjà son activité et apparaît dans les métriques du cockpit — seule la notation de ses réponses est absente} other {<v>#</v> de ces agents publient déjà leur activité et apparaissent dans les métriques du cockpit — seule la notation de leurs réponses est absente}}"
     },
     "unreadable": "Impossible de lire qui est noté comment — l'information est indisponible pour le moment.",
     "observedChip": "Publie son activité — suivi dans les métriques du cockpit",
@@ -11259,19 +11259,19 @@
       "checkedAgo": "{days, plural, =0 {dernier contrôle : aujourd'hui} one {dernier contrôle : il y a # jour} other {dernier contrôle : il y a # jours}}",
       "neverRated": "aucune notation encore",
       "neverChecked": "aucun contrôle encore",
-      "readAgo": "{days, plural, =0 {dernière demande analysée : aujourd'hui} one {dernière demande analysée : il y a # jour} other {dernière demande analysée : il y a # jours}}",
-      "neverRead": "aucune demande analysée encore"
+      "readAgo": "{days, plural, =0 {dernier message analysé : aujourd'hui} one {dernier message analysé : il y a # jour} other {dernier message analysé : il y a # jours}}",
+      "neverRead": "aucun message analysé encore"
     },
     "chipStale": {
       "rated": "{days, plural, one {aucune notation depuis # jour} other {aucune notation depuis # jours}}",
       "checked": "{days, plural, one {aucun contrôle depuis # jour} other {aucun contrôle depuis # jours}}"
     },
     "understanding": {
-      "label": "Demandes lues par une IA",
-      "counts": "{observed, plural, one {# demande analysée} other {# demandes analysées}} : {verdicts} lues par le modèle — {agree} même conclusion que la détection par mots-clés, {disagree} différente",
-      "failures": "{count, plural, one {# demande sans lecture du modèle — la détection par mots-clés a répondu} other {# demandes sans lecture du modèle — la détection par mots-clés a répondu}}",
-      "latency": "lecture du texte : {seconds} s en médiane",
-      "empty": "aucune demande analysée encore"
+      "label": "Messages reçus — lus par l'IA de l'agent",
+      "counts": "{observed, plural, one {<v>#</v> message analysé} other {<v>#</v> messages analysés}} : <v>{verdicts}</v> lus par le modèle — <v>{agree}</v> même conclusion que la détection par mots-clés, <v>{disagree}</v> différente",
+      "failures": "{count, plural, one {<v>#</v> message sans lecture du modèle — la détection par mots-clés a répondu} other {<v>#</v> messages sans lecture du modèle — la détection par mots-clés a répondu}}",
+      "latency": "lecture du texte : <v>{seconds}</v> s en médiane",
+      "empty": "aucun message analysé encore"
     }
   }
 }

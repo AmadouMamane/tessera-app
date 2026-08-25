@@ -48,11 +48,13 @@ const RUNS_NOUN: Record<Locale, RegExp> = {
   en: /\bruns?\b/iu,
   de: /ausführung/iu,
 };
-// The reading plane's own noun (ADR 0053 §A5): requests READ, never responses or runs.
-const REQUESTS_NOUN: Record<Locale, RegExp> = {
-  fr: /demandes?/iu,
-  en: /\brequests?\b/iu,
-  de: /anfragen?/iu,
+// The reading plane's own noun (ADR 0053 §A5): messages READ, never responses or runs.
+// "messages" over "demandes/requests" (operator decision 2026-08-25): the author of the
+// incoming text may be the operator writing an instruction, not a customer asking.
+const MESSAGES_NOUN: Record<Locale, RegExp> = {
+  fr: /messages?/iu,
+  en: /\bmessages?\b/iu,
+  de: /nachrichten?/iu,
 };
 
 describe("the band's source cannot reach the LLM plane", () => {
@@ -106,10 +108,10 @@ describe("one population, one noun", () => {
 });
 
 describe("one population, one noun — the reading plane", () => {
-  it.each(LOCALES)("%s: the understanding lines say requests and borrow no noun", (locale) => {
+  it.each(LOCALES)("%s: the understanding lines say messages and borrow no noun", (locale) => {
     const { understanding } = catalogue(locale);
     for (const line of [understanding.label, understanding.counts, understanding.failures]) {
-      expect(line).toMatch(REQUESTS_NOUN[locale]);
+      expect(line).toMatch(MESSAGES_NOUN[locale]);
       expect(line).not.toMatch(RESPONSES_NOUN[locale]);
       expect(line).not.toMatch(RUNS_NOUN[locale]);
     }

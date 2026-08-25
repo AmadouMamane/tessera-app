@@ -2818,7 +2818,7 @@
         "source": "Richtlinie für gesteuerte Aktionen."
       },
       "regimes": {
-        "what": "Sicherheit, Konformität und Kosten werden für alle Agenten kontrolliert. Die Antwortqualität wird nach der eigenen Methode jedes Agenten bewertet — jede Karte zählt in ihrer eigenen Einheit, nie mit den Nachbarn vermengt.",
+        "what": "Sicherheit, Konformität und Kosten werden für alle Agenten kontrolliert. Die Antwortqualität wird nach der eigenen Methode jedes Agenten bewertet — jede Karte zählt in ihrer eigenen Einheit.",
         "how": "Zählungen je Methode über die gesamte Historie, unabhängig vom Zeitfenster der Leiste. Jeder Agenten-Chip öffnet seine Seite (Métier-Ansicht für Fachkontrollen und KI-Lektüre).",
         "source": "/observability/quality-regimes — die Manifest-Deklaration jedes Agenten."
       }
@@ -2861,8 +2861,8 @@
       "signals": "{n}/200 Qualitätssignale",
       "noFailing": "Keine fehlerhafte Kategorie",
       "live": "live",
-      "signalsFunnel": "{sampled} gemessene Signale von {wired} angebundenen · {declared} im Katalog für diese Seite deklariert",
-      "signalsFunnelUnread": "{sampled} erfasst von {wired} verdrahtet · der Katalog konnte nicht gelesen werden — der deklarierte Anteil ist unbekannt"
+      "signalsFunnel": "{sampled} Signale gemessen · {wired} laufend verfolgt · {declared} für diese Seite vorgesehen",
+      "signalsFunnelUnread": "{sampled} gemessen · {wired} laufend verfolgt · die für diese Seite vorgesehene Gesamtzahl konnte nicht gelesen werden"
     },
     "kpi": {
       "score": "Qualitätsscore",
@@ -8721,12 +8721,12 @@
     },
     "understanding": {
       "title": "Sprachverständnis",
-      "subtitle": "Der Assistent liest jede schriftliche Anfrage, um die passende Aktion zu wählen. Diese Karte verfolgt, wie zuverlässig dieses Lesen ist.",
-      "counts": "{observed} Anfragen analysiert: {verdicts} vom Modell gelesen — {agree} mit demselben Schluss wie die Stichworterkennung, {disagree} mit einem anderen Schluss.",
+      "subtitle": "Der Assistent liest jede eingehende Nachricht, um die passende Aktion zu wählen. Diese Karte verfolgt, wie zuverlässig dieses Lesen ist.",
+      "counts": "{observed} Nachrichten analysiert: {verdicts} vom Modell gelesen — {agree} mit demselben Schluss wie die Stichworterkennung, {disagree} mit einem anderen Schluss.",
       "failures": "{count} Mal gab das Modell keine Lesart ({detail}); die Stichworterkennung hat stattdessen geantwortet.",
       "noFailures": "das Modell hat jedes Mal eine Lesart geliefert",
       "latency": "Lesen des Textes: {seconds} s im Median",
-      "freshness": "letzte analysierte Anfrage: {date}",
+      "freshness": "letzte analysierte Nachricht: {date}",
       "modeActive": "das Modell liest und entscheidet",
       "modeShadow": "beobachtend — die Stichworterkennung entscheidet",
       "kind": {
@@ -11223,20 +11223,20 @@
     "agentCount": "{count, plural, one {# Agent} other {# Agenten}}",
     "moreNames": "{count, plural, one {+# weiterer} other {+# weitere}}",
     "llm_judged": {
-      "label": "Antworten, von einem KI-Richter bewertet",
-      "counts": "{n, plural, one {# vom Prüfer bewertete Antwort} other {# vom Prüfer bewertete Antworten}} · {since}",
+      "label": "Gesendete Antworten — vom KI-Prüfer bewertet",
+      "counts": "{n, plural, one {<v>#</v> vom Prüfer bewertete Antwort} other {<v>#</v> vom Prüfer bewertete Antworten}} · {since}",
       "note": "die Anzeige darüber misst diese Agenten",
-      "languages": "nach Sprache: FR {fr} · DE {de} · EN {en}"
+      "languages": "nach Sprache: FR <v>{fr}</v> · DE <v>{de}</v> · EN <v>{en}</v>"
     },
     "business_scored": {
       "label": "Ausführungen, durch automatische Fachkontrollen geprüft",
-      "counts": "{runs, plural, one {# geprüfte Ausführung} other {# geprüfte Ausführungen}} · {declared} Kontrollen · {scored} bewertet · {unknown} unbestimmt · {na} nicht anwendbar · {since}",
-      "aggregate": "{runs, plural, one {# geprüfte Ausführung insgesamt} other {# geprüfte Ausführungen insgesamt}} · {since} — ein Klick auf einen Agenten öffnet seine Fachansicht",
+      "counts": "{runs, plural, one {<v>#</v> geprüfte Ausführung} other {<v>#</v> geprüfte Ausführungen}} · <v>{declared}</v> Kontrollen · <v>{scored}</v> bewertet · <v>{unknown}</v> unbestimmt · <v>{na}</v> nicht anwendbar · {since}",
+      "aggregate": "{runs, plural, one {<v>#</v> geprüfte Ausführung insgesamt} other {<v>#</v> geprüfte Ausführungen insgesamt}} · {since} — ein Klick auf einen Agenten öffnet seine Fachansicht",
       "link": "Fachansicht"
     },
     "unscored": {
       "label": "Antworten ohne Bewertung (deklarierte Entscheidung)",
-      "observedNote": "{observed, plural, one {# dieser Agenten veröffentlicht bereits seine Aktivität und erscheint in den Cockpit-Metriken — nur die Bewertung seiner Antworten fehlt} other {# dieser Agenten veröffentlichen bereits ihre Aktivität und erscheinen in den Cockpit-Metriken — nur die Bewertung ihrer Antworten fehlt}}"
+      "observedNote": "{observed, plural, one {<v>#</v> dieser Agenten veröffentlicht bereits seine Aktivität und erscheint in den Cockpit-Metriken — nur die Bewertung seiner Antworten fehlt} other {<v>#</v> dieser Agenten veröffentlichen bereits ihre Aktivität und erscheinen in den Cockpit-Metriken — nur die Bewertung ihrer Antworten fehlt}}"
     },
     "unreadable": "Nicht lesbar, wer wie bewertet wird — die Information ist derzeit nicht verfügbar.",
     "observedChip": "Veröffentlicht seine Aktivität — in den Cockpit-Metriken erfasst",
@@ -11259,19 +11259,19 @@
       "checkedAgo": "{days, plural, =0 {letzte Kontrolle: heute} one {letzte Kontrolle: vor # Tag} other {letzte Kontrolle: vor # Tagen}}",
       "neverRated": "noch nichts bewertet",
       "neverChecked": "noch nichts kontrolliert",
-      "readAgo": "{days, plural, =0 {letzte analysierte Anfrage: heute} one {letzte analysierte Anfrage: vor # Tag} other {letzte analysierte Anfrage: vor # Tagen}}",
-      "neverRead": "noch keine Anfrage analysiert"
+      "readAgo": "{days, plural, =0 {letzte analysierte Nachricht: heute} one {letzte analysierte Nachricht: vor # Tag} other {letzte analysierte Nachricht: vor # Tagen}}",
+      "neverRead": "noch keine Nachricht analysiert"
     },
     "chipStale": {
       "rated": "{days, plural, one {seit # Tag nichts bewertet} other {seit # Tagen nichts bewertet}}",
       "checked": "{days, plural, one {seit # Tag nichts kontrolliert} other {seit # Tagen nichts kontrolliert}}"
     },
     "understanding": {
-      "label": "Von einer KI gelesene Anfragen",
-      "counts": "{observed, plural, one {# Anfrage analysiert} other {# Anfragen analysiert}}: {verdicts} vom Modell gelesen — {agree} mit demselben Schluss wie die Stichworterkennung, {disagree} mit einem anderen",
-      "failures": "{count, plural, one {# Anfrage ohne Lesart des Modells — die Stichworterkennung hat geantwortet} other {# Anfragen ohne Lesart des Modells — die Stichworterkennung hat geantwortet}}",
-      "latency": "Lesen des Textes: {seconds} s im Median",
-      "empty": "noch keine Anfrage analysiert"
+      "label": "Eingegangene Nachrichten — von der KI des Agenten gelesen",
+      "counts": "{observed, plural, one {<v>#</v> Nachricht analysiert} other {<v>#</v> Nachrichten analysiert}}: <v>{verdicts}</v> vom Modell gelesen — <v>{agree}</v> mit demselben Schluss wie die Stichworterkennung, <v>{disagree}</v> mit einem anderen",
+      "failures": "{count, plural, one {<v>#</v> Nachricht ohne Lesart des Modells — die Stichworterkennung hat geantwortet} other {<v>#</v> Nachrichten ohne Lesart des Modells — die Stichworterkennung hat geantwortet}}",
+      "latency": "Lesen des Textes: <v>{seconds}</v> s im Median",
+      "empty": "noch keine Nachricht analysiert"
     }
   }
 }
