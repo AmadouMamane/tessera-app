@@ -358,9 +358,12 @@ export function TopProblems({
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/* Same type rhythm as the full registry next door (text-xs body, small-caps
+                header): this was the page's one text-sm table, and it read as a different
+                surface pasted in (operator eye, 2026-08-25). */}
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+                <tr className="border-b border-[var(--border)] text-left text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
                   <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.signal")}</th>
                   <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.status")}</th>
                   <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.score")}</th>
