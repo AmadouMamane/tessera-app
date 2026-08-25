@@ -2816,6 +2816,11 @@
         "what": "Gesteuerte sensible Aktionen: Richter einfrieren, Schwellen ändern.",
         "how": "Aktionen mit hoher Wirkung, die erhöhte Rolle oder Vier-Augen-Prinzip erfordern.",
         "source": "Richtlinie für gesteuerte Aktionen."
+      },
+      "regimes": {
+        "what": "Sicherheit, Konformität und Kosten werden für alle Agenten kontrolliert. Die Antwortqualität wird nach der eigenen Methode jedes Agenten bewertet — jede Karte zählt in ihrer eigenen Einheit, nie mit den Nachbarn vermengt.",
+        "how": "Zählungen je Methode über die gesamte Historie, unabhängig vom Zeitfenster der Leiste. Jeder Agenten-Chip öffnet seine Seite (Métier-Ansicht für Fachkontrollen und KI-Lektüre).",
+        "source": "/observability/quality-regimes — die Manifest-Deklaration jedes Agenten."
       }
     },
     "seeDetail": "Details anzeigen",
@@ -3584,7 +3589,8 @@
         "observability_level_unreadable": "Nicht feststellbar, ob {count, plural, one {der Agent {agents}} other {# Agenten ({agents})}} live gehen kann: die Nachweisstufe war nicht lesbar. Auf einer ungemessenen Stufe geht nichts live",
         "unknown": "Livegang verweigert fuer {count, plural, one {den Agenten {agents}} other {# Agenten ({agents})}} — dieses Cockpit kennt den gemeldeten Grund nicht"
       }
-    }
+    },
+    "methodsNote": "Die Anzeige deckt nur die vom KI-Richter bewerteten Antworten ab — die übrigen Bewertungsmethoden sind unten aufgeführt."
   },
   "security": {
     "title": "Sicherheit & Datenschutz",
@@ -11213,8 +11219,7 @@
     }
   },
   "qualityRegimes": {
-    "title": "Wie die Qualität bewertet wird",
-    "subtitle": "Sicherheit, Konformität und Kosten werden für alle Agenten kontrolliert. Die Antwortqualität wird nach der eigenen Methode jedes Agenten bewertet.",
+    "title": "Bewertungsmethoden",
     "agentCount": "{count, plural, one {# Agent} other {# Agenten}}",
     "moreNames": "{count, plural, one {+# weiterer} other {+# weitere}}",
     "llm_judged": {

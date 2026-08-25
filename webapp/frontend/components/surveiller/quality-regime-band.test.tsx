@@ -192,10 +192,13 @@ describe("the answer-quality rating band", () => {
     expect(container.innerHTML).toMatch(/agents\/support-client/);
     expect(container.innerHTML).toMatch(/agents\/hello-agent/);
     // The honest-scope sentence: the band must never read as "recouvrement is outside
-    // quality altogether" — cross-cutting controls cover the whole fleet. (Reworded
-    // 2026-08-24: the subtitle informs the reader, it no longer describes the two-rulers
-    // doctrine to itself — the structure keeps enforcing it.)
-    expect(text).toMatch(/pour tous les agents/);
+    // quality altogether". Since the zone-mould move (2026-08-25) it lives in the zone's
+    // ⓘ (quality.explain.regimes.what) — asserted on the catalogue, since a popover only
+    // renders on interaction.
+    expect(
+      (messages as unknown as { quality: { explain: { regimes: { what: string } } } }).quality
+        .explain.regimes.what,
+    ).toMatch(/pour tous les agents/);
     expect(text).toMatch(/Réponses notées par un juge IA/);
     expect(text).toMatch(/Support Client/);
     expect(text).toMatch(/Onboarding/);
@@ -381,7 +384,8 @@ describe("the answer-quality rating band", () => {
     regimes.isError = false;
     const { container } = render(wrap(<QualityRegimeBand />));
     const text = container.textContent ?? "";
-    expect(text).toMatch(/Comment la qualité est notée/);
+    // Since the zone-mould move the visible label belongs to the Zone wrapper (the
+    // dashboard's), so the pending content claims NOTHING at all — not even a title.
     expect(text).not.toMatch(/Réponses notées|Exécutions vérifiées|Réponses non notées/);
     expect(text).not.toMatch(/\d/);
     expect(container.querySelector("[aria-busy='true']")).not.toBeNull();

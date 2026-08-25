@@ -312,12 +312,14 @@ test("the rating band names its methods — or names its blind spot — and carr
   await login(page);
   await page.goto(SIGNALS);
 
-  // The band under the hero (ADR 0017 §Amendment 4). Loading the page is the only witness
-  // for its RSC/client seam (the 2026-08-07 lesson above), and the served band must land in
-  // one of exactly two states: a real reading naming at least one method, or the named
-  // failed-read line. A blank section — the skeleton that never resolves — is the one
-  // outcome this assertion refuses.
-  const band = page.locator('section[aria-label="Comment la qualité est notée"]');
+  // The rating-methods zone (ADR 0017 §Amendment 4) — since 2026-08-25 a house-mould Zone
+  // in the dashboard's overview tab, below the temporal sequence (operator feedback: the
+  // free-standing band broke the hero→rail reading order). Loading the page is the only
+  // witness for its RSC/client seam (the 2026-08-07 lesson above), and the served content
+  // must land in one of exactly two states: a real reading naming at least one method, or
+  // the named failed-read line. A blank zone — the skeleton that never resolves — is the
+  // one outcome this assertion refuses.
+  const band = page.locator('section[aria-label="Méthodes de notation"]');
   await expect(band).toBeVisible();
   await expect(
     band

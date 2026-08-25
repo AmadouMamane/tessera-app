@@ -2816,6 +2816,11 @@
         "what": "Actions sensibles gouvernées : geler le juge, changer les seuils.",
         "how": "Actions à fort impact exigeant un rôle élevé ou un double contrôle.",
         "source": "Politique d'actions gouvernées."
+      },
+      "regimes": {
+        "what": "Sécurité, conformité et coûts sont contrôlés pour tous les agents. La qualité des réponses est notée selon la méthode propre à chaque agent — chaque carte compte dans sa propre unité, jamais fondue avec les voisines.",
+        "how": "Comptes par méthode sur tout l'historique, indépendants de la fenêtre du rail temporel. Chaque pastille d'agent ouvre sa page (vue Métier pour les contrôles métier et la lecture IA).",
+        "source": "/observability/quality-regimes — la déclaration du manifeste de chaque agent."
       }
     },
     "seeDetail": "Voir le détail",
@@ -3584,7 +3589,8 @@
         "observability_level_unreadable": "On ne peut pas savoir si {count, plural, one {l'agent {agents} peut} other {# agents ({agents}) peuvent}} être mis en ligne : le niveau de preuve n'a pas pu être lu. Rien n'est mis en ligne sur un niveau non mesuré",
         "unknown": "Mise en ligne refusée pour {count, plural, one {l'agent {agents}} other {# agents ({agents})}} — ce cockpit ne reconnaît pas le motif renvoyé"
       }
-    }
+    },
+    "methodsNote": "La jauge ne couvre que les réponses notées par le juge IA — les autres méthodes de notation sont détaillées plus bas."
   },
   "security": {
     "title": "Sécurité & confidentialité",
@@ -11213,8 +11219,7 @@
     }
   },
   "qualityRegimes": {
-    "title": "Comment la qualité est notée",
-    "subtitle": "Sécurité, conformité et coûts sont contrôlés pour tous les agents. La qualité des réponses est notée selon la méthode propre à chaque agent.",
+    "title": "Méthodes de notation",
     "agentCount": "{count, plural, one {# agent} other {# agents}}",
     "moreNames": "{count, plural, one {+# autre} other {+# autres}}",
     "llm_judged": {

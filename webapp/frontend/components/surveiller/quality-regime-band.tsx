@@ -11,11 +11,14 @@ import type { QualityRegimeEntry } from "@/lib/api/schemas";
 import { cn } from "@/lib/cn";
 
 /**
- * The answer-quality rating section (ADR 0017 §Amendment 4): one CARD per declared rating
- * method — the same visual grammar as the view-switch doors above it — each naming ITS
- * agents and ITS counts, never blended with a neighbour's. The subtitle states the honest
- * scope first: cross-cutting controls (security, compliance, cost) cover EVERY agent;
- * what differs per agent is only how its answers are rated.
+ * The answer-quality rating methods (ADR 0017 §Amendment 4): one CARD per declared rating
+ * method, each naming ITS agents and ITS counts, never blended with a neighbour's.
+ * Rendered as the CONTENT of a house-mould Zone on the quality dashboard (operator
+ * feedback 2026-08-25: the free-standing band between the hero and the temporal rail
+ * broke the page's own "alert leads, temporal controls follow" sequence and wore a
+ * foreign visual grammar). The Zone carries the label and the ⓘ; the honest-scope
+ * sentence lives in the ⓘ (quality.explain.regimes) — and the counts span ALL history,
+ * independent of the rail's window, which the ⓘ says out loud.
  *
  * Constraints this component must keep:
  *  · COUNTS only, never a rate — the hero owns the page's one percentage (insights
@@ -45,20 +48,13 @@ const REGIME_ORDER = ["llm_judged", "business_scored", "unscored"] as const;
 
 type Regime = (typeof REGIME_ORDER)[number];
 
-/** Per-method icon + tile accent — sober tints over the shared card chrome. */
-const REGIME_STYLE: Record<Regime, { icon: typeof Gavel; tile: string }> = {
-  llm_judged: {
-    icon: Gavel,
-    tile: "border-[#7c5cf5]/40 bg-[#7c5cf5]/15 text-[var(--tessera-text)]",
-  },
-  business_scored: {
-    icon: Ruler,
-    tile: "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-text)]",
-  },
-  unscored: {
-    icon: EyeOff,
-    tile: "border-[var(--tessera-border)] bg-[var(--tessera-muted)] text-[var(--tessera-text-muted)]",
-  },
+/** Per-method icon + accent — slim inline icons, the zone sub-card grammar (no tiles). */
+const REGIME_STYLE: Record<Regime, { icon: typeof Gavel; accent: string }> = {
+  // Theme TOKENS, not colour literals: a bare icon on a light card has no tile
+  // background to save it, and the contrast ratchet measures exactly that.
+  llm_judged: { icon: Gavel, accent: "text-[var(--tessera-fg-accent)]" },
+  business_scored: { icon: Ruler, accent: "text-[var(--tessera-fg-success)]" },
+  unscored: { icon: EyeOff, accent: "text-[var(--tessera-text-muted)]" },
 };
 
 /** Agent chips shown per card before collapsing into "+N more". */
@@ -175,33 +171,26 @@ export function QualityRegimeBand() {
   // the very defect it exists to fix — a rated method reading as "nothing else is rated".
   // The blind state is named (ADR 0026); only the transient pending state renders nothing.
   if (isError) {
+    // The zone stays, its content names the blindness (ADR 0026) — never a silent gap.
     return (
-      <section
-        aria-label={t("title")}
-        className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-4 py-3"
-      >
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <h2 className="text-[0.8rem] font-semibold">{t("title")}</h2>
-          <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("unreadable")}</p>
-        </div>
+      <section aria-label={t("title")} className="py-0.5">
+        <p role="alert" className="text-[0.68rem] text-[var(--tessera-fg-danger)]">
+          {t("unreadable")}
+        </p>
       </section>
     );
   }
   if (!data) {
-    // Pending: reserve the section's shape so the page does not jump when the declaration
-    // arrives. Static chrome only (title + subtitle) — the skeleton claims no method, no
-    // agent, no count while the read is in flight.
+    // Pending: reserve the zone's shape so the page does not jump when the declaration
+    // arrives — and claim NOTHING (the Zone label above is static chrome; the skeleton
+    // shows no method, no agent, no count while the read is in flight).
     return (
       <section aria-label={t("title")} aria-busy="true">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <h2 className="text-[0.8rem] font-semibold">{t("title")}</h2>
-          <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("subtitle")}</p>
-        </div>
-        <div className="mt-2 grid grid-cols-1 gap-2.5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           {REGIME_ORDER.map((regime) => (
             <div
               key={regime}
-              className="h-[7rem] animate-pulse rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
+              className="h-[6.5rem] animate-pulse rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
               aria-hidden
             />
           ))}
@@ -234,20 +223,16 @@ export function QualityRegimeBand() {
 
   return (
     <section aria-label={t("title")}>
-      <div className="flex flex-wrap items-baseline gap-x-2">
-        <h2 className="text-[0.8rem] font-semibold">{t("title")}</h2>
-        <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("subtitle")}</p>
-      </div>
       <div
         className={cn(
-          "mt-2 grid grid-cols-1 gap-2.5",
+          "grid grid-cols-1 gap-2",
           cardCount === 2 && "md:grid-cols-2",
           cardCount >= 3 && "md:grid-cols-3",
         )}
       >
         {presentRegimes.map((regime) => {
           const entries = byRegime.get(regime) ?? [];
-          const { icon: Icon, tile } = REGIME_STYLE[regime];
+          const { icon: Icon, accent } = REGIME_STYLE[regime];
           const hiddenNames = entries.length - Math.min(entries.length, MAX_NAMES);
           const businessEntries =
             regime === "business_scored" ? entries.filter((entry) => entry.business) : [];
@@ -312,16 +297,9 @@ export function QualityRegimeBand() {
               key={regime}
               className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-3"
             >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border",
-                    tile,
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1 text-[0.72rem] font-semibold leading-snug">
+              <div className="flex items-center gap-2">
+                <Icon className={cn("h-3.5 w-3.5 shrink-0", accent)} aria-hidden />
+                <span className="min-w-0 flex-1 text-[0.7rem] font-semibold leading-snug">
                   {t(`${regime}.label`)}
                 </span>
                 <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
@@ -470,16 +448,9 @@ function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
   const lastRead = latest(summaries.map((summary) => summary.latest_at));
   return (
     <article className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-3">
-      <div className="flex items-center gap-2.5">
-        <span
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border",
-            "border-sky-500/40 bg-sky-500/10 text-[var(--tessera-text)]",
-          )}
-        >
-          <Brain className="h-4 w-4" aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1 text-[0.72rem] font-semibold leading-snug">
+      <div className="flex items-center gap-2">
+        <Brain className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" aria-hidden />
+        <span className="min-w-0 flex-1 text-[0.7rem] font-semibold leading-snug">
           {t("understanding.label")}
         </span>
         <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">

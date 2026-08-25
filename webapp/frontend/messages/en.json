@@ -2816,6 +2816,11 @@
         "what": "Governed sensitive actions: freeze the judge, change thresholds.",
         "how": "High-impact actions requiring an elevated role or dual control.",
         "source": "Governed-actions policy."
+      },
+      "regimes": {
+        "what": "Security, compliance and costs are checked for every agent. Answer quality is rated with each agent's own method — every card counts in its own unit, never blended with its neighbours.",
+        "how": "Counts per method over all history, independent of the temporal rail's window. Each agent chip opens its page (the Métier view for business checks and AI reading).",
+        "source": "/observability/quality-regimes — each agent's manifest declaration."
       }
     },
     "seeDetail": "View details",
@@ -3584,7 +3589,8 @@
         "observability_level_unreadable": "Cannot say whether {count, plural, one {agent {agents} may} other {# agents ({agents}) may}} go live: the evidence level could not be read. Nothing goes live on an unmeasured level",
         "unknown": "Launch refused for {count, plural, one {agent {agents}} other {# agents ({agents})}} — this cockpit does not recognise the reason given"
       }
-    }
+    },
+    "methodsNote": "The gauge covers only responses rated by the AI judge — the other rating methods are detailed below."
   },
   "security": {
     "title": "Security & personal data",
@@ -11199,8 +11205,7 @@
     }
   },
   "qualityRegimes": {
-    "title": "How quality is rated",
-    "subtitle": "Security, compliance and costs are checked for every agent. Answer quality is rated with each agent's own method.",
+    "title": "Rating methods",
     "agentCount": "{count, plural, one {# agent} other {# agents}}",
     "moreNames": "{count, plural, one {+# more} other {+# more}}",
     "llm_judged": {

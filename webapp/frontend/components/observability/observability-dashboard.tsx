@@ -10,6 +10,7 @@ import {
   ListChecks,
   type LucideIcon,
   Radio,
+  Scale,
   ShieldCheck,
   Stethoscope,
   TrendingUp,
@@ -18,6 +19,8 @@ import {
 // would read as the icon to anyone who remembers it.
 import type { Route as NextRoute } from "next";
 import { useLocale, useTranslations } from "next-intl";
+
+import { QualityRegimeBand } from "@/components/surveiller/quality-regime-band";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { MetricInfo } from "@/components/cockpit/metric-info";
@@ -181,6 +184,7 @@ function SectionInfo({ title, explainKey }: { title: string; explainKey: string 
 export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const t = useTranslations("observability");
   const tq = useTranslations("quality");
+  const tqr = useTranslations("qualityRegimes");
   const tcd = useTranslations("overview.controlDetail");
   const locale = useLocale();
   const [tab, setTab] = useUrlBackedView(TAB_DEFS, "overview", DASHBOARD_TAB_PARAM);
@@ -767,6 +771,18 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 </div>
               </Zone>
             </div>
+
+            {/* The rating methods (ADR 0017 §A4), in the house mould and BELOW the
+                temporal sequence (operator feedback 2026-08-25) — its counts span all
+                history, independent of the rail's window, which its ⓘ says out loud. */}
+            <Zone
+              label={tqr("title")}
+              icon={Scale}
+              iconClassName="text-[var(--tessera-fg-accent)]"
+              info={<SectionInfo title={tqr("title")} explainKey="regimes" />}
+            >
+              <QualityRegimeBand />
+            </Zone>
           </>
         )}
 
