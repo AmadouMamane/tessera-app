@@ -443,9 +443,12 @@ describe("cockpit language stays human at the first reading level", () => {
   });
 
   it("uses a natural zero-state for fleet reconciliation in every language", () => {
-    expect(fr.agentScope.noHandoffSummary).toMatch(/aucun transfert.*total de la flotte/u);
-    expect(en.agentScope.noHandoffSummary).toMatch(/No handoff.*fleet total/u);
-    expect(de.agentScope.noHandoffSummary).toMatch(/keine Übergabe.*Flottensumme/u);
+    // One sentence, one unit: the conversation count and the absence of handoffs — no
+    // arithmetic lesson (operator feedback 2026-08-25 trimmed the "so adding them gives
+    // the total" doctrine the previous shape carried).
+    expect(fr.agentScope.noHandoffSummary).toMatch(/conversations traitées.*aucun transfert/u);
+    expect(en.agentScope.noHandoffSummary).toMatch(/conversations handled.*no handoff/u);
+    expect(de.agentScope.noHandoffSummary).toMatch(/Konversationen.*keine Übergabe/u);
   });
 
   it("explains verified transfers in ordinary language in every language", () => {

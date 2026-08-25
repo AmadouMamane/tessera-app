@@ -2841,7 +2841,7 @@
     "statusbar": {
       "realtime": "Données : temps réel",
       "truthChain": "Chaîne de vérité",
-      "truthSource": "Source de vérité : YAML/Git",
+      "truthSource": "Réglages versionnés et audités",
       "signals": "{n} signaux branchés",
       "systemOk": "Système OK",
       "systemCrit": "{n, plural, one {# signal critique} other {# signaux critiques}}",
@@ -3206,7 +3206,7 @@
       "chip": {
         "dataset": "Dataset",
         "judge": "Juge",
-        "truth": "Source de vérité : YAML · Git",
+        "truth": "Réglages versionnés et audités",
         "chain": "Chaîne d'audit intacte"
       },
       "act": {
@@ -3530,7 +3530,7 @@
       "trend_down": "Régression légère",
       "trend_flat": "Stable",
       "prob7": "Probabilité de régression 7 j",
-      "risk": "Score de risque",
+      "risk": "Risque de régression",
       "drift": "Dérive du juge",
       "predictor": "Prédicteur d'échec",
       "predictorUntrained": "non entraîné",
@@ -4154,7 +4154,7 @@
       "partial": "Partiel",
       "non_conformant": "Non conforme",
       "chain": "Chaîne d'audit intacte",
-      "truth": "Source de vérité : YAML · Git",
+      "truth": "Réglages versionnés et audités",
       "env": "Environnement : Production",
       "realtime": "Temps réel"
     },
@@ -4214,7 +4214,7 @@
       "reference": "Référentiel : v2026.06",
       "lastReview": "Dernière revue : il y a 2 h",
       "validProofs": "Preuves valides : 1 105",
-      "source": "Source de vérité : YAML · Git",
+      "source": "Réglages versionnés et audités",
       "audit": "Audit intact"
     }
   },
@@ -4402,7 +4402,7 @@
     },
     "status": {
       "chain": "Chaîne d'audit intacte",
-      "truth": "Source de vérité : YAML · Git",
+      "truth": "Réglages versionnés et audités",
       "soc": "SOC connecté",
       "realtime": "Temps réel"
     },
@@ -4580,7 +4580,7 @@
       "ready": "Prêt",
       "to_approve": "À approuver",
       "chain": "Chaîne d'audit intacte",
-      "truth": "Source de vérité : YAML · Git",
+      "truth": "Réglages versionnés et audités",
       "improvement": "Amélioration continue"
     },
     "gate": {
@@ -9129,7 +9129,6 @@
       "availability": "Disponibilité",
       "latency": "Latence"
     },
-    "contribReconciled": "Détail par agent : {sum} · total de la flotte : {org} — les deux concordent sur cette période.",
     "contribGap": "Le détail par agent ({sum}) est supérieur au total de la flotte ({org}) : une conversation transférée apparaît chez deux agents, mais une seule fois dans le total. Le contrôle des transferts ci-dessous explique l'écart.",
     "contribUnknown": "Le total ne peut pas encore être vérifié : le total de la flotte ou le détail par agent n'est pas disponible.",
     "staleEval": "Verdict daté : le catalogue a évolué depuis cette éval.",
@@ -9142,7 +9141,7 @@
       "org-wide": "Ce signal concerne toute la flotte ; il n'existe pas de valeur par agent.",
       "not-honoured": "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée."
     },
-    "noHandoffSummary": "Sur la période, aucun transfert entre agents n'a été constaté : l'addition des conversations traitées par chaque agent donne donc directement le total de la flotte, soit {total} conversations.",
+    "noHandoffSummary": "{total} conversations traitées sur la période — aucun transfert entre agents.",
     "handoffSummary": {
       "one": "Une conversation est passée d'un agent à un autre. Elle figure dans l'activité des deux agents concernés, mais n'est comptée qu'une fois dans le total de la flotte : {total} conversations.",
       "many": "{attested} conversations sont passées d'un agent à un autre. Elles figurent dans l'activité des deux agents concernés, mais ne sont comptées qu'une fois dans le total de la flotte : {total} conversations."
@@ -9260,7 +9259,7 @@
     "agentFilterHint": "Le filtre choisi s'applique à toutes les pages de gouvernance et de configuration."
   },
   "appFooter": {
-    "sourceOfTruth": "Source de vérité : YAML · Git",
+    "sourceOfTruth": "Réglages versionnés et audités",
     "checking": "Intégrité : vérification…",
     "integrityOk": "Intégrité hash-chaînée vérifiée ({n} événements)",
     "integrityBroken": "Intégrité : contenu altéré — à investiguer",

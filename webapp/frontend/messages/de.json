@@ -2841,7 +2841,7 @@
     "statusbar": {
       "realtime": "Daten: Echtzeit",
       "truthChain": "Wahrheitskette",
-      "truthSource": "Wahrheitsquelle: YAML/Git",
+      "truthSource": "Einstellungen versioniert und auditiert",
       "signals": "{n} angebundene Signale",
       "systemOk": "System OK",
       "systemCrit": "{n, plural, one {# kritisches Signal} other {# kritische Signale}}",
@@ -3206,7 +3206,7 @@
       "chip": {
         "dataset": "Dataset",
         "judge": "Judge",
-        "truth": "Quelle der Wahrheit: YAML · Git",
+        "truth": "Einstellungen versioniert und auditiert",
         "chain": "Audit-Kette intakt"
       },
       "act": {
@@ -3530,7 +3530,7 @@
       "trend_down": "Leichte Regression",
       "trend_flat": "Stabil",
       "prob7": "Regressionswahrscheinlichkeit 7 T",
-      "risk": "Risikowert",
+      "risk": "Regressionsrisiko",
       "drift": "Judge-Abweichung",
       "predictor": "Fehler-Prädiktor",
       "predictorUntrained": "nicht trainiert",
@@ -4154,7 +4154,7 @@
       "partial": "Teilweise",
       "non_conformant": "Nicht konform",
       "chain": "Audit-Kette intakt",
-      "truth": "Quelle der Wahrheit: YAML · Git",
+      "truth": "Einstellungen versioniert und auditiert",
       "env": "Umgebung: Produktion",
       "realtime": "Echtzeit"
     },
@@ -4214,7 +4214,7 @@
       "reference": "Referenz: v2026.06",
       "lastReview": "Letzte Prüfung: vor 2 Std.",
       "validProofs": "Gültige Nachweise: 1 105",
-      "source": "Quelle der Wahrheit: YAML · Git",
+      "source": "Einstellungen versioniert und auditiert",
       "audit": "Audit intakt"
     }
   },
@@ -4402,7 +4402,7 @@
     },
     "status": {
       "chain": "Audit-Kette intakt",
-      "truth": "Quelle der Wahrheit: YAML · Git",
+      "truth": "Einstellungen versioniert und auditiert",
       "soc": "SOC verbunden",
       "realtime": "Echtzeit"
     },
@@ -4580,7 +4580,7 @@
       "ready": "Bereit",
       "to_approve": "Zu genehmigen",
       "chain": "Audit-Kette intakt",
-      "truth": "Quelle der Wahrheit: YAML · Git",
+      "truth": "Einstellungen versioniert und auditiert",
       "improvement": "Kontinuierliche Verbesserung"
     },
     "gate": {
@@ -9129,7 +9129,6 @@
       "availability": "Verfügbarkeit",
       "latency": "Latenz"
     },
-    "contribReconciled": "Detail pro Agent: {sum} · Flotte gesamt: {org} — beide stimmen für diesen Zeitraum überein.",
     "contribGap": "Das Detail pro Agent ({sum}) liegt über der Flottensumme ({org}): Eine übergebene Konversation erscheint bei zwei Agenten, in der Summe aber nur einmal. Die Übergabeprüfung unten erklärt die Abweichung.",
     "contribUnknown": "Die Gesamtzahl kann noch nicht bestätigt werden, weil die Flottensumme oder das Detail pro Agent fehlt.",
     "staleEval": "Verdikt veraltet: der Katalog hat sich seit dieser Eval geändert.",
@@ -9142,7 +9141,7 @@
       "org-wide": "Dieses Signal gilt für die gesamte Flotte; es gibt keinen Wert pro Agent.",
       "not-honoured": "Agent-Dimension bei der Lesung nicht honoriert — Wert verweigert."
     },
-    "noHandoffSummary": "Im Zeitraum wurde keine Übergabe zwischen Agenten festgestellt. Die Addition der von jedem Agenten bearbeiteten Konversationen ergibt daher direkt die Flottensumme: {total} Konversationen.",
+    "noHandoffSummary": "{total} Konversationen im Zeitraum bearbeitet — keine Übergabe zwischen Agenten.",
     "handoffSummary": {
       "one": "Eine Konversation wurde von einem Agenten an einen anderen übergeben. Sie erscheint in der Aktivität beider beteiligten Agenten, wird in der Flottensumme aber nur einmal gezählt: {total} Konversationen.",
       "many": "{attested} Konversationen wurden von einem Agenten an einen anderen übergeben. Sie erscheinen in der Aktivität beider beteiligten Agenten, werden in der Flottensumme aber nur einmal gezählt: {total} Konversationen."
@@ -9260,7 +9259,7 @@
     "agentFilterHint": "Der gewählte Filter gilt für alle Governance- und Konfigurationsseiten."
   },
   "appFooter": {
-    "sourceOfTruth": "Quelle der Wahrheit: YAML · Git",
+    "sourceOfTruth": "Einstellungen versioniert und auditiert",
     "checking": "Integrität: wird geprüft…",
     "integrityOk": "Hash-Kette verifiziert ({n} Ereignisse)",
     "integrityBroken": "Integrität: Inhalt manipuliert — zu untersuchen",

@@ -220,11 +220,11 @@ describe("the transfer verification line under the fleet total", () => {
 
     render(await AgentBreakdown({ fleet, scope: "all", locale: "fr" }));
 
-    const explanation = screen.getByText(/aucun transfert entre agents n'a été constaté/i);
-    expect(explanation.textContent).toContain(
-      "l'addition des conversations traitées par chaque agent donne donc directement le total de la flotte",
-    );
-    expect(explanation.textContent).toContain("415 conversations");
+    // One sentence, one unit, no arithmetic lesson (operator feedback 2026-08-25: the
+    // previous copy explained WHY the sum equals the total instead of stating the facts).
+    const explanation = screen.getByText(/aucun transfert entre agents/i);
+    expect(explanation.textContent).toContain("415 conversations traitées sur la période");
+    expect(explanation.textContent).not.toMatch(/donne donc directement/);
     expect(explanation.textContent).not.toMatch(/0 sont retrouvées|0 sont retirées/);
   });
 
@@ -329,12 +329,17 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     expect(doors).toContain("/fr/agents/support-client/evaluations");
   });
 
-  it("shows that the per-agent detail matches the fleet total", async () => {
+  it("stays silent when the per-agent detail matches the fleet total", async () => {
+    // A check that passes says nothing (operator decision 2026-08-25: the reconciled
+    // sentence restated the table's own numbers as doctrine). Silence stays unambiguous
+    // because BOTH other states still speak — the gap line (next test) and the
+    // cannot-verify line — so an absent note can only mean checked-and-equal.
     renderWithIntl(
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
     );
-    // 14 + 5 = 19 = the org's own count on this window: stated, not assumed.
-    expect(screen.getByText(/Détail par agent : 19 · total de la flotte : 19/)).toBeTruthy();
+    expect(screen.queryByText(/Détail par agent/)).toBeNull();
+    expect(screen.queryByText(/est supérieur au total de la flotte/)).toBeNull();
+    expect(screen.queryByText(/ne peut pas encore être vérifié/)).toBeNull();
   });
 
   it("WRITES the gap when the per-agent detail does not match the fleet total", async () => {

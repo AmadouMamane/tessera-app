@@ -484,17 +484,12 @@ function AlarmTable({
             >
               {/* Contribution reconciliation — the per-agent slices vs the deduplicated org
                 total. ∑ slices = org would be a coincidence, not a proof: a handed-off
-                journey touches two agents and counts once in the org. Stated, never smoothed;
-                the handoff line below (the ONE existing reconciliation) explains the gap. */}
+                journey touches two agents and counts once in the org. A check that PASSES
+                stays silent (operator decision 2026-08-25 — the reconciled sentence restated
+                the table's own numbers as doctrine); a gap or an unverifiable total still
+                speaks, so silence can only ever mean checked-and-equal. */}
               {lens.sumNBad !== null && lens.orgNBad !== null ? (
-                lens.sumNBad === lens.orgNBad ? (
-                  <span className="block">
-                    {t("contribReconciled", {
-                      sum: fmt.int(lens.sumNBad),
-                      org: fmt.int(lens.orgNBad),
-                    })}
-                  </span>
-                ) : (
+                lens.sumNBad === lens.orgNBad ? null : (
                   <span className="block text-[var(--tessera-fg-warning)]/90">
                     {t("contribGap", { sum: fmt.int(lens.sumNBad), org: fmt.int(lens.orgNBad) })}
                   </span>

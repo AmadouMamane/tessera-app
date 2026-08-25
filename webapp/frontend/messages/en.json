@@ -2841,7 +2841,7 @@
     "statusbar": {
       "realtime": "Data: real-time",
       "truthChain": "Truth chain",
-      "truthSource": "Source of truth: YAML/Git",
+      "truthSource": "Settings versioned and audited",
       "signals": "{n} signals wired",
       "systemOk": "System OK",
       "systemCrit": "{n, plural, one {# critical signal} other {# critical signals}}",
@@ -3206,7 +3206,7 @@
       "chip": {
         "dataset": "Dataset",
         "judge": "Judge",
-        "truth": "Source of truth: YAML · Git",
+        "truth": "Settings versioned and audited",
         "chain": "Audit chain intact"
       },
       "act": {
@@ -3530,7 +3530,7 @@
       "trend_down": "Slight regression",
       "trend_flat": "Stable",
       "prob7": "7-day regression probability",
-      "risk": "Risk score",
+      "risk": "Regression risk",
       "drift": "Judge drift",
       "predictor": "Failure predictor",
       "predictorUntrained": "untrained",
@@ -4154,7 +4154,7 @@
       "partial": "Partial",
       "non_conformant": "Non-conformant",
       "chain": "Audit chain intact",
-      "truth": "Source of truth: YAML · Git",
+      "truth": "Settings versioned and audited",
       "env": "Environment: Production",
       "realtime": "Real-time"
     },
@@ -4214,7 +4214,7 @@
       "reference": "Baseline: v2026.06",
       "lastReview": "Last review: 2 h ago",
       "validProofs": "Valid evidence: 1,105",
-      "source": "Source of truth: YAML · Git",
+      "source": "Settings versioned and audited",
       "audit": "Audit intact"
     }
   },
@@ -4402,7 +4402,7 @@
     },
     "status": {
       "chain": "Audit chain intact",
-      "truth": "Source of truth: YAML · Git",
+      "truth": "Settings versioned and audited",
       "soc": "SOC connected",
       "realtime": "Real-time"
     },
@@ -4580,7 +4580,7 @@
       "ready": "Ready",
       "to_approve": "To approve",
       "chain": "Audit chain intact",
-      "truth": "Source of truth: YAML · Git",
+      "truth": "Settings versioned and audited",
       "improvement": "Continuous improvement"
     },
     "gate": {
@@ -9129,7 +9129,6 @@
       "availability": "Availability",
       "latency": "Latency"
     },
-    "contribReconciled": "Per-agent detail: {sum} · fleet total: {org} — both match for this period.",
     "contribGap": "The per-agent detail ({sum}) is higher than the fleet total ({org}): a transferred conversation appears under two agents but only once in the total. The transfer check below explains the gap.",
     "contribUnknown": "The total cannot be confirmed yet because the fleet total or the per-agent detail is unavailable.",
     "staleEval": "Stale verdict: the catalogue changed since this eval.",
@@ -9142,7 +9141,7 @@
       "org-wide": "This signal applies to the whole fleet; there is no per-agent value.",
       "not-honoured": "Agent dimension not honoured by the read — value refused."
     },
-    "noHandoffSummary": "No handoff between agents was observed during the period, so adding the conversations handled by each agent directly gives the fleet total: {total} conversations.",
+    "noHandoffSummary": "{total} conversations handled over the period — no handoff between agents.",
     "handoffSummary": {
       "one": "One conversation moved from one agent to another. It appears in both agents' activity, but counts only once in the fleet total: {total} conversations.",
       "many": "{attested} conversations moved from one agent to another. They appear in both agents' activity, but count only once in the fleet total: {total} conversations."
@@ -9260,7 +9259,7 @@
     "agentFilterHint": "The selected filter applies across governance and configuration pages."
   },
   "appFooter": {
-    "sourceOfTruth": "Source of truth: YAML · Git",
+    "sourceOfTruth": "Settings versioned and audited",
     "checking": "Integrity: verifying…",
     "integrityOk": "Hash-chain verified ({n} events)",
     "integrityBroken": "Integrity: content tampered — investigate",
