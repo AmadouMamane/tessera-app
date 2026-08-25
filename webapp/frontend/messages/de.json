@@ -671,7 +671,10 @@
       "cost": "{eur} € · {anomalies} Anomalien",
       "turns": "{n} Turns",
       "unknown": "{n} unbekannt",
-      "agreement": "Übereinstimmung {agreement}"
+      "agreement": "Übereinstimmung {agreement}",
+      "sloEmpty": "keine Antwort im Fenster bewertet",
+      "citationsEmpty": "{turns} Turns gelesen · kein Zitat zu prüfen",
+      "localeFormatEmpty": "{turns} Turns gelesen · kein Betrag zu prüfen"
     },
     "noCurve": {
       "fixed-corpus": "fester Korpus",
@@ -1941,7 +1944,7 @@
       "unsupported": "keine Quelle im Kontext"
     },
     "clusters": {
-      "title": "Failure-Cluster (auto-thematisiert)",
+      "title": "Fehlerfamilien (automatisch gruppiert)",
       "unavailable": "Embedder nicht verfügbar.",
       "failures": "Failures",
       "themes": "Themen",
@@ -1949,7 +1952,7 @@
       "cases": "Fälle"
     },
     "predictor": {
-      "title": "Pre-Judge-Failure-Prädiktor",
+      "title": "Fehlschlag-Prädiktor (vor der Bewertung)",
       "empty": "Noch keine erfassten Turns.",
       "precision": "Präzision",
       "recall": "Recall",
@@ -2204,7 +2207,7 @@
       "ok": "Keine Gefälligkeit"
     },
     "intent": {
-      "title": "Geschäftsintent & Routing",
+      "title": "Geschäftsintention & Routing",
       "lowConfidence": "Geringe Konfidenz",
       "turns": "Turns",
       "unknown": "Unbekannt",
@@ -2338,7 +2341,7 @@
     },
     "cta": {
       "evidence": "Qualitäts-Evidence-Pack erzeugen",
-      "openDataset": "Prüfsatz öffnen"
+      "openDataset": "Prüfsatz — Ansicht Bewertungen"
     },
     "sec": {
       "etat": "Aktueller Zustand",
@@ -2952,13 +2955,13 @@
       }
     },
     "charts": {
-      "evolution": "Entwicklung des Qualitätsscores (7 T)",
+      "evolution": "Entwicklung des Qualitätsscores ({window})",
       "noData": "Keine Daten im Zeitraum",
       "mean": "Mittel",
-      "points": "{n} Punkte",
+      "points": "{n, plural, =0 {keine Punkte} one {# Punkt} other {# Punkte}}",
       "causes": "Wahrscheinliche Ursachen",
       "costQuality": "Bewertungskosten und Qualität",
-      "faithGrounding": "Treue vs Verankerung (7 T)",
+      "faithGrounding": "Treue vs Verankerung ({window})",
       "good": "Gut",
       "mid": "Mittel",
       "low": "Schlecht"
@@ -3145,7 +3148,7 @@
       "drift_moderate": "moderat",
       "drift_high": "hoch",
       "drift_critical": "kritisch",
-      "drift_unknown": "k.A.",
+      "drift_unknown": "unbestimmt",
       "curve": "Kalibrierungskurve",
       "curveX": "Mittlerer Richter-Score",
       "curveY": "Beobachtete Gut-Rate",
@@ -3531,9 +3534,18 @@
       "drift": "Judge-Abweichung",
       "predictor": "Fehler-Prädiktor",
       "predictorUntrained": "nicht trainiert",
-      "intents": "Risiko-Intents",
+      "intents": "Risiko-Intentionen",
       "langs": "Risiko-Sprachen",
-      "langsUnmeasured": "Kataloge nicht lesbar — nicht gemessen"
+      "langsUnmeasured": "Kataloge nicht lesbar — nicht gemessen",
+      "predictorSample": "{pct} · {n, plural, one {# Fall} other {# Fälle}}",
+      "intentName": {
+        "account": "Konto",
+        "product": "Produkt",
+        "regulation": "Regulierung",
+        "simulation": "Simulation",
+        "escalation": "Eskalation",
+        "unknown": "nicht erkannt"
+      }
     },
     "signalsKpi": {
       "active": "Aktive Signale",
@@ -9122,7 +9134,7 @@
     "contribUnknown": "Die Gesamtzahl kann noch nicht bestätigt werden, weil die Flottensumme oder das Detail pro Agent fehlt.",
     "staleEval": "Verdikt veraltet: der Katalog hat sich seit dieser Eval geändert.",
     "refusal": {
-      "no-sample": "Keine Turns dieses Agenten im Fenster — gemessen, nicht verweigert.",
+      "no-sample": "Keine Daten dieses Agenten für dieses Signal im Fenster.",
       "absent": "Signal fehlt im Snapshot für diesen Agenten.",
       "schema-drift": "Payload außerhalb des Vertrags — Wert verweigert.",
       "no-report": "Kein lesbarer Scope-Report — der Anteil ist nicht beweisbar.",

@@ -404,10 +404,14 @@ export function FaithGroundingScatter({
   pairs,
   loading,
   onOpen,
+  windowLabel,
 }: {
   pairs: MetricPairs | undefined;
   loading: boolean;
   onOpen?: (tab: OverviewTab) => void;
+  /** The rail window's label — the title names the window ACTUALLY applied (the card
+   *  once wore a hardcoded "(7 d)" over an unwindowed all-history read). */
+  windowLabel: string;
 }) {
   const tq = useTranslations("quality");
   const points = pairs?.points ?? [];
@@ -423,8 +427,13 @@ export function FaithGroundingScatter({
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
         <CardTitle className="flex min-w-0 items-center gap-1 text-sm">
-          <span className="min-w-0 truncate">{tq("charts.faithGrounding")}</span>
-          <KpiInfo title={tq("charts.faithGrounding")} k="faithGrounding" />
+          <span className="min-w-0 truncate">
+            {tq("charts.faithGrounding", { window: windowLabel })}
+          </span>
+          <KpiInfo
+            title={tq("charts.faithGrounding", { window: windowLabel })}
+            k="faithGrounding"
+          />
         </CardTitle>
         {onOpen ? <CardTabLink onOpen={onOpen} tab="signals" label={tq("seeDetail")} /> : null}
       </CardHeader>
@@ -534,6 +543,20 @@ function MiniBarRow({
   );
 }
 
+/**
+ * The intent classifier's vocabulary (`routing_intent._MARKERS` plus its "unknown"
+ * fallback) — the ids whose business names live at `quality.pred.intentName.*`. An id
+ * outside this set renders as itself: a raw id beats a printed key path.
+ */
+const INTENT_IDS = new Set([
+  "account",
+  "product",
+  "regulation",
+  "simulation",
+  "escalation",
+  "unknown",
+]);
+
 /** "C. Signaux prédictifs" — trend badge, regression-risk read, judge drift, the
  * failure predictor, and the at-risk intents/languages (all real, image 00). */
 export function PredictiveSignals({
@@ -555,6 +578,7 @@ export function PredictiveSignals({
 }) {
   const dec2 = useDecimalFormat(2);
   const pctFmt = usePercentFormat(1);
+  const pct0 = usePercentFormat(0);
   const tq = useTranslations("quality");
   const delta = series?.delta ?? null;
   const trend = delta == null ? "flat" : delta <= -0.02 ? "down" : delta >= 0.02 ? "up" : "flat";
@@ -591,9 +615,7 @@ export function PredictiveSignals({
             </Row>
             <div className="flex flex-col gap-1.5 border-t border-[var(--tessera-border)] pt-1.5">
               <Row label={tq("pred.prob7")}>
-                <span className="tabular-nums">
-                  {prob == null ? "—" : `${Math.round(prob * 100)}%`}
-                </span>
+                <span className="tabular-nums">{pct0(prob)}</span>
               </Row>
               <Row label={tq("pred.risk")}>
                 <span className={`tabular-nums ${riskTone}`}>
@@ -618,8 +640,13 @@ export function PredictiveSignals({
               </Row>
               <Row label={tq("pred.predictor")}>
                 {predictor && predictor.n > 0 ? (
+                  // The sample size travels with its NOUN — a bare "0 % · 100" left the
+                  // reader to guess what the second number counted.
                   <span className="tabular-nums">
-                    {Math.round(predictor.precision * 100)}% · {predictor.n}
+                    {tq("pred.predictorSample", {
+                      pct: pct0(predictor.precision),
+                      n: predictor.n,
+                    })}
                   </span>
                 ) : (
                   <span className={MUTED}>{tq("pred.predictorUntrained")}</span>
@@ -637,7 +664,10 @@ export function PredictiveSignals({
                   intents.map(([name, n], i) => (
                     <MiniBarRow
                       key={name}
-                      label={name}
+                      // The classifier's identifiers are code vocabulary ("unknown",
+                      // "regulation") — the reader gets their business names; an id the
+                      // catalogue does not know renders as itself rather than a key path.
+                      label={INTENT_IDS.has(name) ? tq(`pred.intentName.${name}`) : name}
                       value={String(n)}
                       pct={(n / intentMax) * 100}
                       color={CAT_COLORS[i % CAT_COLORS.length] ?? "var(--tessera-text-muted)"}
@@ -662,7 +692,7 @@ export function PredictiveSignals({
                     <MiniBarRow
                       key={l.locale}
                       label={l.locale.toUpperCase()}
-                      value={`${Math.round(l.gap * 100)}%`}
+                      value={pct0(l.gap)}
                       pct={(l.gap / langMax) * 100}
                       color={CAT_COLORS[(i + 3) % CAT_COLORS.length] ?? "var(--tessera-text-muted)"}
                     />

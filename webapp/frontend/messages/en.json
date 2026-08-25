@@ -671,7 +671,10 @@
       "cost": "{eur} € · {anomalies} anomalies",
       "turns": "{n} turns",
       "unknown": "{n} unknown",
-      "agreement": "agreement {agreement}"
+      "agreement": "agreement {agreement}",
+      "sloEmpty": "no response rated on the window",
+      "citationsEmpty": "{turns} turns read · no citation to check",
+      "localeFormatEmpty": "{turns} turns read · no amount to check"
     },
     "noCurve": {
       "fixed-corpus": "fixed corpus",
@@ -2338,7 +2341,7 @@
     },
     "cta": {
       "evidence": "Generate quality evidence pack",
-      "openDataset": "Open case set"
+      "openDataset": "Case set — Evaluations view"
     },
     "sec": {
       "etat": "Current state",
@@ -2952,13 +2955,13 @@
       }
     },
     "charts": {
-      "evolution": "Quality score evolution (7d)",
+      "evolution": "Quality score evolution ({window})",
       "noData": "No data over the period",
       "mean": "Mean",
-      "points": "{n} points",
+      "points": "{n, plural, =0 {no points} one {# point} other {# points}}",
       "causes": "Probable causes",
       "costQuality": "Evaluation cost and quality",
-      "faithGrounding": "Faithfulness vs Grounding (7d)",
+      "faithGrounding": "Faithfulness vs Grounding ({window})",
       "good": "Good",
       "mid": "Fair",
       "low": "Poor"
@@ -3145,7 +3148,7 @@
       "drift_moderate": "moderate",
       "drift_high": "high",
       "drift_critical": "critical",
-      "drift_unknown": "n/a",
+      "drift_unknown": "undetermined",
       "curve": "Calibration curve",
       "curveX": "Mean judge score",
       "curveY": "Observed good-rate",
@@ -3533,7 +3536,16 @@
       "predictorUntrained": "untrained",
       "intents": "At-risk intents",
       "langs": "At-risk languages",
-      "langsUnmeasured": "Catalogues unreadable — not measured"
+      "langsUnmeasured": "Catalogues unreadable — not measured",
+      "predictorSample": "{pct} · {n, plural, one {# case} other {# cases}}",
+      "intentName": {
+        "account": "account",
+        "product": "product",
+        "regulation": "regulation",
+        "simulation": "simulation",
+        "escalation": "escalation",
+        "unknown": "unrecognised"
+      }
     },
     "signalsKpi": {
       "active": "Active signals",
@@ -9122,7 +9134,7 @@
     "contribUnknown": "The total cannot be confirmed yet because the fleet total or the per-agent detail is unavailable.",
     "staleEval": "Stale verdict: the catalogue changed since this eval.",
     "refusal": {
-      "no-sample": "No turns from this agent on the window — measured, not refused.",
+      "no-sample": "No data from this agent for this signal on the window.",
       "absent": "Signal missing from the snapshot for this agent.",
       "schema-drift": "Payload off-contract — value refused.",
       "no-report": "No readable scope report — the slice cannot be proven.",

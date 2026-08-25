@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ScoreSeries } from "@/lib/api/schemas";
+import { useDecimalFormat, usePercentFormat } from "@/lib/format-number";
 
 const W = 100;
 const H = 38;
@@ -32,6 +33,7 @@ export function MetricKpi({
   drillLabel?: string;
 }) {
   const tq = useTranslations("quality");
+  const pct0 = usePercentFormat(0);
   const buckets = series?.buckets ?? [];
   const n = buckets.length;
   const pts = buckets
@@ -77,7 +79,7 @@ export function MetricKpi({
       >
         <span className="flex items-baseline gap-1">
           <span className="text-lg font-semibold tabular-nums">
-            {mean != null ? `${Math.round(mean * 100)}%` : "—"}
+            {mean != null ? pct0(mean) : "—"}
           </span>
           {/* WHICH statistic this is, on the surface rather than inside the ⓘ.
               The SLO ribbon two rows above prints 52.6 % — the share of responses clearing the
@@ -138,11 +140,16 @@ export function MetricKpi({
 export function EvolutionChart({
   series,
   loading,
+  windowLabel,
 }: {
   series: ScoreSeries | undefined;
   loading: boolean;
+  /** The rail window's label — the title names the window ACTUALLY applied, never a
+   *  hardcoded "(7 d)" that keeps reading seven days under a thirty-day rail. */
+  windowLabel: string;
 }) {
   const tq = useTranslations("quality");
+  const dec2 = useDecimalFormat(2);
   const buckets = series?.buckets ?? [];
   const n = buckets.length;
 
@@ -170,13 +177,13 @@ export function EvolutionChart({
       <CardHeader>
         <CardTitle className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-1.5">
-            {tq("charts.evolution")}
-            <QInfo title={tq("charts.evolution")} k="evolution" />
+            {tq("charts.evolution", { window: windowLabel })}
+            <QInfo title={tq("charts.evolution", { window: windowLabel })} k="evolution" />
           </span>
           {delta != null ? (
             <Badge tone={delta >= 0 ? "success" : "danger"} className="tabular-nums">
               {delta >= 0 ? "+" : ""}
-              {delta.toFixed(2)}
+              {dec2(delta)}
             </Badge>
           ) : null}
         </CardTitle>
@@ -227,7 +234,7 @@ export function EvolutionChart({
             </div>
             <div className="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
               <span className="tabular-nums">
-                {tq("charts.mean")} {mean != null ? mean.toFixed(2) : "—"}
+                {tq("charts.mean")} {dec2(mean)}
               </span>
               <span className="tabular-nums">{tq("charts.points", { n: series?.n ?? 0 })}</span>
             </div>

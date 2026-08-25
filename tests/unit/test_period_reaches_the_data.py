@@ -70,10 +70,10 @@ def _at(days_ago: float) -> str:
     return (_NOW - timedelta(days=days_ago)).isoformat()
 
 
-def _score(days_ago: float, score: float) -> dict[str, object]:
+def _score(days_ago: float, score: float, metric: str = "faithfulness") -> dict[str, object]:
     return {
         "scored_at": _at(days_ago),
-        "metric": "faithfulness",
+        "metric": metric,
         "score": score,
         "language": "fr",
         "conversation_id": f"c-{days_ago}",
@@ -128,7 +128,21 @@ def _seed_spread_over_time(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> I
     scores_mod._RECENT.clear()
     monkeypatch.setattr(scores_mod, "_WARMED", False)
     scores_path.write_text(
-        "\n".join(json.dumps(r) for r in (_score(20, 0.10), _score(3, 0.50), _score(0.08, 0.90)))
+        "\n".join(
+            json.dumps(r)
+            for r in (
+                _score(20, 0.10),
+                _score(3, 0.50),
+                _score(0.08, 0.90),
+                # A grounding score on each of the SAME conversations: the metric-pairs
+                # scatter only makes a point when a conversation carries both metrics, so
+                # without these rows its window test would compare 0 against 0 and prove
+                # nothing. The SLO/trend rows above read faithfulness only — untouched.
+                _score(20, 0.20, metric="grounding"),
+                _score(3, 0.60, metric="grounding"),
+                _score(0.08, 0.80, metric="grounding"),
+            )
+        )
         + "\n",
         encoding="utf-8",
     )
@@ -156,6 +170,11 @@ _WINDOWED_ROUTES: tuple[tuple[str, Any, str], ...] = (
     ("cost", obs.observability_cost, "n_turns"),
     ("routing", obs.observability_routing, "n"),
     ("intent", obs.observability_intent, "n"),
+    # The scatter was the page's ONE unwindowed read: it sat under the rail with a
+    # hardcoded "(7 d)" title while reading all history (found on the served page,
+    # 2026-08-25 — an empty week showed a gap on the evolution chart next to a scatter
+    # full of last month's points).
+    ("metric_pairs", obs.observability_metric_pairs, "n"),
 )
 
 
@@ -193,6 +212,22 @@ async def test_the_window_admits_exactly_the_rows_inside_it() -> None:
     # No period at all is all history — the behaviour every caller had before the rail
     # could reach the data, and the one a caller that sends nothing must keep.
     assert _size((await call_route(obs.observability_slo))["n"]) == 3
+
+
+@pytest.mark.asyncio
+async def test_metric_pairs_names_the_window_it_applied() -> None:
+    """The scatter's payload states its own window — null only when nothing was applied.
+
+    Reading ``window.period_days`` before believing a figure is this cockpit's rule
+    (instrumentation trap no. 2); a payload that stays silent about its window is how the
+    unwindowed scatter read as a 7-day one for a month.
+    """
+    week = await call_route(obs.observability_metric_pairs, days="7")
+    assert week["window"] == {"period_days": 7}
+    assert _size(week["n"]) == 2
+    bare = await call_route(obs.observability_metric_pairs)
+    assert bare["window"] == {"period_days": None}
+    assert _size(bare["n"]) == 3
 
 
 @pytest.mark.asyncio

@@ -2368,6 +2368,10 @@ export const MetricPairsSchema = z.object({
   y_metric: z.string(),
   n: z.number().int(),
   points: z.array(MetricPointSchema),
+  // The window the backend actually applied (null = all history) — declared so a consumer
+  // can read it before believing the points (instrumentation trap no. 2). Optional because
+  // an older payload predates it.
+  window: z.object({ period_days: z.number().nullable() }).optional(),
 });
 export type MetricPairs = z.infer<typeof MetricPairsSchema>;
 

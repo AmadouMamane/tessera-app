@@ -98,6 +98,8 @@ describe("localization signal honesty", () => {
     renderRow(report());
     expect(screen.queryByText(UNMEASURED)).toBeNull();
     expect(screen.getByText("DE")).toBeTruthy();
-    expect(screen.getByText("10%")).toBeTruthy(); // 1 - 0.9 completeness
+    // 1 - 0.9 completeness, through the locale percent formatter (fr spaces the sign;
+    // the exact space is the formatter's business, so the pin tolerates any).
+    expect(screen.getByText(/10\s*%/u)).toBeTruthy();
   });
 });

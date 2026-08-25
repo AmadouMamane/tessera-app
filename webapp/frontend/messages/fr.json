@@ -671,7 +671,10 @@
       "cost": "{eur} € · {anomalies} anomalies",
       "turns": "{n} tours",
       "unknown": "{n} inconnus",
-      "agreement": "accord {agreement}"
+      "agreement": "accord {agreement}",
+      "sloEmpty": "aucune réponse notée sur la période",
+      "citationsEmpty": "{turns} tours lus · aucune citation à vérifier",
+      "localeFormatEmpty": "{turns} tours lus · aucun montant à vérifier"
     },
     "noCurve": {
       "fixed-corpus": "corpus fixe",
@@ -1941,7 +1944,7 @@
       "unsupported": "aucune source dans le contexte"
     },
     "clusters": {
-      "title": "Clusters de failures (auto-thématisés)",
+      "title": "Familles d'échecs (regroupement automatique)",
       "unavailable": "Embedder indisponible.",
       "failures": "Failures",
       "themes": "Thèmes",
@@ -1949,7 +1952,7 @@
       "cases": "cas"
     },
     "predictor": {
-      "title": "Prédicteur de failure (pré-juge)",
+      "title": "Prédicteur d'échec (avant notation)",
       "empty": "Aucun tour capturé pour l'instant.",
       "precision": "Précision",
       "recall": "Rappel",
@@ -2204,7 +2207,7 @@
       "ok": "Pas de complaisance"
     },
     "intent": {
-      "title": "Intent métier & routage",
+      "title": "Intention métier & routage",
       "lowConfidence": "Confiance faible",
       "turns": "Tours",
       "unknown": "Inconnus",
@@ -2338,7 +2341,7 @@
     },
     "cta": {
       "evidence": "Générer dossier de preuves qualité",
-      "openDataset": "Ouvrir le jeu de cas"
+      "openDataset": "Jeu de cas — vue Évaluations"
     },
     "sec": {
       "etat": "État actuel",
@@ -2952,13 +2955,13 @@
       }
     },
     "charts": {
-      "evolution": "Évolution du score qualité (7 j)",
+      "evolution": "Évolution du score qualité ({window})",
       "noData": "Aucune donnée sur la période",
       "mean": "Moyenne",
-      "points": "{n} points",
+      "points": "{n, plural, =0 {aucun point} one {# point} other {# points}}",
       "causes": "Causes probables",
       "costQuality": "Coût de l'évaluation et qualité",
-      "faithGrounding": "Fidélité vs Ancrage (7 j)",
+      "faithGrounding": "Fidélité vs Ancrage ({window})",
       "good": "Bon",
       "mid": "Moyen",
       "low": "Faible"
@@ -3145,7 +3148,7 @@
       "drift_moderate": "modérée",
       "drift_high": "élevée",
       "drift_critical": "critique",
-      "drift_unknown": "n/a",
+      "drift_unknown": "indéterminée",
       "curve": "Courbe de calibration",
       "curveX": "Score juge moyen",
       "curveY": "Taux réel « bon »",
@@ -3531,9 +3534,18 @@
       "drift": "Dérive du juge",
       "predictor": "Prédicteur d'échec",
       "predictorUntrained": "non entraîné",
-      "intents": "Intents à risque",
+      "intents": "Intentions à risque",
       "langs": "Langues à risque",
-      "langsUnmeasured": "Catalogues illisibles — non mesuré"
+      "langsUnmeasured": "Catalogues illisibles — non mesuré",
+      "predictorSample": "{pct} · {n, plural, one {# cas} other {# cas}}",
+      "intentName": {
+        "account": "compte",
+        "product": "produit",
+        "regulation": "réglementation",
+        "simulation": "simulation",
+        "escalation": "escalade",
+        "unknown": "non reconnue"
+      }
     },
     "signalsKpi": {
       "active": "Signaux actifs",
@@ -9122,7 +9134,7 @@
     "contribUnknown": "Le total ne peut pas encore être vérifié : le total de la flotte ou le détail par agent n'est pas disponible.",
     "staleEval": "Verdict daté : le catalogue a évolué depuis cette éval.",
     "refusal": {
-      "no-sample": "Aucune activité de cet agent sur la période.",
+      "no-sample": "Aucune donnée de cet agent pour ce signal sur la période.",
       "absent": "Ce signal n'a pas été reçu pour cet agent.",
       "schema-drift": "La donnée reçue ne respecte pas le format attendu.",
       "no-report": "La lecture ne permet pas de confirmer ce détail par agent.",

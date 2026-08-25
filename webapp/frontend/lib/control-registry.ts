@@ -264,6 +264,14 @@ interface ControlSample {
   /** 0 ⇒ nothing was measured ⇒ honest "—" rather than a fabricated 0 %. */
   n: number;
   detail: ControlDetail | null;
+  /**
+   * What the empty sample MEASURED, for the rows where "no data" has a shape worth
+   * naming: "96 turns read · no citation to check" is a different fact from a source
+   * that answered nothing, and a bare "—" folds them together (found served 2026-08-25:
+   * the quality page's three na rows all read as unexplained holes when each source had
+   * answered and simply found nothing of its kind in the window).
+   */
+  emptyDetail?: ControlDetail | null;
   /** Per-control target when it comes from the payload rather than the spec. */
   target?: { value: number; text: string; direction: "higher" | "lower" };
   /** Severity override where the raw distance to target is not the right scale. */
@@ -356,6 +364,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
           key: "sample",
           values: { good: String(slo.n_good), n: String(slo.n) },
         },
+        emptyDetail: { key: "sloEmpty", values: {} },
         target: {
           value: slo.target,
           text: `≥ ${fmt.pct(slo.target)}`,
@@ -740,6 +749,9 @@ const SPECS: Record<ControlId, ControlSpec> = {
           key: "count",
           values: { hit: String(c.n_unsupported), n: String(c.n_citations) },
         },
+        // n counts CITATIONS: zero of them over a read window is a measured emptiness
+        // (the turns were read, none cited anything), not a source that said nothing.
+        emptyDetail: { key: "citationsEmpty", values: { turns: fmt.num(c.n_turns, 0) } },
       };
     },
   },
@@ -831,6 +843,8 @@ const SPECS: Record<ControlId, ControlSpec> = {
           key: "count",
           values: { hit: String(l.n_violations), n: String(l.n_amounts) },
         },
+        // n counts grouped AMOUNTS: zero of them over a read window is measured, not mute.
+        emptyDetail: { key: "localeFormatEmpty", values: { turns: fmt.num(l.n_turns, 0) } },
       };
     },
   },
@@ -998,7 +1012,8 @@ export function readControl(
       target: bar,
       state: NEUTRAL,
       severity: 0,
-      detail: null,
+      // The measured emptiness, when the spec can name one — never invented here.
+      detail: sample.emptyDetail ?? null,
       impactKey: spec.impactKey,
       asOfCapable: spec.asOfCapable,
       calibrated: spec.calibrated,

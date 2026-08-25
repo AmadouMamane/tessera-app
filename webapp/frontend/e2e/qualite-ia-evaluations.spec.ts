@@ -297,7 +297,7 @@ test("the departed tabs are gone from the monitoring strip, and its links follow
   // `if (count > 0)` that once wrapped this made a missing control a silent pass — the one
   // outcome that must never read as green, since a drill-down that disappeared is exactly the
   // regression this assertion exists to catch.
-  const openCases = page.getByRole("link", { name: "Ouvrir le jeu de cas", exact: true });
+  const openCases = page.getByRole("link", { name: "Jeu de cas — vue Évaluations", exact: true });
   await expect(openCases).toHaveCount(1);
   await openCases.click();
   await page.waitForURL(/vue=evaluations/, { timeout: 15_000 });

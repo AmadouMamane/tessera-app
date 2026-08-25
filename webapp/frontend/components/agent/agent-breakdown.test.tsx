@@ -439,7 +439,7 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
     expect(screen.getByText("133 / 521")).toBeTruthy();
     // The empty window and the dead read are BOTH dashes, but they say different things.
     expect(
-      screen.getAllByTitle("Aucune activité de cet agent sur la période.").length,
+      screen.getAllByTitle("Aucune donnée de cet agent pour ce signal sur la période.").length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByTitle("Ce signal ne peut pas être calculé sur cette période.").length,
@@ -578,7 +578,7 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
     expect(screen.getByText("0 / 9 521")).toBeTruthy();
     // The empty window and the refused slice are BOTH dashes, but they say different things.
     expect(
-      screen.getAllByTitle("Aucune activité de cet agent sur la période.").length,
+      screen.getAllByTitle("Aucune donnée de cet agent pour ce signal sur la période.").length,
     ).toBeGreaterThan(0);
     expect(
       screen.getAllByTitle(

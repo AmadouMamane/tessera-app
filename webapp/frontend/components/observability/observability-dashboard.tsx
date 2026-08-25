@@ -201,6 +201,10 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   // every windowable query below AND every one of their keys — a request that carries the
   // period while its key does not would be served the previous period's cached answer.
   const period = useWindowStore((st) => st.period);
+  // …and its LABEL, for every title that names its window: a title with a hardcoded
+  // "(7 d)" keeps saying seven days after the operator picks thirty.
+  const tTime = useTranslations("overview.time");
+  const windowLabel = tTime(period);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -283,9 +287,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
   });
 
   const metricPairs = useQuery({
-    queryKey: ["metric-pairs", "faithfulness", "grounding", asOf],
+    queryKey: ["metric-pairs", "faithfulness", "grounding", asOf, scope, period],
     queryFn: ({ signal }) =>
-      fetchMetricPairs(signal, "faithfulness", "grounding", asOf ?? undefined),
+      fetchMetricPairs(signal, "faithfulness", "grounding", asOf ?? undefined, scope, period),
     placeholderData: keepPreviousData,
     refetchInterval: historyMode ? false : 15_000,
     enabled: tab === "overview",
@@ -581,7 +585,9 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
     const bundle = {
       generated_at: new Date().toISOString(),
       page: "quality",
-      window: tq("temporal.window"),
+      // The window ACTUALLY selected on the rail — a static "last 7 days" here would
+      // stamp the wrong window on an evidence pack generated under any other period.
+      window: windowLabel,
       // The whole funnel, not a ratio: an evidence bundle that says "42/200" invites the
       // reader to conclude the other 158 are failing, when 124 of them were never built.
       signals: signalFunnel,
@@ -762,11 +768,16 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
                 info={<SectionInfo title={tq("sec.trends")} explainKey="trends" />}
               >
                 <div className="grid items-start gap-2 sm:grid-cols-2">
-                  <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+                  <EvolutionChart
+                    series={scoreSeries.data}
+                    loading={scoreSeries.isLoading}
+                    windowLabel={windowLabel}
+                  />
                   <FaithGroundingScatter
                     pairs={metricPairs.data}
                     loading={metricPairs.isLoading}
                     onOpen={openTarget}
+                    windowLabel={windowLabel}
                   />
                 </div>
               </Zone>
@@ -796,7 +807,11 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             />
             <SignalsTable rows={signalRows} selectedKey={focusedKey} onSelect={focusSignal} />
             <div className="grid gap-2 lg:grid-cols-3">
-              <EvolutionChart series={scoreSeries.data} loading={scoreSeries.isLoading} />
+              <EvolutionChart
+                series={scoreSeries.data}
+                loading={scoreSeries.isLoading}
+                windowLabel={windowLabel}
+              />
               <ThemeDistribution rows={signalRows} />
               <SignalHeatmap rows={signalRows} />
             </div>

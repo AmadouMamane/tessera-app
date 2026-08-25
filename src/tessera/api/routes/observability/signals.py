@@ -493,16 +493,32 @@ def observability_metric_pairs(
     x: str = "faithfulness",
     y: str = "grounding",
     at: str | None = None,
+    days: str | None = None,
+    agent: str = "all",
 ) -> dict[str, object]:
     """Per-turn pairs of two metrics for a scatter (e.g. faithfulness vs grounding).
 
     Pairs are keyed by ``conversation_id`` — a turn that the online evaluator
-    scored on both metrics. Honours as-of-T via the durable score log.
+    scored on both metrics. Honours as-of-T via the durable score log, and the
+    cockpit's period rail via ``days`` — this card sat under the rail with a
+    hardcoded "(7 d)" title while reading ALL history: the one unwindowed read on a
+    windowed page (the neighbouring score series was windowed, so an empty week
+    showed an honest gap next to a scatter full of last month's points). The
+    window actually applied travels in the response (``window.period_days``,
+    ``null`` = all history), like every windowed payload of this cockpit.
     """
     from tessera.observability.eval.series import compute_metric_pairs
 
-    pairs = compute_metric_pairs(read_scores(at, full=True), x_metric=x, y_metric=y)
-    return {**asdict(pairs), "as_of": at}
+    window = parse_period_days(days)
+    pairs = compute_metric_pairs(
+        _scores_for(at, _agent_or_none(agent), window), x_metric=x, y_metric=y
+    )
+    return {
+        **asdict(pairs),
+        "as_of": at,
+        "agent": agent,
+        "window": {"period_days": window},
+    }
 
 
 @router.get("/observability/obs-cost")

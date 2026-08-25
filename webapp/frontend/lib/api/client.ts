@@ -994,9 +994,16 @@ export async function fetchMetricPairs(
   x = "faithfulness",
   y = "grounding",
   at?: string,
+  agent?: string,
+  days?: string,
 ): Promise<MetricPairs> {
   const params = new URLSearchParams({ x, y });
   if (at) params.set("at", at);
+  if (agent && agent !== "all") params.set("agent", agent);
+  // Same window idiom as fetchScoreSeries: the scatter sits under the same rail as the
+  // evolution chart, and was the page's one unwindowed read (found served, 2026-08-25).
+  const windowDays = integerWindowDays(days);
+  if (windowDays) params.set("days", String(windowDays));
   return request(`/observability/metric-pairs?${params.toString()}`, { signal }, MetricPairsSchema);
 }
 
