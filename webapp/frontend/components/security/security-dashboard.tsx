@@ -870,9 +870,13 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const controlsTable = (rows: Control[]) => (
     <Card>
       <CardContent className="overflow-x-auto p-0">
-        <table className="w-full text-sm">
+        {/* House table mould (data-premium-table: type scale, sticky first column, hover
+            states) + small-caps header — this was the fleet's last text-sm data table;
+            every sibling cockpit entity table already wears the marker (operator ask
+            2026-08-25). Column sizing below is untouched: the mould sets type, not widths. */}
+        <table data-premium-table="true" className="w-full">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
+            <tr className="border-b border-[var(--border)] text-left uppercase text-[var(--muted-foreground)]">
               {/* One column absorbs the card's leftover width; every other column is sized by
                 its own content, which means it must not WRAP that content. Both halves are
                 needed: with only the first, the auto layout spread the slack over five of

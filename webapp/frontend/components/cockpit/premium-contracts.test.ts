@@ -68,6 +68,7 @@ describe("premium cockpit contracts", () => {
       "components/observability/runs-datasets.tsx",
       "components/observability/signals-table.tsx",
       "components/proofs/etat-a-date.tsx",
+      "components/security/security-dashboard.tsx",
       "components/signals/signal-catalogue.tsx",
       "components/sources/sources-overview.tsx",
       "components/users/users-overview.tsx",
