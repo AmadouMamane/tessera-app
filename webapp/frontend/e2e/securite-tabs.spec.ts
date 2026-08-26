@@ -35,8 +35,8 @@ test("overview is selected by default and comprehensive (6 zones)", async ({ pag
 });
 
 test("the prompt-injection tab focuses the real firewall signals", async ({ page }) => {
-  await page.getByRole("tab", { name: "Prompt injection" }).click();
-  await expect(page.getByRole("tab", { name: "Prompt injection" })).toHaveAttribute(
+  await page.getByRole("tab", { name: "Instructions malveillantes" }).click();
+  await expect(page.getByRole("tab", { name: "Instructions malveillantes" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
@@ -47,7 +47,7 @@ test("the prompt-injection tab focuses the real firewall signals", async ({ page
 });
 
 test("the guard tab shows precision/recall and real governance links", async ({ page }) => {
-  await page.getByRole("tab", { name: "Guard & policies" }).click();
+  await page.getByRole("tab", { name: "Protections & règles" }).click();
   await expect(page.getByText("Précision du guard")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Politiques & garde-fous (registre)" }),
@@ -55,25 +55,25 @@ test("the guard tab shows precision/recall and real governance links", async ({ 
 });
 
 test("the isolation tab carries the real cross-tenant probe", async ({ page }) => {
-  await page.getByRole("tab", { name: "Isolation & tenants" }).click();
+  await page.getByRole("tab", { name: "Séparation des environnements" }).click();
   await expect(page.getByText("Tours sondés (cross-tenant)")).toBeVisible();
   await expect(page.getByText("Cloisonnement de cette instance")).toBeVisible();
 });
 
 test("the red-team tab shows the harness campaign and failed cases", async ({ page }) => {
-  await page.getByRole("tab", { name: "Red-team & efficacité" }).click();
+  await page.getByRole("tab", { name: "Tests d'attaque & efficacité" }).click();
   await expect(page.getByText("Attaques testées (harnais)")).toBeVisible();
   await expect(page.getByText("Cas échoués du domaine (harnais)")).toBeVisible();
 });
 
 test("memory and pii and tools tabs render their focused real panels", async ({ page }) => {
-  await page.getByRole("tab", { name: "Mémoire & GDPR" }).click();
+  await page.getByRole("tab", { name: "Mémoire & vie privée" }).click();
   await expect(page.getByText("Complétude d’effacement")).toBeVisible();
 
-  await page.getByRole("tab", { name: "PII & Privacy" }).click();
+  await page.getByRole("tab", { name: "Données personnelles" }).click();
   await expect(page.getByText("Tours avec fuite PII")).toBeVisible();
 
-  await page.getByRole("tab", { name: "Outils & privilèges" }).click();
+  await page.getByRole("tab", { name: "Outils & droits d'accès" }).click();
   await expect(page.getByText("Outils sur-provisionnés").first()).toBeVisible();
 
   // Back to overview restores the comprehensive layout.
