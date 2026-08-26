@@ -81,26 +81,17 @@ type Translator = Awaited<ReturnType<typeof getTranslations>>;
 type FleetAgent = NonNullable<Fleet["agents"]>[number];
 
 /**
- * The quality/alarm tables hold two clocks: the columns the rail windows, then the release
- * pair (the bench verdict and its date), which never follows the period on purpose. A labeled
- * spanning-group row named the two — the operator judged it ugly (2026-08-26), so the boundary
- * is DRAWN instead of named: one vertical hairline before the release pair, carried by this
- * class on its header and cells. The lens flip still only ever swaps the windowed columns, so
- * the card's skeleton stays invariant across states.
- */
-const CLOCK_SEAM = "border-l border-[var(--tessera-border)]";
-
-/**
  * The last-evaluation cell — the bench verdict's date, i.e. its provenance: a release
  * verdict without its date is unverifiable, so it rides beside the verdict column in BOTH
- * lens modes and, like the verdict, deliberately ignores the period rail. It opens the
- * release pair, so it carries the seam.
+ * lens modes and, like the verdict, deliberately ignores the period rail. The two clocks
+ * carry no visual marker (a labeled group row, then a vertical hairline, were both judged
+ * ugly on screen — operator, 2026-08-26): the column names alone say which side each is on.
  */
 function EvalFreshnessCell({ agent, t }: { agent: FleetAgent; t: Translator }) {
   const rel = agent.release?.available ? agent.release : null;
   return (
     <td
-      className={`${CLOCK_SEAM} py-1.5 text-center tabular-nums ${
+      className={`py-1.5 text-center tabular-nums ${
         rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
       }`}
       title={rel?.verdict_stale ? t("staleEval") : undefined}
@@ -440,9 +431,7 @@ function AlarmTable({
             <th className="pb-2 text-center font-medium">{metricLabel(lens.metric, t)}</th>
             <th className="pb-2 text-center font-medium">{t("colSloGap")}</th>
             <th className="pb-2 text-center font-medium">{t("colContribution")}</th>
-            <th className={`${CLOCK_SEAM} pb-2 text-center font-medium`}>
-              {t("colEvalFreshness")}
-            </th>
+            <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
             <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
@@ -575,9 +564,7 @@ function QualityTable({
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colFaithfulness")}</th>
             <th className="pb-2 text-center font-medium">{t("colHallucination")}</th>
-            <th className={`${CLOCK_SEAM} pb-2 text-center font-medium`}>
-              {t("colEvalFreshness")}
-            </th>
+            <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
             <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
