@@ -140,6 +140,9 @@ async def _compute(scope: Scope, ids: tuple[str, ...]) -> dict[str, object]:
             "language": scope.language,
             "model": scope.model,
             "environment": scope.environment,
+            # The window LENGTH the envelope was computed under (None = all history) — the
+            # payload names what was applied, so a reader never has to infer it from the URL.
+            "days": scope.period_days,
         },
         "signals": signals,
         "meta": {

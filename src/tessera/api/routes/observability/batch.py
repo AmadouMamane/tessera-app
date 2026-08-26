@@ -219,19 +219,24 @@ async def observability_fleet_batch(
     know which signals its plan will want, and defaulting to all of them would fan every agent
     out over the whole catalogue to throw most of it away.
 
-    ``lang``/``period``/``at`` scope the fleet rollup exactly as its own route does. The two
-    snapshot halves' own ``at``/``language``/``model`` dimensions are deliberately NOT exposed
-    and NOT derived from ``at``: the breakdown has never sent them (its reads are live even
-    inside an as-of-T window), and quietly forwarding ``at`` here would change what the page
-    renders — that is a behaviour change to argue for on its own merits, not something a
-    round-trip collapse may smuggle in.
+    ``lang``/``period``/``at`` scope EVERY half: the fleet rollup exactly as its own route does,
+    and the two snapshot halves through their own ``days``/``at`` parameters. This overturns the
+    earlier deliberate asymmetry (the snapshot halves used to stay live and all-history while the
+    rollup obeyed the rail) — argued on its own merits and decided on 2026-08-26: the breakdown
+    rows and the rollup total render inside ONE card under ONE period control, and two clocks in
+    one card is the very incoherence the front's period plumbing exists to end. A caller that
+    sends no ``period``/``at`` (the audit-logs proof breakdown) keeps the all-history, live
+    contract unchanged. The halves' ``language``/``model`` dimensions remain unexposed: no
+    breakdown sends them.
     """
     halves: dict[str, Coroutine[Any, Any, object]] = {
         "fleet": observability_fleet(lang=lang, period=period, at=at)
     }
     if signals:
-        halves["fleet_snapshot"] = observability_fleet_snapshot(signals=signals)
+        halves["fleet_snapshot"] = observability_fleet_snapshot(signals=signals, days=period, at=at)
     if org_signals:
-        halves["snapshot"] = observability_snapshot(agent="all", signals=org_signals)
+        halves["snapshot"] = observability_snapshot(
+            agent="all", signals=org_signals, days=period, at=at
+        )
     computed = await asyncio.gather(*halves.values())
     return dict(zip(halves, computed, strict=True))

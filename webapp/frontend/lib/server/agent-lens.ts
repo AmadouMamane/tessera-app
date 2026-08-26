@@ -59,10 +59,23 @@ const fetchFleetSnapshotByUrl = cache(
   },
 );
 
-/** Fetch every fleet agent's snapshot for `signals` in one round-trip, keyed by agent id. */
-function fetchFleetSnapshot(signals: string): Promise<Map<string, OverviewSnapshot>> {
+/**
+ * Fetch every fleet agent's snapshot for `signals` in one round-trip, keyed by agent id.
+ *
+ * `window` is the SAME period/anchor pair the fleet rollup beside these rows was read under
+ * (operator decision, 2026-08-26): one card, one clock. Until then this fan-out sent neither,
+ * and an absent window deliberately means all history — so the per-agent rows sat on lifetime
+ * values under a period rail every neighbouring figure obeyed. Omitting both (the caller passed
+ * no search params) keeps that all-history contract.
+ */
+function fetchFleetSnapshot(
+  signals: string,
+  window: { days: string | null; at: string | null },
+): Promise<Map<string, OverviewSnapshot>> {
   const qs = new URLSearchParams();
   qs.set("signals", signals);
+  if (window.days) qs.set("days", window.days);
+  if (window.at) qs.set("at", window.at);
   return fetchFleetSnapshotByUrl(`${backendUrl()}/observability/fleet-snapshot?${qs.toString()}`);
 }
 
@@ -163,7 +176,12 @@ export async function loadBreakdownLens(
   // An org-wide signal is settled by its declared capability alone: no per-agent fan-out at all.
   if (plan.kind === "masked") return { fleet, lens: { kind: "masked", signalId: plan.signalId } };
   const signals = plan.kind === "alarm" ? "slo" : "slo,scores";
-  const snapshots = await fetchFleetSnapshot(signals);
+  // The fan-out asks for the very window/anchor `fleetQuery` resolved for the rollup — read
+  // back off `params` rather than re-derived, so the two reads cannot disagree about the clock.
+  const snapshots = await fetchFleetSnapshot(signals, {
+    days: params.get("period"),
+    at: params.get("at"),
+  });
   const perAgent: AgentSnapshot[] = agents.map((a) => ({
     agentId: a.id,
     snapshot: snapshots.get(a.id),

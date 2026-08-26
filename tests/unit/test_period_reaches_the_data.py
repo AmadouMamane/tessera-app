@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from tessera.api.routes import observability as obs
+from tessera.api.routes.observability.batch import observability_fleet_batch
 from tessera.observability import replay as replay_mod
 from tessera.observability.eval import scores as scores_mod
 from tessera.observability.spine.adapters import set_reader
@@ -228,6 +229,54 @@ async def test_metric_pairs_names_the_window_it_applied() -> None:
     bare = await call_route(obs.observability_metric_pairs)
     assert bare["window"] == {"period_days": None}
     assert _size(bare["n"]) == 3
+
+
+def _fanout_slo_n(bulk: Any, agent: str) -> int:
+    """One agent's SLO sample size out of a fleet-snapshot payload (or a batch half)."""
+    entries = {e["agent_id"]: e["snapshot"] for e in bulk["agents"]}
+    return int(entries[agent]["signals"]["slo"]["data"]["n"])
+
+
+@pytest.mark.asyncio
+async def test_the_per_agent_fanout_answers_differently_per_period() -> None:
+    """The « Vue par agent » rows were the cockpit's LAST unwindowed read (found 2026-08-26).
+
+    The card's fleet total obeyed the rail while the per-agent rows above it read all
+    history — two clocks in one table, invisible because neither number errs. Same
+    assertion as every route above: two windows must be two answers, measured on the
+    payload; and the payload names the window it applied, ``None`` only when none was.
+    """
+    day = await call_route(obs.observability_fleet_snapshot, signals="slo", days="1")
+    month = await call_route(obs.observability_fleet_snapshot, signals="slo", days="30")
+    assert _fanout_slo_n(day, "support-client") == 1
+    assert _fanout_slo_n(month, "support-client") == 3
+    assert day["window"] == {"period_days": 1}
+    # The rail's own vocabulary reaches the data too — the front forwards its period KEY.
+    week = await call_route(obs.observability_fleet_snapshot, signals="slo", days="d7")
+    assert _fanout_slo_n(week, "support-client") == 2
+    bare = await call_route(obs.observability_fleet_snapshot, signals="slo")
+    assert bare["window"] == {"period_days": None}
+    assert _fanout_slo_n(bare, "support-client") == 3
+
+
+@pytest.mark.asyncio
+async def test_the_batch_forwards_the_window_to_both_snapshot_halves() -> None:
+    """The coalesced read the breakdown actually makes — the defect measured on its own route.
+
+    ``/observability/fleet-batch`` forwarded ``period`` to its fleet half only; both snapshot
+    halves were computed live over all history, so the operator's period selector changed the
+    total under the table and nothing in it. Two windows, two answers, on BOTH halves.
+    """
+    day: Any = await observability_fleet_batch(
+        lang="fr", period="h24", signals="slo", org_signals="slo"
+    )
+    month: Any = await observability_fleet_batch(
+        lang="fr", period="d30", signals="slo", org_signals="slo"
+    )
+    assert _fanout_slo_n(day["fleet_snapshot"], "support-client") == 1
+    assert _fanout_slo_n(month["fleet_snapshot"], "support-client") == 3
+    assert day["snapshot"]["signals"]["slo"]["data"]["n"] == 1
+    assert month["snapshot"]["signals"]["slo"]["data"]["n"] == 3
 
 
 @pytest.mark.asyncio

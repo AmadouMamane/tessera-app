@@ -4,7 +4,7 @@ A GOUVERNER domain page awaited the fleet rollup and then the per-agent snapshot
 INDEPENDENT reads, two serial tunnel round-trips. ``/observability/fleet-batch`` returns both at
 once. It exists only to save a round-trip; it may never change a value.
 
-Three tests pin that, and one pins a deliberate NON-forward:
+Three tests pin that, and one pins the shared clock:
 
 * wiring (deterministic): the endpoint calls the very handler objects ``/observability/fleet`` and
   ``/observability/fleet-snapshot`` register — so each half is that route's payload by
@@ -16,9 +16,10 @@ Three tests pin that, and one pins a deliberate NON-forward:
   lives in ``tests/integration/test_fleet_batch_parity_populated.py`` (2026-08-04);
 * independence: the two halves are passed through untouched, so each still degrades on its own
   terms (an unavailable fleet does not empty the snapshot);
-* ``?at=`` scopes the FLEET half only. The breakdown's snapshot fan-out has never carried an
-  as-of bound, and a round-trip collapse is not the place to give it one — that asymmetry is
-  preserved deliberately, so it is asserted rather than left to be "fixed" by accident.
+* ``?period=``/``?at=`` reach EVERY half. Until 2026-08-26 the snapshot fan-out deliberately
+  stayed live and all-history while the rollup obeyed the rail — two clocks inside the one
+  « Vue par agent » card. Decided on its own merits (operator, 2026-08-26): one card, one clock;
+  a caller that sends no window keeps the all-history contract unchanged.
 """
 
 from __future__ import annotations
@@ -119,7 +120,9 @@ def test_the_snapshot_half_equals_its_standalone_route(app: FastAPI) -> None:
     assert combined.status_code == 200
     body = combined.json()
 
-    snapshot = client.get(f"/observability/fleet-snapshot?signals={_SIGNALS}")
+    # The batch forwards its `period` as the fan-out's window, so the standalone comparison
+    # must ask for the same one — parity is only meaningful between two reads of one clock.
+    snapshot = client.get(f"/observability/fleet-snapshot?signals={_SIGNALS}&days=d7")
     assert snapshot.status_code == 200
     assert _without_call_meta(body["fleet_snapshot"]) == _without_call_meta(snapshot.json())
 
@@ -137,7 +140,7 @@ def test_the_org_half_equals_the_org_snapshot_route(app: FastAPI) -> None:
     assert combined.status_code == 200
     body = combined.json()
 
-    org = client.get("/observability/snapshot?signals=slo")
+    org = client.get("/observability/snapshot?signals=slo&days=d7")
     assert org.status_code == 200
     assert _without_call_meta_one(body["snapshot"]) == _without_call_meta_one(org.json())
     assert body["snapshot"]["signals"]["slo"], "the org half came back empty — vacuous parity"
@@ -183,12 +186,16 @@ def test_the_halves_are_independent(app: FastAPI) -> None:
 
 
 @pytest.mark.usefixtures("no_external")
-def test_as_of_scopes_the_fleet_half_only(app: FastAPI) -> None:
-    """``?at=`` bounds the rollup; the snapshot fan-out stays live, exactly as the front asks it.
+def test_the_window_and_anchor_reach_every_half(app: FastAPI) -> None:
+    """``?period=``/``?at=`` bound the rollup AND the snapshot halves — one card, one clock.
 
-    Not an oversight: the breakdown has never sent an as-of bound to the per-agent snapshot, and
-    forwarding this one would silently change the rendered columns. Asserted so the asymmetry is
-    a decision on the record rather than a detail somebody "tidies up" into a behaviour change.
+    This test used to assert the exact opposite (the fan-out deliberately stayed live and
+    all-history), so the asymmetry was a decision on the record. It has now been decided the
+    other way on its own merits (operator, 2026-08-26): the per-agent rows and the fleet total
+    render inside one card under one period control, and the old asymmetry showed lifetime
+    values beside a windowed total. Asserted the same way, so the NEW behaviour is equally on
+    the record — and each envelope names the scope it was computed under, so the claim is read
+    off the payload, not inferred from the call.
     """
     client = TestClient(app, raise_server_exceptions=False)
     body = client.get(
@@ -196,7 +203,10 @@ def test_as_of_scopes_the_fleet_half_only(app: FastAPI) -> None:
     ).json()
 
     assert body["fleet"] == client.get(f"/observability/fleet?lang=fr&period=d7&at={_ASOF}").json()
-    live = client.get(f"/observability/fleet-snapshot?signals={_SIGNALS}").json()
-    assert _without_call_meta(body["fleet_snapshot"]) == _without_call_meta(live)
-    # And it really is the LIVE fan-out: no as-of bound reached the snapshot half.
-    assert all(e["snapshot"]["scope"]["at"] is None for e in body["fleet_snapshot"]["agents"])
+    windowed = client.get(f"/observability/fleet-snapshot?signals={_SIGNALS}&days=d7&at={_ASOF}")
+    assert _without_call_meta(body["fleet_snapshot"]) == _without_call_meta(windowed.json())
+    # The window and the anchor really reached the fan-out: every envelope says so itself.
+    for entry in body["fleet_snapshot"]["agents"]:
+        assert entry["snapshot"]["scope"]["at"] == _ASOF
+        assert entry["snapshot"]["scope"]["days"] == 7
+    assert body["fleet_snapshot"]["window"] == {"period_days": 7}

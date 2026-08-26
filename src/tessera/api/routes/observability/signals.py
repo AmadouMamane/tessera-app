@@ -121,6 +121,10 @@ async def observability_fleet_snapshot(
     An agent whose compute raises is OMITTED (not zero-filled): the frontend then resolves it
     to ``undefined`` and renders that agent's honest refusal cell, exactly as a failed
     individual fetch does today. ``?signals=`` selects the same comma-separated subset.
+    ``?days=`` (a number of days, or a rail period key) windows every per-agent read, and the
+    response names the window it applied — ``null`` when none was: an absent window means ALL
+    HISTORY here, and until 2026-08-26 that silence let the « Vue par agent » rows sit on
+    lifetime values under a period rail every neighbouring figure obeyed.
     """
     ids = tuple(part.strip() for part in signals.split(",") if part.strip()) if signals else None
     agent_ids = sorted(registered_agent_ids())
@@ -147,7 +151,7 @@ async def observability_fleet_snapshot(
         for aid, envelope in zip(agent_ids, envelopes, strict=True)
         if not isinstance(envelope, BaseException)
     ]
-    return {"agents": agents}
+    return {"agents": agents, "window": {"period_days": parse_period_days(days)}}
 
 
 @router.get("/observability/data-range")

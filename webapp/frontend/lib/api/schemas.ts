@@ -7301,6 +7301,8 @@ export type ControlSeries = z.infer<typeof ControlSeriesSchema>;
  */
 export const FleetSnapshotSchema = z.object({
   agents: z.array(z.object({ agent_id: z.string(), snapshot: OverviewSnapshotSchema })),
+  /** The window the fan-out applied (`period_days: null` = all history) — the payload names it. */
+  window: z.object({ period_days: z.number().nullable() }).optional(),
 });
 export type FleetSnapshot = z.infer<typeof FleetSnapshotSchema>;
 

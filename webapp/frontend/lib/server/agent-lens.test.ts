@@ -142,10 +142,37 @@ describe("the declared lens loader", () => {
     const urls = fetchMock.mock.calls.map((c) => String(c[0]));
     expect(urls).toEqual([
       "http://backend.test/observability/fleet-batch?lang=fr&period=d7&org_signals=slo",
-      "http://backend.test/observability/fleet-snapshot?signals=slo%2Cscores",
+      "http://backend.test/observability/fleet-snapshot?signals=slo%2Cscores&days=d7",
     ]);
     expect(fleet?.agents?.map((a) => a.id)).toEqual(["support-client", "recouvrement"]);
     expect(lens.kind).toBe("quality");
+  });
+
+  it("fans out under the SAME window and anchor as the rollup — one card, one clock", async () => {
+    // The regression this guards (operator, 2026-08-26): the per-agent rows read all history
+    // while the fleet total beside them obeyed the rail — the period selector changed the
+    // total under the table and nothing in it. The fan-out's `days`/`at` must be the very
+    // values `fleetQuery` resolved for the batch read, never re-derived.
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/observability/fleet-batch")) {
+        return jsonResponse({ fleet: FLEET, snapshot: ORG_QUIET });
+      }
+      return jsonResponse({ agents: [] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await loadDeclaredLens("/surveiller/qualite-ia", "fr", {
+      fleetSearchParams: { period: "h24", asof: "2026-07-23T12:00:00+00:00" },
+    });
+
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+    expect(urls).toEqual([
+      "http://backend.test/observability/fleet-batch?lang=fr&period=h24" +
+        "&at=2026-07-23T12%3A00%3A00%2B00%3A00&org_signals=slo",
+      "http://backend.test/observability/fleet-snapshot?signals=slo%2Cscores&days=h24" +
+        "&at=2026-07-23T12%3A00%3A00%2B00%3A00",
+    ]);
   });
 
   it("spends ONE read on the quality page when the org plan settles it org-wide", async () => {
