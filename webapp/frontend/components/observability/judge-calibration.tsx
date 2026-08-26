@@ -52,7 +52,7 @@ const catColor = (c: string) => CAT_COLOR[c] ?? "var(--tessera-text-muted)";
 
 // ── small shared atoms ───────────────────────────────────────────────────────
 
-/** Section heading (A. / B. / C. / D.). */
+/** Section heading. */
 function Sec({ children }: { children: ReactNode }) {
   return (
     <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
@@ -421,7 +421,6 @@ function MiniLine({ buckets, baseline }: { buckets: SeriesBucket[]; baseline?: n
  *  Link when the action has a real home page, a disabled button (with the reason in
  *  its title) when the action's endpoint does not exist yet — never a dead button. */
 function ActionCard({
-  n,
   title,
   desc,
   roles,
@@ -430,7 +429,6 @@ function ActionCard({
   href,
   notWired,
 }: {
-  n: number;
   title: string;
   desc: string;
   roles: { label: string; tone: "warning" | "success" | "neutral" | "danger" }[];
@@ -446,12 +444,7 @@ function ActionCard({
   }`;
   return (
     <Card className="flex min-w-0 flex-col gap-2 p-3">
-      <div className="flex items-start gap-2">
-        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-muted)] text-[0.6rem] font-semibold tabular-nums">
-          {n}
-        </span>
-        <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
-      </div>
+      <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
       <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
       <div className="flex flex-wrap gap-1">
         {roles.map((r) => (
@@ -481,8 +474,8 @@ function ActionCard({
 // ── main hero (zones A · B · C · D) ──────────────────────────────────────────
 
 /** Full judge-calibration hero, faithful to the normative tab (image 05):
- * A. État actuel · B. Diagnostic de calibration · C. Segments à risque & dérive ·
- * D. Actions recommandées. Everything is real: the gold-set points (scored by the
+ * État actuel · Diagnostic de calibration · Segments à risque & dérive ·
+ * Actions recommandées. Everything is real: the gold-set points (scored by the
  * sovereign llama3.2:3b judge, backfilled to eval/calibration/_calibration.json)
  * feed the matrix/curve/distribution and the per-language/-metric/-segment
  * breakdowns; `drift` is the durable judge-score drift over the window. */
@@ -744,7 +737,6 @@ export function JudgeCalibration({
       <Sec>{tq("judge.secActions")}</Sec>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <ActionCard
-          n={1}
           title={tq("judge.act.recalTitle")}
           desc={tq("judge.act.recalDesc")}
           roles={[{ label: "Operator+", tone: "success" }]}
@@ -752,7 +744,6 @@ export function JudgeCalibration({
           notWired={tq("judge.act.notWired")}
         />
         <ActionCard
-          n={2}
           title={tq("judge.act.curateTitle", { n: nDisagree })}
           desc={tq("judge.act.curateDesc")}
           roles={[{ label: "Admin+", tone: "warning" }]}
@@ -760,7 +751,6 @@ export function JudgeCalibration({
           href="/agir/curation-eval-set"
         />
         <ActionCard
-          n={3}
           title={tq("judge.act.shadowTitle")}
           desc={tq("judge.act.shadowDesc")}
           roles={[{ label: "Operator+", tone: "success" }]}
@@ -768,7 +758,6 @@ export function JudgeCalibration({
           href="/agir/replay-shadow"
         />
         <ActionCard
-          n={4}
           title={tq("judge.act.freezeTitle")}
           desc={tq("judge.act.freezeDesc")}
           roles={[
@@ -780,7 +769,6 @@ export function JudgeCalibration({
           href="/agir/release-control"
         />
         <ActionCard
-          n={5}
           title={tq("judge.act.complianceTitle")}
           desc={tq("judge.act.complianceDesc")}
           roles={[{ label: "Compliance+", tone: "neutral" }]}
@@ -788,7 +776,6 @@ export function JudgeCalibration({
           href="/surveiller/conformite"
         />
         <ActionCard
-          n={6}
           title={tq("judge.act.evidenceTitle")}
           desc={tq("judge.act.evidenceDesc")}
           roles={[{ label: "Auditor+", tone: "neutral" }]}
