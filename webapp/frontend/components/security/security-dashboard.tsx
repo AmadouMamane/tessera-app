@@ -882,8 +882,12 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 needed: with only the first, the auto layout spread the slack over five of
                 these seven columns (gutters of 51, 26, 37, 30, 67 px under identical `px-3`);
                 with only the second, «≤ 0.10%» and «100% (3/3)» broke across two lines in
-                columns 69 px wide. Measured in `e2e/table-rhythm.spec.ts`. */}
-              <th className="min-w-[11rem] px-3 py-2 font-medium">{ts("col.signal")}</th>
+                columns 69 px wide. Measured in `e2e/table-rhythm.spec.ts`. The identity
+                column is nowrap-content-sized like the value columns (an earlier
+                `min-w-[11rem]` made it a second slack absorber once the mould's smaller
+                type freed 36 px inside it — two absorbers is exactly the spread the rule
+                refuses). */}
+              <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.signal")}</th>
               <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.state")}</th>
               <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.value")}</th>
               <th className="px-3 py-2 font-medium whitespace-nowrap">{ts("col.target")}</th>
@@ -896,7 +900,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           <tbody>
             {rows.map((c) => (
               <tr key={c.key} className="border-b border-[var(--border)]/50">
-                <td className="px-3 py-2 font-medium">{ts(`ctrl.${c.key}`)}</td>
+                <td className="px-3 py-2 font-medium whitespace-nowrap">{ts(`ctrl.${c.key}`)}</td>
                 <td className="px-3 py-2">
                   <Badge tone={TONE_BADGE[c.tone]}>{ts(`state.${c.tone}`)}</Badge>
                 </td>
