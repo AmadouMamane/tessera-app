@@ -537,7 +537,7 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
         lens: reliability,
       }),
     );
-    expect(screen.getByText("Erreurs outils (erreurs / appels)")).toBeTruthy();
+    expect(screen.getByText("Erreurs outils")).toBeTruthy();
     expect(screen.getByText("Latence")).toBeTruthy();
     expect(screen.getByText("Coût (tokens)")).toBeTruthy();
     expect(screen.getByText("3 / 521")).toBeTruthy();

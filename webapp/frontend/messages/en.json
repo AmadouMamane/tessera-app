@@ -3615,12 +3615,12 @@
       "report": "Export report"
     },
     "sec": {
-      "actual": "A. Current state",
-      "controls": "B. Critical controls",
-      "diagnostic": "C. Root-cause diagnostic",
-      "predictive": "D. Predictive signals",
-      "privacy": "E. Privacy / Memory / SOC",
-      "actions": "F. Recommended actions"
+      "actual": "Current state",
+      "controls": "Critical controls",
+      "diagnostic": "Root-cause diagnostic",
+      "predictive": "Predictive signals",
+      "privacy": "Privacy / Memory / SOC",
+      "actions": "Recommended actions"
     },
     "kpi": {
       "attackRate": "Attack success rate",
@@ -9115,7 +9115,7 @@
     "colGuardDenied": "Guard denials (denied / calls)",
     "colGovernedActs": "Governed acts",
     "colLedgerEntries": "Ledger entries",
-    "colToolErrors": "Tool errors (errors / calls)",
+    "colToolErrors": "Tool errors",
     "colCostTokens": "Cost (tokens)",
     "costMeanTitle": "Mean per turn: {mean} tokens",
     "maskedOrgWide": "This table is hidden because the signal applies to the whole fleet and cannot be split by agent. Open its sheet for details.",

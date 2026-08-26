@@ -3615,12 +3615,12 @@
       "report": "Exporter rapport"
     },
     "sec": {
-      "actual": "A. État actuel",
-      "controls": "B. Contrôles critiques",
-      "diagnostic": "C. Diagnostic racine",
-      "predictive": "D. Signaux prédictifs",
-      "privacy": "E. Privacy / Mémoire / SOC",
-      "actions": "F. Actions recommandées"
+      "actual": "État actuel",
+      "controls": "Contrôles critiques",
+      "diagnostic": "Diagnostic racine",
+      "predictive": "Signaux prédictifs",
+      "privacy": "Privacy / Mémoire / SOC",
+      "actions": "Actions recommandées"
     },
     "kpi": {
       "attackRate": "Taux de réussite d'attaque",
@@ -9115,7 +9115,7 @@
     "colGuardDenied": "Refus garde (refus / appels)",
     "colGovernedActs": "Actes gouvernés",
     "colLedgerEntries": "Entrées du journal d'audit",
-    "colToolErrors": "Erreurs outils (erreurs / appels)",
+    "colToolErrors": "Erreurs outils",
     "colCostTokens": "Coût (tokens)",
     "costMeanTitle": "Moyenne par tour : {mean} tokens",
     "maskedOrgWide": "Ce tableau n'est pas affiché : ce signal concerne toute la flotte et ne peut pas être réparti par agent. Consultez sa fiche pour le détail.",

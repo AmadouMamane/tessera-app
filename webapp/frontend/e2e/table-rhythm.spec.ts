@@ -521,7 +521,8 @@ for (const width of [1672, 1280]) {
  * this layout runs 0.63 to 1.25 of the median; the two defects ran 0.06 and 1.93 to 2.02.
  *
  * At a laptop width only the floor applies, and that is a measurement, not a concession. At
- * 946 px the columns are content-bound: «Erreurs outils (erreurs / appels)» wraps and fills
+ * 946 px the columns are content-bound: «Erreurs outils (erreurs / appels)» (header since
+ * shortened to «Erreurs outils», 2026-08-26, which is what lifted this floor) wrapped and filled
  * its column, leaving 31 px of leading air with no width anywhere to redistribute. This layout
  * runs 0.34 to 1.75 there, so a ceiling would assert something the page cannot hold — and a
  * bar nobody meets is one that gets lowered later, quietly, by whoever trips it.

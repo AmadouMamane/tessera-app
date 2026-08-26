@@ -3615,12 +3615,12 @@
       "report": "Bericht exportieren"
     },
     "sec": {
-      "actual": "A. Aktueller Stand",
-      "controls": "B. Kritische Kontrollen",
-      "diagnostic": "C. Ursachen-Diagnose",
-      "predictive": "D. Prädiktive Signale",
-      "privacy": "E. Datenschutz / Speicher / SOC",
-      "actions": "F. Empfohlene Maßnahmen"
+      "actual": "Aktueller Stand",
+      "controls": "Kritische Kontrollen",
+      "diagnostic": "Ursachen-Diagnose",
+      "predictive": "Prädiktive Signale",
+      "privacy": "Datenschutz / Speicher / SOC",
+      "actions": "Empfohlene Maßnahmen"
     },
     "kpi": {
       "attackRate": "Angriffs-Erfolgsrate",
@@ -9115,7 +9115,7 @@
     "colGuardDenied": "Guard-Ablehnungen (abgelehnt / Aufrufe)",
     "colGovernedActs": "Governance-Akte",
     "colLedgerEntries": "Ledger-Einträge",
-    "colToolErrors": "Tool-Fehler (Fehler / Aufrufe)",
+    "colToolErrors": "Tool-Fehler",
     "colCostTokens": "Kosten (Tokens)",
     "costMeanTitle": "Mittel pro Turn: {mean} Tokens",
     "maskedOrgWide": "Diese Tabelle wird nicht angezeigt: Das Signal gilt für die gesamte Flotte und lässt sich nicht nach Agent aufteilen. Details stehen im Signal-Steckbrief.",
