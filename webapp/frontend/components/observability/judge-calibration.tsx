@@ -553,7 +553,7 @@ export function JudgeCalibration({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* A. État actuel ── KPI strip (8 tiles) */}
+      {/* État actuel ── KPI strip (8 tiles) */}
       <Sec>{tq("judge.secActual")}</Sec>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         <Kpi
@@ -614,28 +614,28 @@ export function JudgeCalibration({
         />
       </div>
 
-      {/* B. Diagnostic de calibration ── matrix · curve · distribution · donut */}
+      {/* Diagnostic de calibration ── matrix · curve · distribution · donut */}
       <Sec>{tq("judge.secDiag")}</Sec>
       <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
-        <Panel title={`1) ${tq("judge.confusion")}`} explainKey="jgConfusion">
+        <Panel title={tq("judge.confusion")} explainKey="jgConfusion">
           <ConfusionMatrix tp={tp} fp={fp} fn={fn} tn={tn} />
         </Panel>
-        <Panel title={`2) ${tq("judge.curve")}`} explainKey="jgCurve">
+        <Panel title={tq("judge.curve")} explainKey="jgCurve">
           <CalibrationCurve points={points} />
         </Panel>
-        <Panel title={`3) ${tq("judge.distribution")}`} explainKey="jgDistribution">
+        <Panel title={tq("judge.distribution")} explainKey="jgDistribution">
           <ScoreDistribution points={points} />
         </Panel>
-        <Panel title={`4) ${tq("judge.disagreeDist")}`} explainKey="jgDisagreeDist">
+        <Panel title={tq("judge.disagreeDist")} explainKey="jgDisagreeDist">
           <DisagreementDonut data={donutData} total={nDisagree} />
         </Panel>
       </div>
 
-      {/* C. Segments à risque & dérive */}
+      {/* Segments à risque & dérive */}
       <Sec>{tq("judge.secSegments")}</Sec>
       <div className="grid items-start gap-2 lg:grid-cols-2 2xl:grid-cols-4">
         <Panel
-          title={`1) ${tq("judge.kappaEvolution")}`}
+          title={tq("judge.kappaEvolution")}
           explainKey="jgKappaEvo"
           className="2xl:col-span-1"
         >
@@ -644,14 +644,14 @@ export function JudgeCalibration({
             {tq("judge.kappaEvolutionNote")}
           </p>
         </Panel>
-        <Panel title={`2) ${tq("judge.byLanguage")}`} explainKey="jgByLang">
+        <Panel title={tq("judge.byLanguage")} explainKey="jgByLang">
           <GroupRows groups={data.by_language ?? []} labelKey={(l) => l.toUpperCase()} showKappa />
         </Panel>
-        <Panel title={`3) ${tq("judge.byMetric")}`} explainKey="jgByMetric">
+        <Panel title={tq("judge.byMetric")} explainKey="jgByMetric">
           <GroupRows groups={data.by_category ?? []} labelKey={(l) => tq(`judge.cat.${l}`)} />
         </Panel>
         <div className="flex flex-col gap-2">
-          <Panel title={`4) ${tq("judge.topSegments")}`} explainKey="jgTopSeg">
+          <Panel title={tq("judge.topSegments")} explainKey="jgTopSeg">
             <ul className="flex flex-col gap-1 text-[0.72rem]">
               {(data.by_segment ?? [])
                 .filter((s) => s.n_disagree > 0)
@@ -669,7 +669,7 @@ export function JudgeCalibration({
               ) : null}
             </ul>
           </Panel>
-          <Panel title={`5) ${tq("judge.overrides")}`} explainKey="jgOverrides">
+          <Panel title={tq("judge.overrides")} explainKey="jgOverrides">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold tabular-nums">{data.n_overrides ?? 0}</span>
               <span className="text-[0.65rem] text-[var(--muted-foreground)]">
@@ -690,8 +690,8 @@ export function JudgeCalibration({
         </div>
       </div>
 
-      {/* 6) Cas échoués représentatifs */}
-      <Panel title={`6) ${tq("judge.repCases")}`} explainKey="jgRepCases">
+      {/* Cas échoués représentatifs */}
+      <Panel title={tq("judge.repCases")} explainKey="jgRepCases">
         {disagreements.length === 0 ? (
           <p className="py-3 text-center text-sm text-[var(--muted-foreground)]">
             {tq("judge.noDisagreements")}
@@ -740,7 +740,7 @@ export function JudgeCalibration({
         )}
       </Panel>
 
-      {/* D. Actions recommandées ── 6 governed cards */}
+      {/* Actions recommandées ── 6 governed cards */}
       <Sec>{tq("judge.secActions")}</Sec>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <ActionCard
