@@ -51,6 +51,7 @@ __all__ = [
     "DEFAULT_SET_PATH",
     "REFORMULATION_DIR",
     "CandidateVerdict",
+    "JudgeReferentVerdict",
     "LlmReformulationVerdict",
     "ReformulationCandidate",
     "ReformulationCase",
@@ -60,7 +61,9 @@ __all__ = [
     "main",
     "render_case_template",
     "score_checker_column",
+    "score_judge_referent_column",
     "score_llm_column",
+    "suggest_fidelity_threshold",
 ]
 
 REFORMULATION_DIR = Path(__file__).parent / "reformulation"
@@ -331,6 +334,95 @@ def score_llm_column(
     return asyncio.run(_run())
 
 
+@dataclass(frozen=True, slots=True)
+class JudgeReferentVerdict:
+    """The judge's score for one LABELED candidate — truth is the label, never the judge."""
+
+    case: ReformulationCase
+    candidate: ReformulationCandidate
+    status: str
+    fidelity: float | None
+    model: str
+
+
+def score_judge_referent_column(
+    cases: tuple[ReformulationCase, ...],
+    *,
+    timeout_s: float,
+    concurrency: int,
+    model: str | None,
+) -> list[JudgeReferentVerdict]:
+    """Score every labeled candidate with the fidelity judge (ADR 0054 §4).
+
+    This is the calibration measurement: the referent's labels are the truth and the
+    judge is on trial, so every candidate is judged — faithful and violation alike —
+    and the threshold is derived from where the judge actually separates them, never
+    hand-picked. Spends one real judge call per candidate.
+    """
+
+    async def _one(
+        case: ReformulationCase, candidate: ReformulationCandidate, gate: asyncio.Semaphore
+    ) -> JudgeReferentVerdict:
+        async with gate:
+            judgement = await judge_template_fidelity_llm(
+                render_case_template(case),
+                candidate.text,
+                language=case.language,
+                timeout_s=timeout_s,
+                model=model,
+            )
+            return JudgeReferentVerdict(
+                case=case,
+                candidate=candidate,
+                status=judgement.status,
+                fidelity=judgement.fidelity,
+                model=judgement.model,
+            )
+
+    async def _run() -> list[JudgeReferentVerdict]:
+        gate = asyncio.Semaphore(max(1, concurrency))
+        return list(
+            await asyncio.gather(
+                *(_one(case, candidate, gate) for case in cases for candidate in case.candidates)
+            )
+        )
+
+    return asyncio.run(_run())
+
+
+def suggest_fidelity_threshold(
+    faithful_scores: list[float], violation_scores: list[float]
+) -> dict[str, object]:
+    """Derive the calibrated floor from the judge's scores over the labeled referent.
+
+    The rule is engraved (ADR 0054 §5), only the number is measured: a labeled violation
+    must never pass, so the suggested threshold is the smallest OBSERVED faithful score
+    strictly above every violation score — data-derived, no hand-picked epsilon. What the
+    floor costs is stated with it: the faithful candidates it also refuses fall back to
+    the exact template (safe, only less useful). No faithful score clears the violations
+    → ``suggested_threshold`` is ``None`` and ``separates`` says so out loud: a judge
+    that cannot separate the labels is unusable at ANY floor on that model.
+    """
+    violations_max = max(violation_scores) if violation_scores else None
+    clearing = [
+        score for score in faithful_scores if violations_max is None or score > violations_max
+    ]
+    suggested = min(clearing) if clearing else None
+    accepted = sum(1 for s in faithful_scores if suggested is not None and s >= suggested)
+    return {
+        "faithful_scored": len(faithful_scores),
+        "violations_scored": len(violation_scores),
+        "faithful_min": min(faithful_scores) if faithful_scores else None,
+        "faithful_max": max(faithful_scores) if faithful_scores else None,
+        "violations_min": min(violation_scores) if violation_scores else None,
+        "violations_max": violations_max,
+        "suggested_threshold": suggested,
+        "faithful_accepted": accepted,
+        "faithful_refused": len(faithful_scores) - accepted,
+        "separates": suggested is not None,
+    }
+
+
 def _percentile(values: list[float], fraction: float) -> float | None:
     if not values:
         return None
@@ -357,6 +449,7 @@ def build_report(
     candidate_verdicts: list[CandidateVerdict],
     gate_verdicts: list[GateVerdict],
     llm_verdicts: list[LlmReformulationVerdict] | None = None,
+    judge_referent_verdicts: list[JudgeReferentVerdict] | None = None,
 ) -> dict[str, object]:
     """Assemble the report; the LLM column is honestly absent unless a run measured it."""
     languages = sorted({case.language for case in referent.cases})
@@ -405,6 +498,46 @@ def build_report(
                 if v.checker_ok is False
             },
         }
+    judge_referent_column: dict[str, object]
+    if judge_referent_verdicts is None:
+        judge_referent_column = {
+            "status": "not_run",
+            "reason": (
+                "the judge-referent column only exists when a run measured it "
+                "(--judge-referent); this column must never carry a fabricated number"
+            ),
+        }
+    else:
+        faithful_scores = [
+            v.fidelity
+            for v in judge_referent_verdicts
+            if v.candidate.label == "faithful" and v.fidelity is not None
+        ]
+        violation_scores = [
+            v.fidelity
+            for v in judge_referent_verdicts
+            if v.candidate.label == "violates" and v.fidelity is not None
+        ]
+        judge_referent_column = {
+            "status": "measured",
+            "n_candidates": len(judge_referent_verdicts),
+            "scored": sum(1 for v in judge_referent_verdicts if v.fidelity is not None),
+            "failures_by_status": {
+                status: sum(1 for v in judge_referent_verdicts if v.status == status)
+                for status in sorted({v.status for v in judge_referent_verdicts})
+                if status != "scored"
+            },
+            "models": sorted({v.model for v in judge_referent_verdicts if v.model}),
+            "calibration": suggest_fidelity_threshold(faithful_scores, violation_scores),
+            "scores": {
+                f"{v.case.id}/{v.candidate.id}": {
+                    "label": v.candidate.label,
+                    "fidelity": v.fidelity,
+                    "status": v.status,
+                }
+                for v in judge_referent_verdicts
+            },
+        }
     return {
         "schema_version": "reformulation_bench.v1",
         "run_at": datetime.now(tz=UTC).isoformat(timespec="seconds"),
@@ -426,6 +559,7 @@ def build_report(
                 "disagreements": disagreements,
             },
             "llm": llm_column,
+            "judge_referent": judge_referent_column,
         },
     }
 
@@ -454,6 +588,29 @@ def _print_report(report: dict[str, object]) -> None:
         )
     else:
         print("  llm: not run (--llm to measure — spends real calls)")
+    judge_referent = columns["judge_referent"]
+    if judge_referent.get("status") == "measured":
+        calibration = cast(dict[str, object], judge_referent["calibration"])
+        if calibration["separates"]:
+            verdict = (
+                f"suggested threshold {calibration['suggested_threshold']} "
+                f"(accepts {calibration['faithful_accepted']}/{calibration['faithful_scored']} "
+                f"faithful, refuses every scored violation)"
+            )
+        else:
+            verdict = (
+                "NO separating threshold — the judge cannot be trusted at any floor "
+                "on this model"
+            )
+        print(
+            f"  judge-referent: scored {judge_referent['scored']}/"
+            f"{judge_referent['n_candidates']} · "
+            f"faithful [{calibration['faithful_min']}..{calibration['faithful_max']}] · "
+            f"violations [{calibration['violations_min']}..{calibration['violations_max']}] · "
+            f"{verdict} · models {judge_referent['models']}"
+        )
+    else:
+        print("  judge-referent: not run (--judge-referent to calibrate — spends real calls)")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -481,6 +638,14 @@ def main(argv: list[str] | None = None) -> int:
         "--judge",
         action="store_true",
         help="with --llm: also score each candidate with the fidelity judge (a second call)",
+    )
+    parser.add_argument(
+        "--judge-referent",
+        action="store_true",
+        help=(
+            "score every LABELED referent candidate with the fidelity judge and derive "
+            "the calibrated threshold (ADR 0054 §4; one real call per candidate)"
+        ),
     )
     parser.add_argument(
         "--llm-timeout",
@@ -513,7 +678,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.llm
         else None
     )
-    report = build_report(referent, candidate_verdicts, gate_verdicts, llm_verdicts)
+    judge_referent_verdicts = (
+        score_judge_referent_column(
+            referent.cases,
+            timeout_s=args.llm_timeout,
+            concurrency=args.concurrency,
+            model=args.llm_model,
+        )
+        if args.judge_referent
+        else None
+    )
+    report = build_report(
+        referent, candidate_verdicts, gate_verdicts, llm_verdicts, judge_referent_verdicts
+    )
     _print_report(report)
     if args.report is not None:
         args.report.parent.mkdir(parents=True, exist_ok=True)
