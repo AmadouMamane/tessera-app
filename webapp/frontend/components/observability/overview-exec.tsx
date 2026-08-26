@@ -364,11 +364,21 @@ export function TopProblems({
                 pasted in (operator eye, 2026-08-25). */}
             <table data-premium-table="true" className="w-full">
               <thead>
+                {/* One slack column (the signal name), every fact column sized by its own
+                    content and forbidden to wrap — without this, auto layout spread the
+                    card's leftover width over three gutters (334/132/95 px, measured in
+                    e2e/table-rhythm.spec.ts). */}
                 <tr className="border-b border-[var(--border)] text-left uppercase text-[var(--muted-foreground)]">
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.signal")}</th>
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.status")}</th>
-                  <th className="py-2 pr-4 font-medium">{tq("signalsTable.cols.score")}</th>
-                  <th className="py-2 font-medium">{tq("signalsTable.cols.threshold")}</th>
+                  <th className="w-full py-2 pr-4 font-medium">{tq("signalsTable.cols.signal")}</th>
+                  <th className="py-2 pr-4 font-medium whitespace-nowrap">
+                    {tq("signalsTable.cols.status")}
+                  </th>
+                  <th className="py-2 pr-4 font-medium whitespace-nowrap">
+                    {tq("signalsTable.cols.score")}
+                  </th>
+                  <th className="py-2 font-medium whitespace-nowrap">
+                    {tq("signalsTable.cols.threshold")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -383,13 +393,15 @@ export function TopProblems({
                     onClick={onSelect ? () => onSelect(r) : undefined}
                   >
                     <td className="py-2 pr-4 font-medium">{r.name}</td>
-                    <td className="py-2 pr-4">
+                    <td className="py-2 pr-4 whitespace-nowrap">
                       <Badge tone={STATUS_TONE[r.status] ?? "neutral"}>
                         {tq(`signalsTable.status.${r.status}`)}
                       </Badge>
                     </td>
-                    <td className="py-2 pr-4 font-semibold tabular-nums">{r.score}</td>
-                    <td className="py-2 tabular-nums text-[var(--muted-foreground)]">
+                    <td className="py-2 pr-4 font-semibold tabular-nums whitespace-nowrap">
+                      {r.score}
+                    </td>
+                    <td className="py-2 tabular-nums whitespace-nowrap text-[var(--muted-foreground)]">
                       {r.threshold}
                     </td>
                   </tr>
