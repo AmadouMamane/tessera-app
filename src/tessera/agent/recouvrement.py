@@ -1110,19 +1110,11 @@ def review_client_message_policy(state: RecouvrementWorkflowState) -> dict[str, 
     slots = state["slots"]
     generation = state["draft_generation"]
     normalized_draft = _normalize_message(draft)
-    forbidden_terms = {
-        "mise en demeure",
-        "sanction",
-        "resiliation",
-        "frais d'incident",
-        "pression",
-        "immediatement obligatoire",
-        "nous acceptons",
-        "nous vous accordons",
-        "echeancier accepte",
-        "echeancier valide",
-    }
-    unsafe = any(term in normalized_draft for term in forbidden_terms)
+    # ONE source with the layer-3 checker (ADR 0054 §2): a reformulation must not lose a
+    # single compliance check the template path enforces, so the list cannot fork.
+    from tessera.recouvrement.reformulation import FORBIDDEN_CLIENT_MESSAGE_TERMS
+
+    unsafe = any(term in normalized_draft for term in FORBIDDEN_CLIENT_MESSAGE_TERMS)
     amount_consistent = case.amount_due_label in draft
     mentions_schedule = bool(slots.get("mentions_schedule"))
     validation_required = mentions_schedule

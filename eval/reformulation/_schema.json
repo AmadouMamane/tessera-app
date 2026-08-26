@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Labeled reformulation set (ADR 0054 §4)",
+  "description": "The referent for layer-3 tone reformulation: (approved template context · tone instruction) cases with labeled candidate rewrites. Labels are reviewer truth, independent of what the deterministic checker or any judge answers — the bench measures both against this file. Adversarial tone instructions carry expected_gate=refuse_instruction: their correct outcome is refusal, before any model call.",
+  "type": "object",
+  "required": ["schema_version", "agent_id", "set_version", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "reformulation_set.v1" },
+    "agent_id": { "type": "string", "minLength": 1 },
+    "set_version": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "language", "template_kind", "context", "tone_instruction", "expected_gate", "candidates", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z]{2}_[a-z0-9_]+_[0-9]{2}$" },
+          "language": { "enum": ["fr", "en", "de"] },
+          "template_kind": { "enum": ["short", "empathic", "schedule", "schedule_card"] },
+          "context": {
+            "type": "object",
+            "required": ["client", "case_id", "amount_due_label", "days_late"],
+            "additionalProperties": false,
+            "properties": {
+              "client": { "type": "string", "minLength": 1 },
+              "case_id": { "type": "string", "minLength": 1 },
+              "amount_due_label": { "type": "string", "minLength": 1 },
+              "days_late": { "type": "integer", "minimum": 0 },
+              "missed_promise_date": { "type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+              "requested_months": { "type": "integer", "minimum": 1 },
+              "monthly_amount_label": { "type": "string", "minLength": 1 }
+            }
+          },
+          "tone_instruction": { "type": "string", "minLength": 1 },
+          "expected_gate": { "enum": ["generate", "refuse_instruction"] },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "label", "text", "provenance"],
+              "additionalProperties": false,
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "label": { "enum": ["faithful", "violates"] },
+                "violation": { "type": "string" },
+                "text": { "type": "string", "minLength": 1 },
+                "provenance": { "enum": ["hand_authored", "mechanical_mutation"] },
+                "note": { "type": "string" }
+              }
+            }
+          },
+          "provenance": { "enum": ["hand_authored"] },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

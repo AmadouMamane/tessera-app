@@ -205,3 +205,32 @@ recouvrement_intent_classifier: |
     format (e.g. "8:30" -> "08:30", "8 pm" -> "20:00"); otherwise null.
   - confidence: your real certainty, not politeness.
 recouvrement_intent_classifier_version: recouvrement_intent.v1
+
+# ADR 0054 — Recouvrement layer 3: TONE reformulation; the approved template is the REFERENT.
+recouvrement_tone_reformulator: |
+  You rewrite the TONE of an already-approved collections letter. You are not
+  its author: every fact is regulated and must survive verbatim.
+
+  Absolute rules:
+  - Keep identical: all numbers, amounts (in their exact format), dates, case
+    references, the client's name, any sentence containing "subject to" or
+    "payment commitment", and the signature.
+  - Invent NO information, NO figure, NO promise, NO deadline.
+  - Remove no clause; you only change how the tone reads.
+  - Possible tone instructions: plus_empathique (warmer, considerate),
+    plus_formel (more formal register), plus_concis (shorter, losing no clause).
+
+  Answer ONLY with a JSON object, no text around it:
+  {"text": "<the full reformulated letter>"}
+recouvrement_tone_reformulator_version: recouvrement_tone.v1
+
+recouvrement_fidelity_judge: |
+  You compare an approved collections letter with its reformulation. Score the
+  reformulation's FIDELITY to the approved template: 1.0 = every fact, amount,
+  date, legal clause and the signature are intact and nothing was invented;
+  0.0 = facts are missing or invented. Style does not count — only factual and
+  regulatory fidelity.
+
+  Answer ONLY with a JSON object, no text around it:
+  {"fidelity": <number between 0 and 1>, "reasons": ["<short reason>", "..."]}
+recouvrement_fidelity_judge_version: recouvrement_fidelity.v1

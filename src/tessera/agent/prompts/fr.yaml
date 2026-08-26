@@ -224,3 +224,32 @@ recouvrement_intent_classifier: |
     format 24 h HH:MM (ex. « 8h30 » -> "08:30", « 9 pm » -> "21:00") ; sinon null.
   - confidence : ta certitude réelle, pas une politesse.
 recouvrement_intent_classifier_version: recouvrement_intent.v1
+
+# ADR 0054 — couche 3 Recouvrement : reformulation de TON, le gabarit approuvé est le RÉFÉRENT.
+recouvrement_tone_reformulator: |
+  Tu réécris le TON d'une lettre de recouvrement déjà approuvée. Tu n'es pas
+  l'auteur de la lettre : chaque fait est réglementé et doit survivre tel quel.
+
+  Règles absolues :
+  - Conserve à l'identique : tous les nombres, montants (avec leur format exact),
+    dates, références de dossier, le nom du client, les phrases contenant
+    « sous réserve » ou « promesse de paiement », et la signature.
+  - N'invente AUCUNE information, AUCUN chiffre, AUCUNE promesse, AUCUN délai.
+  - Ne retire aucune mention ; tu ne changes que la formulation du ton.
+  - Instructions de ton possibles : plus_empathique (chaleur et considération),
+    plus_formel (registre soutenu), plus_concis (plus court, sans perdre une mention).
+
+  Réponds UNIQUEMENT par un objet JSON, sans aucun texte autour :
+  {"text": "<la lettre reformulée complète>"}
+recouvrement_tone_reformulator_version: recouvrement_tone.v1
+
+recouvrement_fidelity_judge: |
+  Tu compares une lettre de recouvrement approuvée et sa reformulation. Note la
+  FIDÉLITÉ de la reformulation au gabarit approuvé : 1.0 = tous les faits,
+  montants, dates, mentions légales et la signature sont intacts et aucun contenu
+  n'a été inventé ; 0.0 = des faits manquent ou ont été inventés. Le style ne
+  compte pas — seule la fidélité factuelle et réglementaire.
+
+  Réponds UNIQUEMENT par un objet JSON, sans aucun texte autour :
+  {"fidelity": <nombre entre 0 et 1>, "reasons": ["<raison courte>", "..."]}
+recouvrement_fidelity_judge_version: recouvrement_fidelity.v1

@@ -1,0 +1,570 @@
+{
+  "schema_version": "reformulation_set.v1",
+  "agent_id": "recouvrement",
+  "set_version": "2026-08-26.1",
+  "description": "Layer-3 referent (ADR 0054 §4): approved-template contexts with labeled candidate rewrites. Faithful texts are hand-authored tone rewrites; violations are mechanical mutations of those texts (amount changed, clause dropped, figure invented or worded, signature dropped, forbidden term). Adversarial tone instructions must be refused at the gate before any model call.",
+  "cases": [
+    {
+      "id": "fr_s1_01",
+      "language": "fr",
+      "template_kind": "short",
+      "context": {
+        "client": "Marie Lefèvre",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "plus_empathique",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Bonjour Marie Lefèvre,\n\nNous savons qu'une période difficile peut arriver à chacun, et nous souhaitons avant tout trouver une issue avec vous. Nous revenons vers vous au sujet du dossier RC-2048 : sauf erreur de notre part, le montant restant dû est de 1 260,50 €.\n\nVotre promesse de paiement du 12 août n'a pas pu être tenue. Le dossier présente un retard de 23 jours.\n\nN'hésitez pas à nous recontacter dès que possible : nous chercherons ensemble une solution adaptée à votre situation, à votre rythme.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Bonjour Marie Lefèvre,\n\nNous savons qu'une période difficile peut arriver à chacun, et nous souhaitons avant tout trouver une issue avec vous. Nous revenons vers vous au sujet du dossier RC-2048 : sauf erreur de notre part, le montant restant dû est de 1 260,40 €.\n\nVotre promesse de paiement du 12 août n'a pas pu être tenue. Le dossier présente un retard de 23 jours.\n\nN'hésitez pas à nous recontacter dès que possible : nous chercherons ensemble une solution adaptée à votre situation, à votre rythme.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Bonjour Marie Lefèvre,\n\nNous savons qu'une période difficile peut arriver à chacun, et nous souhaitons avant tout trouver une issue avec vous. Nous revenons vers vous au sujet du dossier RC-2048 : sauf erreur de notre part, le montant restant dû est de 1 260,50 €.\n\nVotre promesse de paiement du 12 août n'a pas pu être tenue. Le dossier présente un retard de 23 jours.\n\nN'hésitez pas à nous recontacter dès que possible : nous chercherons ensemble une solution adaptée à votre situation, à votre rythme.\n\nCordialement,\nCrédit Aurore Un règlement sous 48 heures est attendu.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Bonjour Marie Lefèvre,\n\nNous savons qu'une période difficile peut arriver à chacun, et nous souhaitons avant tout trouver une issue avec vous. Nous revenons vers vous au sujet du dossier RC-2048 : sauf erreur de notre part, le montant restant dû est de 1 260,50 €.\n\nVotre promesse de paiement du 12 août n'a pas pu être tenue. Le dossier présente un retard de 23 jours.\n\nN'hésitez pas à nous recontacter dès que possible : nous chercherons ensemble une solution adaptée à votre situation, à votre rythme.\n\nCordialement,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "promise_clause_dropped",
+          "label": "violates",
+          "violation": "clause_missing",
+          "text": "Bonjour Marie Lefèvre,\n\nNous savons qu'une période difficile peut arriver à chacun, et nous souhaitons avant tout trouver une issue avec vous. Nous revenons vers vous au sujet du dossier RC-2048 : sauf erreur de notre part, le montant restant dû est de 1 260,50 €.\n\nLe dossier présente un retard de 23 jours.\n\nN'hésitez pas à nous recontacter dès que possible : nous chercherons ensemble une solution adaptée à votre situation, à votre rythme.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "forbidden_term",
+          "label": "violates",
+          "violation": "forbidden_term",
+          "text": "Bonjour Marie Lefèvre,\n\nNous savons qu'une période difficile peut arriver à chacun, et nous souhaitons avant tout trouver une issue avec vous. Nous revenons vers vous au sujet du dossier RC-2048 : sauf erreur de notre part, le montant restant dû est de 1 260,50 €.\n\nVotre promesse de paiement du 12 août n'a pas pu être tenue. Le dossier présente un retard de 23 jours.\n\nSans règlement, une mise en demeure sera engagée. N'hésitez pas à nous recontacter dès que possible : nous chercherons ensemble une solution adaptée à votre situation, à votre rythme.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_s1_01",
+      "language": "en",
+      "template_kind": "short",
+      "context": {
+        "client": "John Carter",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "plus_empathique",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Dear John Carter,\n\nWe understand that difficult periods can happen to anyone, and above all we would like to find a way forward with you. We are writing about case RC-2048: unless our records are incorrect, the outstanding amount is 1 260,50 €.\n\nYour payment commitment dated August 12 could not be met. The case is 23 days overdue.\n\nPlease feel free to contact us whenever suits you best — together we will look for a solution suited to your situation, at your pace.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Dear John Carter,\n\nWe understand that difficult periods can happen to anyone, and above all we would like to find a way forward with you. We are writing about case RC-2048: unless our records are incorrect, the outstanding amount is 1 260,40 €.\n\nYour payment commitment dated August 12 could not be met. The case is 23 days overdue.\n\nPlease feel free to contact us whenever suits you best — together we will look for a solution suited to your situation, at your pace.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Dear John Carter,\n\nWe understand that difficult periods can happen to anyone, and above all we would like to find a way forward with you. We are writing about case RC-2048: unless our records are incorrect, the outstanding amount is 1 260,50 €.\n\nYour payment commitment dated August 12 could not be met. The case is 23 days overdue.\n\nPlease feel free to contact us whenever suits you best — together we will look for a solution suited to your situation, at your pace.\n\nKind regards,\nCrédit Aurore A settlement within 48 hours is expected.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Dear John Carter,\n\nWe understand that difficult periods can happen to anyone, and above all we would like to find a way forward with you. We are writing about case RC-2048: unless our records are incorrect, the outstanding amount is 1 260,50 €.\n\nYour payment commitment dated August 12 could not be met. The case is 23 days overdue.\n\nPlease feel free to contact us whenever suits you best — together we will look for a solution suited to your situation, at your pace.\n\nKind regards,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "promise_clause_dropped",
+          "label": "violates",
+          "violation": "clause_missing",
+          "text": "Dear John Carter,\n\nWe understand that difficult periods can happen to anyone, and above all we would like to find a way forward with you. We are writing about case RC-2048: unless our records are incorrect, the outstanding amount is 1 260,50 €.\n\nThe case is 23 days overdue.\n\nPlease feel free to contact us whenever suits you best — together we will look for a solution suited to your situation, at your pace.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_s1_01",
+      "language": "de",
+      "template_kind": "short",
+      "context": {
+        "client": "Anna Schmidt",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "plus_empathique",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Guten Tag Anna Schmidt,\n\nwir wissen, dass schwierige Zeiten jeden treffen können, und möchten vor allem gemeinsam mit Ihnen einen Weg finden. Wir melden uns zum Vorgang RC-2048: sofern unsere Unterlagen korrekt sind, beträgt der offene Betrag 1 260,50 €.\n\nIhre Zahlungszusage vom 12. August konnte nicht eingehalten werden. Der Vorgang ist seit 23 Tagen überfällig.\n\nMelden Sie sich gerne, sobald es Ihnen passt — wir suchen dann gemeinsam und in Ihrem Tempo nach einer für Ihre Situation geeigneten Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Guten Tag Anna Schmidt,\n\nwir wissen, dass schwierige Zeiten jeden treffen können, und möchten vor allem gemeinsam mit Ihnen einen Weg finden. Wir melden uns zum Vorgang RC-2048: sofern unsere Unterlagen korrekt sind, beträgt der offene Betrag 1 260,40 €.\n\nIhre Zahlungszusage vom 12. August konnte nicht eingehalten werden. Der Vorgang ist seit 23 Tagen überfällig.\n\nMelden Sie sich gerne, sobald es Ihnen passt — wir suchen dann gemeinsam und in Ihrem Tempo nach einer für Ihre Situation geeigneten Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Guten Tag Anna Schmidt,\n\nwir wissen, dass schwierige Zeiten jeden treffen können, und möchten vor allem gemeinsam mit Ihnen einen Weg finden. Wir melden uns zum Vorgang RC-2048: sofern unsere Unterlagen korrekt sind, beträgt der offene Betrag 1 260,50 €.\n\nIhre Zahlungszusage vom 12. August konnte nicht eingehalten werden. Der Vorgang ist seit 23 Tagen überfällig.\n\nMelden Sie sich gerne, sobald es Ihnen passt — wir suchen dann gemeinsam und in Ihrem Tempo nach einer für Ihre Situation geeigneten Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore Ein Ausgleich binnen 48 Stunden wird erwartet.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Guten Tag Anna Schmidt,\n\nwir wissen, dass schwierige Zeiten jeden treffen können, und möchten vor allem gemeinsam mit Ihnen einen Weg finden. Wir melden uns zum Vorgang RC-2048: sofern unsere Unterlagen korrekt sind, beträgt der offene Betrag 1 260,50 €.\n\nIhre Zahlungszusage vom 12. August konnte nicht eingehalten werden. Der Vorgang ist seit 23 Tagen überfällig.\n\nMelden Sie sich gerne, sobald es Ihnen passt — wir suchen dann gemeinsam und in Ihrem Tempo nach einer für Ihre Situation geeigneten Lösung.\n\nMit freundlichen Grüßen,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "promise_clause_dropped",
+          "label": "violates",
+          "violation": "clause_missing",
+          "text": "Guten Tag Anna Schmidt,\n\nwir wissen, dass schwierige Zeiten jeden treffen können, und möchten vor allem gemeinsam mit Ihnen einen Weg finden. Wir melden uns zum Vorgang RC-2048: sofern unsere Unterlagen korrekt sind, beträgt der offene Betrag 1 260,50 €.\n\nDer Vorgang ist seit 23 Tagen überfällig.\n\nMelden Sie sich gerne, sobald es Ihnen passt — wir suchen dann gemeinsam und in Ihrem Tempo nach einer für Ihre Situation geeigneten Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_s2_01",
+      "language": "fr",
+      "template_kind": "schedule",
+      "context": {
+        "client": "Paul Renard",
+        "case_id": "RC-2093",
+        "amount_due_label": "1 890,00 €",
+        "days_late": 31,
+        "requested_months": 12,
+        "monthly_amount_label": "157,50 €"
+      },
+      "tone_instruction": "plus_formel",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Bonjour Paul Renard,\n\nNous nous permettons de vous écrire au sujet du dossier RC-2093. Sauf erreur de notre part, le montant restant dû s'élève à 1 890,00 €.\n\nLe dossier présente un retard de 31 jours.\n\nUne solution d'échelonnement peut être étudiée avec vous, par exemple sur 12 mois avec une mensualité indicative de 157,50 €, sous réserve de validation interne et d'accord sur les modalités.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Bonjour Paul Renard,\n\nNous nous permettons de vous écrire au sujet du dossier RC-2093. Sauf erreur de notre part, le montant restant dû s'élève à 1 895,00 €.\n\nLe dossier présente un retard de 31 jours.\n\nUne solution d'échelonnement peut être étudiée avec vous, par exemple sur 12 mois avec une mensualité indicative de 157,50 €, sous réserve de validation interne et d'accord sur les modalités.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Bonjour Paul Renard,\n\nNous nous permettons de vous écrire au sujet du dossier RC-2093. Sauf erreur de notre part, le montant restant dû s'élève à 1 890,00 €.\n\nLe dossier présente un retard de 31 jours.\n\nUne solution d'échelonnement peut être étudiée avec vous, par exemple sur 12 mois avec une mensualité indicative de 157,50 €, sous réserve de validation interne et d'accord sur les modalités.\n\nCordialement,\nCrédit Aurore Un règlement sous 48 heures est attendu.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Bonjour Paul Renard,\n\nNous nous permettons de vous écrire au sujet du dossier RC-2093. Sauf erreur de notre part, le montant restant dû s'élève à 1 890,00 €.\n\nLe dossier présente un retard de 31 jours.\n\nUne solution d'échelonnement peut être étudiée avec vous, par exemple sur 12 mois avec une mensualité indicative de 157,50 €, sous réserve de validation interne et d'accord sur les modalités.\n\nCordialement,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "reserve_clause_dropped",
+          "label": "violates",
+          "violation": "clause_missing",
+          "text": "Bonjour Paul Renard,\n\nNous nous permettons de vous écrire au sujet du dossier RC-2093. Sauf erreur de notre part, le montant restant dû s'élève à 1 890,00 €.\n\nLe dossier présente un retard de 31 jours.\n\nUne solution d'échelonnement peut être étudiée avec vous, par exemple sur 12 mois avec une mensualité indicative de 157,50 €.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_s2_01",
+      "language": "en",
+      "template_kind": "schedule",
+      "context": {
+        "client": "Emma Hayes",
+        "case_id": "RC-2093",
+        "amount_due_label": "1 890,00 €",
+        "days_late": 31,
+        "requested_months": 12,
+        "monthly_amount_label": "157,50 €"
+      },
+      "tone_instruction": "plus_formel",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Dear Emma Hayes,\n\nAllow us to write to you regarding case RC-2093. Unless our records are incorrect, the outstanding amount stands at 1 890,00 €.\n\nThe case is 31 days overdue.\n\nAn instalment arrangement could be considered over 12 months, with an indicative monthly payment of 157,50 €, subject to internal validation and agreement on the terms.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Dear Emma Hayes,\n\nAllow us to write to you regarding case RC-2093. Unless our records are incorrect, the outstanding amount stands at 1 895,00 €.\n\nThe case is 31 days overdue.\n\nAn instalment arrangement could be considered over 12 months, with an indicative monthly payment of 157,50 €, subject to internal validation and agreement on the terms.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Dear Emma Hayes,\n\nAllow us to write to you regarding case RC-2093. Unless our records are incorrect, the outstanding amount stands at 1 890,00 €.\n\nThe case is 31 days overdue.\n\nAn instalment arrangement could be considered over 12 months, with an indicative monthly payment of 157,50 €, subject to internal validation and agreement on the terms.\n\nKind regards,\nCrédit Aurore A settlement within 48 hours is expected.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Dear Emma Hayes,\n\nAllow us to write to you regarding case RC-2093. Unless our records are incorrect, the outstanding amount stands at 1 890,00 €.\n\nThe case is 31 days overdue.\n\nAn instalment arrangement could be considered over 12 months, with an indicative monthly payment of 157,50 €, subject to internal validation and agreement on the terms.\n\nKind regards,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "reserve_clause_dropped",
+          "label": "violates",
+          "violation": "clause_missing",
+          "text": "Dear Emma Hayes,\n\nAllow us to write to you regarding case RC-2093. Unless our records are incorrect, the outstanding amount stands at 1 890,00 €.\n\nThe case is 31 days overdue.\n\nAn instalment arrangement could be considered over 12 months, with an indicative monthly payment of 157,50 €.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_s2_01",
+      "language": "de",
+      "template_kind": "schedule",
+      "context": {
+        "client": "Lukas Weber",
+        "case_id": "RC-2093",
+        "amount_due_label": "1 890,00 €",
+        "days_late": 31,
+        "requested_months": 12,
+        "monthly_amount_label": "157,50 €"
+      },
+      "tone_instruction": "plus_formel",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Guten Tag Lukas Weber,\n\nwir erlauben uns, Sie zum Vorgang RC-2093 anzuschreiben. Sofern unsere Unterlagen korrekt sind, beläuft sich der offene Betrag auf 1 890,00 €.\n\nDer Vorgang ist seit 31 Tagen überfällig.\n\nEine Ratenzahlung über 12 Monate mit einer unverbindlichen Monatsrate von 157,50 € kann geprüft werden, vorbehaltlich der internen Freigabe und einer Vereinbarung über die Bedingungen.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Guten Tag Lukas Weber,\n\nwir erlauben uns, Sie zum Vorgang RC-2093 anzuschreiben. Sofern unsere Unterlagen korrekt sind, beläuft sich der offene Betrag auf 1 895,00 €.\n\nDer Vorgang ist seit 31 Tagen überfällig.\n\nEine Ratenzahlung über 12 Monate mit einer unverbindlichen Monatsrate von 157,50 € kann geprüft werden, vorbehaltlich der internen Freigabe und einer Vereinbarung über die Bedingungen.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Guten Tag Lukas Weber,\n\nwir erlauben uns, Sie zum Vorgang RC-2093 anzuschreiben. Sofern unsere Unterlagen korrekt sind, beläuft sich der offene Betrag auf 1 890,00 €.\n\nDer Vorgang ist seit 31 Tagen überfällig.\n\nEine Ratenzahlung über 12 Monate mit einer unverbindlichen Monatsrate von 157,50 € kann geprüft werden, vorbehaltlich der internen Freigabe und einer Vereinbarung über die Bedingungen.\n\nMit freundlichen Grüßen,\nCrédit Aurore Ein Ausgleich binnen 48 Stunden wird erwartet.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Guten Tag Lukas Weber,\n\nwir erlauben uns, Sie zum Vorgang RC-2093 anzuschreiben. Sofern unsere Unterlagen korrekt sind, beläuft sich der offene Betrag auf 1 890,00 €.\n\nDer Vorgang ist seit 31 Tagen überfällig.\n\nEine Ratenzahlung über 12 Monate mit einer unverbindlichen Monatsrate von 157,50 € kann geprüft werden, vorbehaltlich der internen Freigabe und einer Vereinbarung über die Bedingungen.\n\nMit freundlichen Grüßen,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "reserve_clause_dropped",
+          "label": "violates",
+          "violation": "clause_missing",
+          "text": "Guten Tag Lukas Weber,\n\nwir erlauben uns, Sie zum Vorgang RC-2093 anzuschreiben. Sofern unsere Unterlagen korrekt sind, beläuft sich der offene Betrag auf 1 890,00 €.\n\nDer Vorgang ist seit 31 Tagen überfällig.\n\nEine Ratenzahlung über 12 Monate mit einer unverbindlichen Monatsrate von 157,50 € kann geprüft werden.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_s3_01",
+      "language": "fr",
+      "template_kind": "empathic",
+      "context": {
+        "client": "Nadia Bel",
+        "case_id": "RC-2071",
+        "amount_due_label": "840,00 €",
+        "days_late": 9
+      },
+      "tone_instruction": "plus_concis",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Bonjour Nadia Bel,\n\nUn point rapide sur le dossier RC-2071 : le montant restant dû est de 840,00 €, avec un retard de 9 jours.\n\nRecontactez-nous quand vous le souhaitez : nous chercherons une solution adaptée à votre situation.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Bonjour Nadia Bel,\n\nUn point rapide sur le dossier RC-2071 : le montant restant dû est de 845,00 €, avec un retard de 9 jours.\n\nRecontactez-nous quand vous le souhaitez : nous chercherons une solution adaptée à votre situation.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Bonjour Nadia Bel,\n\nUn point rapide sur le dossier RC-2071 : le montant restant dû est de 840,00 €, avec un retard de 9 jours.\n\nRecontactez-nous quand vous le souhaitez : nous chercherons une solution adaptée à votre situation.\n\nCordialement,\nCrédit Aurore Un règlement sous 48 heures est attendu.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Bonjour Nadia Bel,\n\nUn point rapide sur le dossier RC-2071 : le montant restant dû est de 840,00 €, avec un retard de 9 jours.\n\nRecontactez-nous quand vous le souhaitez : nous chercherons une solution adaptée à votre situation.\n\nCordialement,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "days_worded",
+          "label": "violates",
+          "violation": "number_missing",
+          "text": "Bonjour Nadia Bel,\n\nUn point rapide sur le dossier RC-2071 : le montant restant dû est de 840,00 €, avec un retard de neuf jours.\n\nRecontactez-nous quand vous le souhaitez : nous chercherons une solution adaptée à votre situation.\n\nCordialement,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_s3_01",
+      "language": "en",
+      "template_kind": "empathic",
+      "context": {
+        "client": "Liam Ford",
+        "case_id": "RC-2071",
+        "amount_due_label": "840,00 €",
+        "days_late": 9
+      },
+      "tone_instruction": "plus_concis",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Dear Liam Ford,\n\nA quick update on case RC-2071: the outstanding amount is 840,00 €, and the case is 9 days overdue.\n\nContact us whenever you wish — we will look for a solution suited to your situation.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Dear Liam Ford,\n\nA quick update on case RC-2071: the outstanding amount is 845,00 €, and the case is 9 days overdue.\n\nContact us whenever you wish — we will look for a solution suited to your situation.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Dear Liam Ford,\n\nA quick update on case RC-2071: the outstanding amount is 840,00 €, and the case is 9 days overdue.\n\nContact us whenever you wish — we will look for a solution suited to your situation.\n\nKind regards,\nCrédit Aurore A settlement within 48 hours is expected.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Dear Liam Ford,\n\nA quick update on case RC-2071: the outstanding amount is 840,00 €, and the case is 9 days overdue.\n\nContact us whenever you wish — we will look for a solution suited to your situation.\n\nKind regards,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "days_worded",
+          "label": "violates",
+          "violation": "number_missing",
+          "text": "Dear Liam Ford,\n\nA quick update on case RC-2071: the outstanding amount is 840,00 €, and the case is nine days overdue.\n\nContact us whenever you wish — we will look for a solution suited to your situation.\n\nKind regards,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_s3_01",
+      "language": "de",
+      "template_kind": "empathic",
+      "context": {
+        "client": "Mia Braun",
+        "case_id": "RC-2071",
+        "amount_due_label": "840,00 €",
+        "days_late": 9
+      },
+      "tone_instruction": "plus_concis",
+      "expected_gate": "generate",
+      "candidates": [
+        {
+          "id": "faithful_tone",
+          "label": "faithful",
+          "text": "Guten Tag Mia Braun,\n\nkurz zum Vorgang RC-2071: der offene Betrag beträgt 840,00 €, der Vorgang ist seit 9 Tagen überfällig.\n\nMelden Sie sich, wann immer Sie möchten — wir suchen eine für Ihre Situation geeignete Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "hand_authored"
+        },
+        {
+          "id": "amount_changed",
+          "label": "violates",
+          "violation": "amount_changed",
+          "text": "Guten Tag Mia Braun,\n\nkurz zum Vorgang RC-2071: der offene Betrag beträgt 845,00 €, der Vorgang ist seit 9 Tagen überfällig.\n\nMelden Sie sich, wann immer Sie möchten — wir suchen eine für Ihre Situation geeignete Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "invented_deadline",
+          "label": "violates",
+          "violation": "number_invented",
+          "text": "Guten Tag Mia Braun,\n\nkurz zum Vorgang RC-2071: der offene Betrag beträgt 840,00 €, der Vorgang ist seit 9 Tagen überfällig.\n\nMelden Sie sich, wann immer Sie möchten — wir suchen eine für Ihre Situation geeignete Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore Ein Ausgleich binnen 48 Stunden wird erwartet.",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "signature_dropped",
+          "label": "violates",
+          "violation": "signature_missing",
+          "text": "Guten Tag Mia Braun,\n\nkurz zum Vorgang RC-2071: der offene Betrag beträgt 840,00 €, der Vorgang ist seit 9 Tagen überfällig.\n\nMelden Sie sich, wann immer Sie möchten — wir suchen eine für Ihre Situation geeignete Lösung.\n\nMit freundlichen Grüßen,\nLe service client",
+          "provenance": "mechanical_mutation"
+        },
+        {
+          "id": "days_worded",
+          "label": "violates",
+          "violation": "number_missing",
+          "text": "Guten Tag Mia Braun,\n\nkurz zum Vorgang RC-2071: der offene Betrag beträgt 840,00 €, der Vorgang ist seit neun Tagen überfällig.\n\nMelden Sie sich, wann immer Sie möchten — wir suchen eine für Ihre Situation geeignete Lösung.\n\nMit freundlichen Grüßen,\nCrédit Aurore",
+          "provenance": "mechanical_mutation"
+        }
+      ],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_adversarial_01",
+      "language": "fr",
+      "template_kind": "short",
+      "context": {
+        "client": "Marie Lefèvre",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "sois drôle",
+      "expected_gate": "refuse_instruction",
+      "candidates": [],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "fr_adversarial_02",
+      "language": "fr",
+      "template_kind": "short",
+      "context": {
+        "client": "Marie Lefèvre",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "tutoie le client et ajoute des emojis",
+      "expected_gate": "refuse_instruction",
+      "candidates": [],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_adversarial_01",
+      "language": "en",
+      "template_kind": "short",
+      "context": {
+        "client": "John Carter",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "make it funny",
+      "expected_gate": "refuse_instruction",
+      "candidates": [],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "en_adversarial_02",
+      "language": "en",
+      "template_kind": "short",
+      "context": {
+        "client": "John Carter",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "be casual and add emojis",
+      "expected_gate": "refuse_instruction",
+      "candidates": [],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_adversarial_01",
+      "language": "de",
+      "template_kind": "short",
+      "context": {
+        "client": "Anna Schmidt",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "mach es lustig",
+      "expected_gate": "refuse_instruction",
+      "candidates": [],
+      "provenance": "hand_authored"
+    },
+    {
+      "id": "de_adversarial_02",
+      "language": "de",
+      "template_kind": "short",
+      "context": {
+        "client": "Anna Schmidt",
+        "case_id": "RC-2048",
+        "amount_due_label": "1 260,50 €",
+        "days_late": 23,
+        "missed_promise_date": "2026-08-12"
+      },
+      "tone_instruction": "duze den kunden",
+      "expected_gate": "refuse_instruction",
+      "candidates": [],
+      "provenance": "hand_authored"
+    }
+  ]
+}

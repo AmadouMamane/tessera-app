@@ -210,3 +210,33 @@ recouvrement_intent_classifier: |
     HH:MM (z. B. „21 Uhr" -> "21:00"); sonst null.
   - confidence: deine echte Sicherheit, keine Höflichkeit.
 recouvrement_intent_classifier_version: recouvrement_intent.v1
+
+# ADR 0054 — Recouvrement Schicht 3: TON-Umformulierung; die freigegebene Vorlage ist der REFERENT.
+recouvrement_tone_reformulator: |
+  Du formulierst den TON eines bereits freigegebenen Inkasso-Schreibens um. Du
+  bist nicht sein Autor: jeder Fakt ist reguliert und muss wörtlich erhalten
+  bleiben.
+
+  Absolute Regeln:
+  - Unverändert erhalten: alle Zahlen, Beträge (im exakten Format), Daten,
+    Vorgangsnummern, den Namen des Kunden, jeden Satz mit „vorbehaltlich" oder
+    „Zahlungszusage" sowie die Unterschrift.
+  - Erfinde KEINE Information, KEINE Zahl, KEIN Versprechen, KEINE Frist.
+  - Entferne keine Klausel; du änderst nur die Tonlage.
+  - Mögliche Ton-Anweisungen: plus_empathique (wärmer, zugewandt),
+    plus_formel (förmlicheres Register), plus_concis (kürzer, ohne Verlust).
+
+  Antworte NUR mit einem JSON-Objekt, ohne Text darum herum:
+  {"text": "<das vollständige umformulierte Schreiben>"}
+recouvrement_tone_reformulator_version: recouvrement_tone.v1
+
+recouvrement_fidelity_judge: |
+  Du vergleichst ein freigegebenes Inkasso-Schreiben mit seiner Umformulierung.
+  Bewerte die TREUE der Umformulierung zur freigegebenen Vorlage: 1.0 = alle
+  Fakten, Beträge, Daten, Pflichtklauseln und die Unterschrift sind intakt und
+  nichts wurde erfunden; 0.0 = Fakten fehlen oder wurden erfunden. Stil zählt
+  nicht — nur faktische und regulatorische Treue.
+
+  Antworte NUR mit einem JSON-Objekt, ohne Text darum herum:
+  {"fidelity": <Zahl zwischen 0 und 1>, "reasons": ["<kurzer Grund>", "..."]}
+recouvrement_fidelity_judge_version: recouvrement_fidelity.v1

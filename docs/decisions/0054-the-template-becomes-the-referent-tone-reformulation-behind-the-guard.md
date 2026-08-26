@@ -1,9 +1,11 @@
 # 0054 — Layer 3 opens as an option: tone reformulation, with the approved template as REFERENT
 
-- Status: **proposed** (drafted 2026-08-24 at the operator's request — implementation
-  starts only once the operator accepts this record; ADR 0053 explicitly kept this out of
-  scope pending its own ADR)
-- Date: 2026-08-24
+- Status: **accepted** (2026-08-26 — the operator commissioned the chantier: « vas sur le
+  chantier reformulation recouvrement jusqu'à atterrir complètement ». Slice 1 done by that
+  act; slices 2-3 land with the code this record now governs. The compliance pass named in
+  Costs remains a precondition to SHADOW — the mode knob therefore defaults to ``off``, not
+  ``shadow``, unlike layer 1 — and slice 4 remains the operator's own act.)
+- Date: 2026-08-24 (accepted 2026-08-26)
 - Supersedes: none
 - Superseded by: none
 - Relates to: [0053](0053-the-llm-understands-the-code-decides-the-templates-speak.md)
