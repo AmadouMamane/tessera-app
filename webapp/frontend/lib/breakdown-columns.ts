@@ -65,18 +65,26 @@ export const COL_IDENTITY = "w-[6.5rem] 2xl:w-[9rem]";
  * the two meet the inks touch with only the padding between them. Right-aligning the verdict
  * gives it leading air at all; this width makes that air the size of its neighbours'.
  *
- * **A quarter, and not a share of the column count.** The share rule (`2 / (values + 2)`) is
- * the one that reads correctly and measures badly: with two value columns it hands the verdict
- * half the table and squeezes its neighbours to 23 px of separation, and with five at 1280 px
- * it drives gaps NEGATIVE — inks overlapping. Swept over nine candidates x four lenses x two
- * viewports on the built server, a flat 25 % is the only one that never falls below 0.48 of the
- * median gap; the shipped defect was 0.06. A flat value wins because a value column's ink is
- * usually its HEADER, not its number, so shrinking those columns costs more than the verdict
- * gains.
+ * **A flat share, and not a share of the column count.** The share rule (`2 / (values + 2)`)
+ * is the one that reads correctly and measures badly: with two value columns it hands the
+ * verdict half the table and squeezes its neighbours to 23 px of separation, and with five at
+ * 1280 px it drives gaps NEGATIVE — inks overlapping. A flat value wins because a value
+ * column's ink is usually its HEADER, not its number, so shrinking those columns costs more
+ * than the verdict gains.
+ *
+ * **18 %, re-measured 2026-08-26.** The original sweep chose 25 % when every lens ended in a
+ * verdict SENTENCE. The served verdicts today are short chips («PRÊT», «Non évalué»), and
+ * measured ink-to-ink over the nine pages x two viewports, the quarter had become mostly air:
+ * every lens without the «Dernière évaluation» column ran 2.11-2.23x the median before the
+ * verdict at 1672 px, against a 1.6 ceiling. At 18 % the same walk runs 1.03-1.44 with every
+ * floor at 0.56+. The blocking sentence («Bloqué : moins fiable que sans modèle», ~209 px)
+ * still fits on one line at 1672 px (241 px box); at 1280 px it wraps to two lines, and that
+ * trade is accepted — a rare blocked verdict may take two lines, a permanent quarter of air
+ * may not.
  *
  * A percentage is also what the browser accepts. Under `table-layout: fixed` Chromium SILENTLY
  * DROPS a cell width whose `calc()` mixes a percentage with a length: `calc((100% - 10rem) * 2
- * / 6)` resolved to the plain equal share — no warning, plausible-looking table. `25%` is
- * honoured, and being a literal, Tailwind's scanner emits it.
+ * / 6)` resolved to the plain equal share — no warning, plausible-looking table. A literal
+ * percentage is honoured, and Tailwind's scanner emits it.
  */
-export const COL_VERDICT = "w-[25%]";
+export const COL_VERDICT = "w-[18%]";
