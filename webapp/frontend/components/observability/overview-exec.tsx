@@ -573,7 +573,7 @@ const INTENT_IDS = new Set([
   "unknown",
 ]);
 
-/** "C. Signaux prédictifs" — trend badge, regression-risk read, judge drift, the
+/** "Signaux prédictifs" — trend badge, regression-risk read, judge drift, the
  * failure predictor, and the at-risk intents/languages (all real, image 00). */
 export function PredictiveSignals({
   series,

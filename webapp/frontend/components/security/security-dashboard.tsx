@@ -1649,7 +1649,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       ) : (
         <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="flex min-w-0 flex-col gap-2.5">
-            {/* A. État actuel */}
+            {/* État actuel */}
             <Zone
               label={ts("sec.actual")}
               info={<SecInfo k="zoneActual" title={ts("sec.actual")} />}
@@ -1717,7 +1717,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               </div>
             </Zone>
 
-            {/* B. Contrôles critiques */}
+            {/* Contrôles critiques */}
             <Zone
               label={ts("sec.controls")}
               info={<SecInfo k="zoneControls" title={ts("sec.controls")} />}
@@ -1725,7 +1725,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               {controlsTable(controls)}
             </Zone>
 
-            {/* C. Diagnostic racine */}
+            {/* Diagnostic racine */}
             <Zone
               label={ts("sec.diagnostic")}
               info={<SecInfo k="zoneDiagnostic" title={ts("sec.diagnostic")} />}
@@ -1811,7 +1811,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               </div>
             </Zone>
 
-            {/* D. Signaux prédictifs */}
+            {/* Signaux prédictifs */}
             <Zone
               label={ts("sec.predictive")}
               info={<SecInfo k="zonePredictive" title={ts("sec.predictive")} />}
@@ -1867,7 +1867,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               </div>
             </Zone>
 
-            {/* E. Privacy / Mémoire / SOC */}
+            {/* Privacy / Mémoire / SOC */}
             <Zone
               label={ts("sec.privacy")}
               info={<SecInfo k="zonePrivacy" title={ts("sec.privacy")} />}
@@ -1958,7 +1958,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               </div>
             </Zone>
 
-            {/* F. Actions recommandées */}
+            {/* Actions recommandées */}
             <Zone
               label={ts("sec.actions")}
               info={<SecInfo k="zoneActions" title={ts("sec.actions")} />}

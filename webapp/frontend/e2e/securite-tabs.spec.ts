@@ -30,8 +30,8 @@ test("overview is selected by default and comprehensive (6 zones)", async ({ pag
     "aria-selected",
     "true",
   );
-  await expect(page.getByText("A. État actuel").first()).toBeVisible();
-  await expect(page.getByText("F. Actions recommandées")).toBeVisible();
+  await expect(page.getByText("État actuel").first()).toBeVisible();
+  await expect(page.getByText("Actions recommandées")).toBeVisible();
 });
 
 test("the prompt-injection tab focuses the real firewall signals", async ({ page }) => {
@@ -43,7 +43,7 @@ test("the prompt-injection tab focuses the real firewall signals", async ({ page
   await expect(page.getByText("Attaques testées (harnais)")).toBeVisible();
   await expect(page.getByText("Taux de réussite d’attaque")).toBeVisible();
   // The overview-only zones are dropped (proves switching).
-  await expect(page.getByText("F. Actions recommandées")).toHaveCount(0);
+  await expect(page.getByText("Actions recommandées")).toHaveCount(0);
 });
 
 test("the guard tab shows precision/recall and real governance links", async ({ page }) => {
@@ -78,5 +78,5 @@ test("memory and pii and tools tabs render their focused real panels", async ({ 
 
   // Back to overview restores the comprehensive layout.
   await page.getByRole("tab", { name: "Vue d’ensemble" }).click();
-  await expect(page.getByText("F. Actions recommandées")).toBeVisible();
+  await expect(page.getByText("Actions recommandées")).toBeVisible();
 });
