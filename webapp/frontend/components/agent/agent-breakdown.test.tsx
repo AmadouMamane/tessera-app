@@ -307,17 +307,26 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: alarm }),
     );
 
-    expect(screen.getByText("Valeur (Fidélité)")).toBeTruthy();
+    // One name for one measure: the header is the metric label alone, never a "Valeur (…)"
+    // template that made the same fact change name when the table changed state.
+    expect(screen.getByText("Fidélité")).toBeTruthy();
+    expect(screen.queryByText(/Valeur \(/)).toBeNull();
     expect(screen.getByText("Écart à l'objectif")).toBeTruthy();
     expect(screen.getByText("Réponses concernées")).toBeTruthy();
+    // The two clocks are named, and the release pair (verdict + its date) rides in BOTH
+    // lens modes — the lens flip only ever swaps the content of the first group.
+    expect(screen.getByText("Sur la période")).toBeTruthy();
+    expect(screen.getByText("Avant mise en ligne")).toBeTruthy();
+    expect(screen.getByText("Dernière évaluation")).toBeTruthy();
     // The release column is the other lane's work — it rides in every lens, untouched.
     expect(screen.getByText("Mise en ligne")).toBeTruthy();
-    // The heaviest contributor is first, and its numbers are named.
+    // The heaviest contributor is first, and its numbers are named. (Row 0 is the group
+    // header naming the two clocks, row 1 the column header — data starts at 2.)
     const rows = screen.getAllByRole("row");
-    expect(rowAt(rows, 1).textContent).toMatch(/Support Client/);
-    expect(rowAt(rows, 1).textContent).toMatch(/14 \/ 40/);
-    expect(rowAt(rows, 1).textContent).toMatch(/−30,0 pt|-30,0 pt/);
-    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
+    expect(rowAt(rows, 2).textContent).toMatch(/Support Client/);
+    expect(rowAt(rows, 2).textContent).toMatch(/14 \/ 40/);
+    expect(rowAt(rows, 2).textContent).toMatch(/−30,0 pt|-30,0 pt/);
+    expect(rowAt(rows, 3).textContent).toMatch(/Onboarding/);
     // Monitoring columns are GONE — they answered a different question.
     expect(screen.queryByText("Latence")).toBeNull();
     expect(screen.queryByText("Transferts (e/s)")).toBeNull();
@@ -379,8 +388,8 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: blind }),
     );
     const rows = screen.getAllByRole("row");
-    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
-    expect(rowAt(rows, 2).textContent).toMatch(/—/);
+    expect(rowAt(rows, 3).textContent).toMatch(/Onboarding/);
+    expect(rowAt(rows, 3).textContent).toMatch(/—/);
     expect(
       screen.getAllByTitle(
         "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée.",
@@ -623,7 +632,7 @@ describe("each GOUVERNER domain page gets ITS OWN columns — no more monitoring
 });
 
 describe("the quality lens answers the page's own question when nothing breaches", () => {
-  it("shows fidelity / hallucination / regression / gate / eval freshness", async () => {
+  it("shows the two named clocks: windowed measures, then the verdict and its date", async () => {
     const quality: QualityLens = {
       kind: "quality",
       rows: [
@@ -659,8 +668,15 @@ describe("the quality lens answers the page's own question when nothing breaches
     );
     expect(screen.getByText("Fidélité")).toBeTruthy();
     expect(screen.getByText("Hallucination")).toBeTruthy();
-    expect(screen.getByText("Échecs bloquants")).toBeTruthy();
+    // The two clocks are named as spanning groups over the columns they govern.
+    expect(screen.getByText("Sur la période")).toBeTruthy();
+    expect(screen.getByText("Avant mise en ligne")).toBeTruthy();
     expect(screen.getByText("Dernière évaluation")).toBeTruthy();
+    // The bench's internals left this view for the Évaluations one (operator, 2026-08-26):
+    // per-agent blocking failures and cases passed are the release control's work, one click
+    // through the row's own door — a third copy on the monitoring view mixed the clocks.
+    expect(screen.queryByText("Échecs bloquants")).toBeNull();
+    expect(screen.queryByText("Cas réussis")).toBeNull();
     expect(screen.getByText("96,2 %")).toBeTruthy();
     expect(
       screen.getAllByTitle("Ce signal ne peut pas être calculé sur cette période.").length,

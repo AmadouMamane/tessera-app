@@ -80,6 +80,49 @@ const RELEASE_TONE: Record<string, string> = {
 type Translator = Awaited<ReturnType<typeof getTranslations>>;
 type FleetAgent = NonNullable<Fleet["agents"]>[number];
 
+/**
+ * The two clocks of the quality/alarm lenses, named as spanning column groups: what the rail
+ * windows (the period group) vs what the release lane holds (the pre-launch group — the bench
+ * verdict and its date, which never follow the period on purpose). The lens flip below only
+ * ever swaps the CONTENT of the first group, so the card's skeleton is invariant: two columns
+ * appear to explain an alert; the table never becomes a different table. Each label carries its
+ * own hairline, inset by the padding, so the two brackets read as two — not one line across.
+ */
+function TwoClocksHead({ windowSpan, t }: { windowSpan: number; t: Translator }) {
+  const bracket =
+    "block border-b border-[var(--tessera-border)] pb-1 text-center text-[0.55rem] font-medium uppercase tracking-[0.08em] text-[var(--tessera-text-muted)]";
+  return (
+    <tr className="text-left">
+      <th aria-hidden className="pb-1" />
+      <th colSpan={windowSpan} className="px-3 pb-1">
+        <span className={bracket}>{t("groupWindow")}</span>
+      </th>
+      <th colSpan={2} className="px-3 pb-1">
+        <span className={bracket}>{t("groupRelease")}</span>
+      </th>
+    </tr>
+  );
+}
+
+/**
+ * The last-evaluation cell — the bench verdict's date, i.e. its provenance: a release
+ * verdict without its date is unverifiable, so it rides beside the verdict column in BOTH
+ * lens modes and, like the verdict, deliberately ignores the period rail.
+ */
+function EvalFreshnessCell({ agent, t }: { agent: FleetAgent; t: Translator }) {
+  const rel = agent.release?.available ? agent.release : null;
+  return (
+    <td
+      className={`py-1.5 text-center tabular-nums ${
+        rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
+      }`}
+      title={rel?.verdict_stale ? t("staleEval") : undefined}
+    >
+      {rel ? fmtRunDay(rel.run_at) : "—"}
+    </td>
+  );
+}
+
 /** The release verdict cell — the release lane's work, rendered identically in every lens. */
 function ReleaseCell({ agent, t }: { agent: FleetAgent; t: Translator }) {
   return (
@@ -402,13 +445,16 @@ function AlarmTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
+          <TwoClocksHead windowSpan={3} t={t} />
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
-            <th className="pb-2 text-center font-medium">
-              {t("colSignalValue", { metric: metricLabel(lens.metric, t) })}
-            </th>
+            {/* The measure keeps ONE name across both lens modes: the column holds the value
+                by definition, so wrapping the metric label in a "value (…)" template only
+                made the same fact change name when the table changed state. */}
+            <th className="pb-2 text-center font-medium">{metricLabel(lens.metric, t)}</th>
             <th className="pb-2 text-center font-medium">{t("colSloGap")}</th>
             <th className="pb-2 text-center font-medium">{t("colContribution")}</th>
+            <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
             <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
@@ -457,6 +503,7 @@ function AlarmTable({
                     `${fmt.int(row.nBad)} / ${fmt.int(row.n ?? 0)}`
                   )}
                 </td>
+                <EvalFreshnessCell agent={a} t={t} />
                 <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
@@ -475,11 +522,11 @@ function AlarmTable({
                 ? "—"
                 : `${fmt.int(lens.orgNBad)} / ${fmt.int(lens.orgN)}`}
             </td>
-            <td className="py-2" />
+            <td colSpan={2} className="py-2" />
           </tr>
           <tr>
             <td
-              colSpan={5}
+              colSpan={6}
               className="pb-1 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               {/* Contribution reconciliation — the per-agent slices vs the deduplicated org
@@ -536,12 +583,11 @@ function QualityTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
+          <TwoClocksHead windowSpan={2} t={t} />
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colFaithfulness")}</th>
             <th className="pb-2 text-center font-medium">{t("colHallucination")}</th>
-            <th className="pb-2 text-center font-medium">{t("colRegression")}</th>
-            <th className="pb-2 text-center font-medium">{t("colGate")}</th>
             <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
             <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
@@ -551,7 +597,6 @@ function QualityTable({
             const row = byId.get(a.id);
             const selected = scope !== AGENT_SCOPE_ALL && a.id === scope;
             const dimmed = scope !== AGENT_SCOPE_ALL && a.id !== scope;
-            const rel = a.release?.available ? a.release : null;
             return (
               <tr key={a.id} className={rowClass(selected, dimmed)}>
                 {/* The quality lens answers "how is THIS agent evaluated?" — the row is
@@ -579,26 +624,10 @@ function QualityTable({
                     fmt.rate(row.hallucination)
                   )}
                 </td>
-                <td
-                  className={`py-1.5 text-center tabular-nums ${
-                    rel && rel.blocking_t1 > 0 ? "text-[var(--tessera-fg-danger)]" : ""
-                  }`}
-                >
-                  {rel ? fmt.int(rel.blocking_t1) : "—"}
-                </td>
-                <td className="py-1.5 text-center tabular-nums">
-                  {rel && rel.summary_passed != null && rel.summary_total != null
-                    ? `${fmt.int(rel.summary_passed)}/${fmt.int(rel.summary_total)}`
-                    : "—"}
-                </td>
-                <td
-                  className={`py-1.5 text-center tabular-nums ${
-                    rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
-                  }`}
-                  title={rel?.verdict_stale ? t("staleEval") : undefined}
-                >
-                  {rel ? fmtRunDay(rel.run_at) : "—"}
-                </td>
+                {/* The bench's internals (blocking failures, cases passed) left this view:
+                    they are the evaluations view's work, one click through the row's own
+                    door. Only the verdict and its date remain — the second clock, named. */}
+                <EvalFreshnessCell agent={a} t={t} />
                 <td className="py-1.5 pr-2 text-right">
                   <ReleaseCell agent={a} t={t} />
                 </td>
@@ -612,7 +641,7 @@ function QualityTable({
               {t("orgTotal")}
             </td>
             <td
-              colSpan={6}
+              colSpan={4}
               className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
