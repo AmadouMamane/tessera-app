@@ -34,6 +34,10 @@ from tessera.api.config_overrides import (
     BUDGET_OVERRUN_BEHAVIOURS,
     BUDGET_OVERRUN_KEY,
     DAILY_BUDGET_KEY,
+    REFORMULATION_MODE_KEY,
+    REFORMULATION_MODES,
+    REFORMULATION_THRESHOLD_KEY,
+    REFORMULATION_TIMEOUT_KEY,
     UNDERSTANDING_MODE_KEY,
     UNDERSTANDING_MODES,
     UNDERSTANDING_THRESHOLD_KEY,
@@ -173,20 +177,29 @@ def _base_of(key: str) -> str:
     falls through to the chat-model base: with no row the layer reads the
     profile's own backend, exactly like the chat path.
     """
-    if key == DAILY_BUDGET_KEY:
-        return "—"
-    if key == BUDGET_OVERRUN_KEY:
-        return "block"
-    if key == UNDERSTANDING_MODE_KEY:
-        return "shadow"
-    if key == UNDERSTANDING_THRESHOLD_KEY:
-        return "—"
+    # ADR 0054 — layer 3 restores what the resolver serves with no row stored: OFF (the
+    # compliance pass is a precondition to shadow), no fidelity threshold, the coded
+    # default timeout; both model knobs fall through to the profile base.
+    static_bases = {
+        DAILY_BUDGET_KEY: "—",
+        BUDGET_OVERRUN_KEY: "block",
+        UNDERSTANDING_MODE_KEY: "shadow",
+        UNDERSTANDING_THRESHOLD_KEY: "—",
+        REFORMULATION_MODE_KEY: "off",
+        REFORMULATION_THRESHOLD_KEY: "—",
+    }
+    if key in static_bases:
+        return static_bases[key]
     if key == UNDERSTANDING_TIMEOUT_KEY:
         # Lazy on purpose: config_overrides reads this module the same way, and a
         # route module must not pull the LLM stack in at import time.
         from tessera.recouvrement.understanding import DEFAULT_TIMEOUT_S
 
         return f"{DEFAULT_TIMEOUT_S:g}"
+    if key == REFORMULATION_TIMEOUT_KEY:
+        from tessera.recouvrement.reformulation import DEFAULT_TIMEOUT_S as REFORM_TIMEOUT_S
+
+        return f"{REFORM_TIMEOUT_S:g}"
     return base_chat_model()
 
 
@@ -202,8 +215,16 @@ def _knob_out(key: str, override: Override | None) -> KnobOut:
     elif key == UNDERSTANDING_MODE_KEY:
         # ADR 0053 — the mode is a closed pair, never free text on screen either.
         kind, options = "choice", list(UNDERSTANDING_MODES)
-    elif key in (UNDERSTANDING_THRESHOLD_KEY, UNDERSTANDING_TIMEOUT_KEY):
-        # ADR 0053 — plain decimals; the store validates the family's own range.
+    elif key == REFORMULATION_MODE_KEY:
+        # ADR 0054 — the layer-3 mode is a closed triple, never free text on screen.
+        kind, options = "choice", list(REFORMULATION_MODES)
+    elif key in (
+        UNDERSTANDING_THRESHOLD_KEY,
+        UNDERSTANDING_TIMEOUT_KEY,
+        REFORMULATION_THRESHOLD_KEY,
+        REFORMULATION_TIMEOUT_KEY,
+    ):
+        # ADR 0053 / ADR 0054 — plain decimals; the store validates each family's range.
         kind = "decimal"
     return KnobOut(
         key=key,

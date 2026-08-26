@@ -42,6 +42,11 @@ __all__ = [
     "BUDGET_OVERRUN_KEY",
     "CHAT_MODEL_KEY",
     "DAILY_BUDGET_KEY",
+    "REFORMULATION_MODES",
+    "REFORMULATION_MODEL_KEY",
+    "REFORMULATION_MODE_KEY",
+    "REFORMULATION_THRESHOLD_KEY",
+    "REFORMULATION_TIMEOUT_KEY",
     "UNDERSTANDING_MODES",
     "UNDERSTANDING_MODEL_KEY",
     "UNDERSTANDING_MODE_KEY",
@@ -51,6 +56,7 @@ __all__ = [
     "KnobError",
     "Override",
     "OverrideNotStoredError",
+    "ReformulationConfig",
     "UnderstandingConfig",
     "agent_of_key",
     "allowed_chat_models",
@@ -61,6 +67,7 @@ __all__ = [
     "list_overrides",
     "resolve_budget_policy",
     "resolve_chat_model_override",
+    "resolve_reformulation_config",
     "resolve_understanding_config",
     "set_override",
 ]
@@ -90,6 +97,19 @@ UNDERSTANDING_TIMEOUT_KEY: Final[str] = "recouvrement.understanding.timeout_s"
 #: knobs (the catalogue); no override stored means the profile base serves. Measured before
 #: named: gemma3:27b entered the catalogue on its bench run (115/120, 2026-08-24).
 UNDERSTANDING_MODEL_KEY: Final[str] = "recouvrement.understanding.model"
+#: ADR 0054 §5 — recouvrement layer-3 (tone reformulation) deployment mode. Unlike layer 1,
+#: the base is ``off``: the ADR names a human compliance pass as a precondition to SHADOW,
+#: so an absent row must spend nothing and change nothing.
+REFORMULATION_MODE_KEY: Final[str] = "recouvrement.reformulation.mode"
+REFORMULATION_MODES: Final[tuple[str, ...]] = ("off", "shadow", "active")
+#: ADR 0054 §5 — the calibrated fidelity floor (bench-measured, never hand-picked);
+#: ``active`` cannot be stored without it, mirroring the understanding threshold's guard.
+REFORMULATION_THRESHOLD_KEY: Final[str] = "recouvrement.reformulation.fidelity_threshold"
+#: ADR 0054 — the per-call bound on a layer-3 model call, seconds (a letter is a longer
+#: generation than an intent verdict, hence the wider family range).
+REFORMULATION_TIMEOUT_KEY: Final[str] = "recouvrement.reformulation.timeout_s"
+#: ADR 0054 — the model layer 3 drafts and judges with; same closed catalogue value space.
+REFORMULATION_MODEL_KEY: Final[str] = "recouvrement.reformulation.model"
 
 
 class KnobError(ValueError):
@@ -134,6 +154,10 @@ def knob_keys() -> list[str]:
         UNDERSTANDING_THRESHOLD_KEY,
         UNDERSTANDING_TIMEOUT_KEY,
         UNDERSTANDING_MODEL_KEY,
+        REFORMULATION_MODE_KEY,
+        REFORMULATION_THRESHOLD_KEY,
+        REFORMULATION_TIMEOUT_KEY,
+        REFORMULATION_MODEL_KEY,
     ]
 
 
@@ -237,8 +261,11 @@ def _validated_value(key: str, value: str) -> str:
     understood = _validated_understanding_value(key, value)
     if understood is not None:
         return understood
-    # The fallthrough serves every model-valued knob: the chat-model family AND the
-    # understanding-model knob share one closed catalogue.
+    reformulated = _validated_reformulation_value(key, value)
+    if reformulated is not None:
+        return reformulated
+    # The fallthrough serves every model-valued knob: the chat-model family, the
+    # understanding-model knob and the reformulation-model knob share one closed catalogue.
     if value not in allowed_chat_models():
         raise KnobError(f"model {value!r} is not in the catalogue — refused, never stored")
     return value
@@ -271,6 +298,36 @@ def _validated_understanding_value(key: str, value: str) -> str | None:
     return None
 
 
+def _validated_reformulation_value(key: str, value: str) -> str | None:
+    """Validate an ADR 0054 reformulation-knob value, or ``None`` for other families.
+
+    The model knob deliberately falls through to the shared catalogue check.
+    """
+    if key == REFORMULATION_MODE_KEY:
+        if value not in REFORMULATION_MODES:
+            raise KnobError(
+                f"reformulation mode {value!r} is not one of {REFORMULATION_MODES} — refused"
+            )
+        return value
+    if key == REFORMULATION_THRESHOLD_KEY:
+        try:
+            threshold = Decimal(value)
+        except InvalidOperation as exc:
+            raise KnobError(f"{value!r} is not a decimal fidelity threshold — refused") from exc
+        if not threshold.is_finite() or not Decimal(0) <= threshold <= Decimal(1):
+            raise KnobError(f"the fidelity threshold lives in [0, 1]; got {value!r}")
+        return str(threshold)
+    if key == REFORMULATION_TIMEOUT_KEY:
+        try:
+            timeout_s = Decimal(value)
+        except InvalidOperation as exc:
+            raise KnobError(f"{value!r} is not a decimal timeout in seconds — refused") from exc
+        if not timeout_s.is_finite() or not Decimal(0) < timeout_s <= Decimal(120):
+            raise KnobError(f"the reformulation timeout lives in (0, 120] seconds; got {value!r}")
+        return str(timeout_s)
+    return None
+
+
 def _forget_cached_ceiling() -> None:
     """Drop the ceiling cache after any override write (ADR 0034).
 
@@ -284,6 +341,7 @@ def _forget_cached_ceiling() -> None:
 
     invalidate_policy_cache()
     _forget_cached_understanding()
+    _forget_cached_reformulation()
 
 
 async def set_override(key: str, value: str, *, author: str, reason: str) -> Override:
@@ -322,6 +380,18 @@ async def set_override(key: str, value: str, *, author: str, reason: str) -> Ove
             "active understanding requires a stored confidence threshold first — "
             "calibrate on the bench (eval.intent_bench threshold sweep), store "
             f"{UNDERSTANDING_THRESHOLD_KEY!r} citing the run, then flip (ADR 0053 §6)"
+        )
+    # ADR 0054 §5 — the same rule for layer 3: an active reformulation with no calibrated
+    # fidelity threshold is an illegal state, unrepresentable in the store.
+    if (
+        key == REFORMULATION_MODE_KEY
+        and value == "active"
+        and await _stored_value(REFORMULATION_THRESHOLD_KEY) is None
+    ):
+        raise KnobError(
+            "active reformulation requires a stored fidelity threshold first — "
+            "calibrate on the bench (eval.reformulation_bench --llm --judge), store "
+            f"{REFORMULATION_THRESHOLD_KEY!r} citing the run, then flip (ADR 0054 §5)"
         )
     await ensure_overrides_schema()
     pool = get_pool()
@@ -365,6 +435,14 @@ async def delete_override(key: str) -> None:
         raise KnobError(
             "the confidence threshold cannot be removed while understanding mode is "
             "'active' — set the mode back to 'shadow' first (ADR 0053 §6)"
+        )
+    if (
+        key == REFORMULATION_THRESHOLD_KEY
+        and await _stored_value(REFORMULATION_MODE_KEY) == "active"
+    ):
+        raise KnobError(
+            "the fidelity threshold cannot be removed while reformulation mode is "
+            "'active' — set the mode back to 'shadow' or 'off' first (ADR 0054 §5)"
         )
     await ensure_overrides_schema()
     pool = get_pool()
@@ -583,6 +661,104 @@ async def _read_understanding_config() -> UnderstandingConfig:
         )
     by_key = {str(r["key"]): str(r["value"]) for r in rows}
     return _interpret_understanding_rows(by_key, default_timeout_s=DEFAULT_TIMEOUT_S)
+
+
+@dataclass(frozen=True, slots=True)
+class ReformulationConfig:
+    """The governed layer-3 deployment state recouvrement serves under (ADR 0054 §5)."""
+
+    mode: Literal["off", "shadow", "active"]
+    threshold: float | None
+    timeout_s: float
+    #: ``None`` = the profile base serves (the same meaning as no chat-model override).
+    model: str | None = None
+
+
+_reformulation_cache: tuple[float, ReformulationConfig] | None = None
+
+
+def _forget_cached_reformulation() -> None:
+    """Drop the reformulation-config cache; same write seam as the understanding one's."""
+    global _reformulation_cache
+    _reformulation_cache = None
+
+
+async def resolve_reformulation_config() -> ReformulationConfig:
+    """The layer-3 mode / threshold / timeout this turn serves under (ADR 0054 §5).
+
+    Cached like the understanding config (same TTL, same invalidation seam).
+    **Fails open to OFF, loudly** — deliberately not to shadow: the ADR names a
+    human compliance pass as a precondition to shadow, so the known-good state of
+    an unreadable store is the layer not running at all. ``active`` with no
+    stored threshold degrades to ``off`` for the same reason, and says so.
+    """
+    global _reformulation_cache
+    now = time.monotonic()
+    if _reformulation_cache is not None and now - _reformulation_cache[0] < (
+        _UNDERSTANDING_TTL_SECONDS
+    ):
+        return _reformulation_cache[1]
+    config = await _read_reformulation_config()
+    _reformulation_cache = (now, config)
+    return config
+
+
+async def _read_reformulation_config() -> ReformulationConfig:
+    """One uncached read of the four reformulation knobs (see the resolver's contract)."""
+    from tessera.recouvrement.reformulation import DEFAULT_TIMEOUT_S
+
+    keys = [
+        REFORMULATION_MODE_KEY,
+        REFORMULATION_THRESHOLD_KEY,
+        REFORMULATION_TIMEOUT_KEY,
+        REFORMULATION_MODEL_KEY,
+    ]
+    try:
+        await ensure_overrides_schema()
+        pool = get_pool()
+        async with pool.connection() as conn, conn.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                sql.SQL("SELECT key, value FROM {table} WHERE key = ANY(%s);").format(table=_TABLE),
+                (keys,),
+            )
+            rows = await cur.fetchall()
+    except Exception as exc:  # fail open to OFF — a turn never blocks, a layer never starts
+        sys.stderr.write(
+            f"tessera.config_overrides: reformulation read failed, serving off: {exc}\n"
+        )
+        return ReformulationConfig(
+            mode="off", threshold=None, timeout_s=DEFAULT_TIMEOUT_S, model=None
+        )
+    by_key = {str(r["key"]): str(r["value"]) for r in rows}
+    return _interpret_reformulation_rows(by_key, default_timeout_s=DEFAULT_TIMEOUT_S)
+
+
+def _interpret_reformulation_rows(
+    by_key: dict[str, str], *, default_timeout_s: float
+) -> ReformulationConfig:
+    """Turn stored layer-3 knob rows into the served config — degradations spoken."""
+    threshold = (
+        float(by_key[REFORMULATION_THRESHOLD_KEY])
+        if REFORMULATION_THRESHOLD_KEY in by_key
+        else None
+    )
+    timeout_s = float(by_key.get(REFORMULATION_TIMEOUT_KEY, default_timeout_s))
+    mode = by_key.get(REFORMULATION_MODE_KEY, "off")
+    if mode == "active" and threshold is None:
+        sys.stderr.write(
+            "tessera.config_overrides: reformulation mode 'active' with no stored threshold "
+            "— an illegal store state; serving off (ADR 0054 §5)\n"
+        )
+        mode = "off"
+    resolved_mode: Literal["off", "shadow", "active"] = (
+        "active" if mode == "active" else ("shadow" if mode == "shadow" else "off")
+    )
+    return ReformulationConfig(
+        mode=resolved_mode,
+        threshold=threshold,
+        timeout_s=timeout_s,
+        model=by_key.get(REFORMULATION_MODEL_KEY),
+    )
 
 
 def _interpret_understanding_rows(

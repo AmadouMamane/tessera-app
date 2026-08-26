@@ -150,6 +150,14 @@ agents:
       understanding:
         mode: llm_structured
         bench_set: recouvrement
+      # `reformulation` (§3 Amendment 6, ADR 0054): layer 3 opens as a governed option —
+      # an LLM may rewrite TONE with the approved template as REFERENT; facts survive
+      # verbatim under the deterministic checker, every failure sends the exact template.
+      # The runtime mode (off / shadow / active) is a governed knob, not this declaration:
+      # this says the plane EXISTS and names its labeled referent.
+      reformulation:
+        mode: template_referent
+        bench_set: recouvrement
       telemetry_capabilities: [graph_topology, tools]
       capabilities:
         - id: summarize_case

@@ -129,6 +129,19 @@ class UnderstandingMode(StrEnum):
     LLM_STRUCTURED = "llm_structured"
 
 
+class ReformulationMode(StrEnum):
+    """How the agent's outbound wording relates to its approved templates (§3 Amendment 6).
+
+    ``template_referent`` — an LLM may rewrite TONE with the approved template as the
+    REFERENT (ADR 0054): facts survive verbatim under a deterministic checker, the
+    fidelity judge scores against the template, and every failure falls back to the
+    exact template. Declared, never inferred — an agent that lets a model near its
+    regulated letters without saying so would carry an unmeasured plane.
+    """
+
+    TEMPLATE_REFERENT = "template_referent"
+
+
 class InvocationBinding(StrEnum):
     """How a declared consumer sends a turn to the agent (ADR 0019 §1).
 
@@ -174,6 +187,31 @@ class UnderstandingSpec(_Spec):
             msg = (
                 "understanding mode 'llm_structured' requires bench_set — an LLM "
                 "understanding without a labeled referent is unverifiable (ADR 0053 §7)"
+            )
+            raise ValueError(msg)
+        return self
+
+
+class ReformulationSpec(_Spec):
+    """The AgentSpec ``reformulation`` block (§3 Amendment 6 — the third ruler, ADR 0054).
+
+    ``bench_set`` names the labeled referent (``eval/reformulation/<bench_set>.json``)
+    the reformulation layer is measured against — REQUIRED: a template-referent
+    reformulation without a labeled referent is unverifiable, refused at load
+    (the same rule as the understanding block's, ADR 0053 §7).
+    """
+
+    mode: ReformulationMode
+    bench_set: str | None = None
+
+    @model_validator(mode="after")
+    def _bench_set_integrity(self) -> ReformulationSpec:
+        # The enum has ONE member today, so every declared mode requires the referent; a
+        # future mode that does not would reintroduce the per-mode condition here.
+        if not self.bench_set:
+            msg = (
+                "reformulation mode 'template_referent' requires bench_set — a "
+                "reformulation layer without a labeled referent is unverifiable (ADR 0054 §4)"
             )
             raise ValueError(msg)
         return self
@@ -279,6 +317,10 @@ class AgentObservabilitySpec(_Spec):
     # plane to declare (the three chat-native agents); an agent that DOES split the
     # planes must declare how the understanding one is ruled, no default.
     understanding: UnderstandingSpec | None = None
+    # §3 Amendment 6 (ADR 0054): the reformulation layer's own declaration. Optional —
+    # ``None`` means the agent's outbound wording is template-assembled or model-native
+    # with no separate reformulation plane; an agent that opens layer 3 must declare it.
+    reformulation: ReformulationSpec | None = None
     telemetry_capabilities: tuple[str, ...] = ()
     capabilities: tuple[Capability, ...] = ()
     policies: tuple[PolicyMetadata, ...] = ()

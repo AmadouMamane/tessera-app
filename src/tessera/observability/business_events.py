@@ -515,7 +515,16 @@ class MessageGeneratedPayload(_StrictPayload):
     @field_validator("message_kind")
     @classmethod
     def _known_message_kind(cls, value: str) -> str:
-        allowed = {"assistant_reply", "client_message", "internal_confirmation"}
+        # ``shadow_reformulation`` (ADR 0054 §3): a layer-3 shadow measurement row — the
+        # generation happened, nothing was sent, and the payload carries measurements only
+        # (never the candidate letter). Filtered out of every client_message consumer by
+        # the kind itself, exactly like the non-client kinds before it.
+        allowed = {
+            "assistant_reply",
+            "client_message",
+            "internal_confirmation",
+            "shadow_reformulation",
+        }
         if value not in allowed:
             msg = f"unknown message_kind {value!r}"
             raise ValueError(msg)

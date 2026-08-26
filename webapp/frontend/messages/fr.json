@@ -9702,7 +9702,11 @@
       "understandingMode": "Compréhension du langage (Recouvrement) — mode",
       "understandingThreshold": "Compréhension du langage (Recouvrement) — seuil de confiance",
       "understandingTimeout": "Compréhension du langage (Recouvrement) — délai max (s)",
-      "understandingModel": "Compréhension du langage (Recouvrement) — modèle"
+      "understandingModel": "Compréhension du langage (Recouvrement) — modèle",
+      "reformulationMode": "Reformulation de ton (Recouvrement) — mode",
+      "reformulationThreshold": "Reformulation de ton (Recouvrement) — seuil de fidélité",
+      "reformulationTimeout": "Reformulation de ton (Recouvrement) — délai maximal (s)",
+      "reformulationModel": "Reformulation de ton (Recouvrement) — modèle"
     }
   },
   "guardrailCatalogue": {

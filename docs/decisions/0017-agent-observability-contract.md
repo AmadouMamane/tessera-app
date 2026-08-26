@@ -11,7 +11,10 @@
   judges its production answers; `unscored` is a declaration carrying its reason, never an
   absence). Amended 2026-08-23 (§Amendment 5: the declared understanding layer — an agent
   that splits understanding from answering names how the understanding plane is ruled and
-  the labeled referent that measures it; ADR 0053).**
+  the labeled referent that measures it; ADR 0053). Amended 2026-08-26 (§Amendment 6: the
+  declared reformulation layer — an agent that lets a model rewrite the tone of its
+  regulated letters declares the plane, its template-referent ruler and its labeled
+  referent; ADR 0054).**
 - Date: 2026-07-06
 - Deciders: Tessera maintainers
 - Related: 0008 (agent audience and surface), 0010 (Recouvrement internal operator agent),
@@ -22,6 +25,49 @@
   `src/tessera/recouvrement/scoring.py`, `src/tessera/agent/agents.yaml`,
   the "ADR-001" vision draft (2026-07-06, chat-authored, outside the numbered corpus —
   harvested by §Amendment 1).
+
+## Amendment 6 (2026-08-26) — the declared reformulation layer: the third ruler names itself
+
+**ADR 0054 opens recouvrement's layer 3 — an LLM may rewrite the TONE of an approved letter,
+with the template as REFERENT — which creates a third measured plane neither §A4's regimes nor
+§A5's understanding block covers.** Its ruler is template-fidelity: a deterministic
+must-survive checker (facts, amounts, dates, legal clauses, signature — verbatim or the exact
+template ships instead) plus a fidelity judge calibrated against a human-labeled referent
+before any threshold governs. Leaving that plane undeclared would recreate the defect A4 and
+A5 each closed — a measured plane whose ruler no declaration names.
+
+### A6.1 — Decision: an optional block, never a defaulted one
+
+`AgentObservabilitySpec` gains `reformulation: {mode, bench_set}` —
+`mode ∈ {template_referent}`. Optional because most agents have no reformulation plane (their
+outbound wording is either template-assembled with no model near it, or model-native and
+already ruled by §A4); an agent that opens layer 3 declares it, with no default. The
+declaration says the plane EXISTS and names its referent; the runtime state (off / shadow /
+active) is a GOVERNED KNOB (`recouvrement.reformulation.*`, ADR 0054 §5), never the manifest —
+a deploy artifact must not flip a compliance-gated layer.
+
+### A6.2 — Integrity
+
+- `template_referent` ⇒ `bench_set` REQUIRED, refused at load: a reformulation layer without
+  a labeled referent is unverifiable (ADR 0054 §4);
+- the declared `bench_set` (`eval/reformulation/<set>.json`) must exist on disk and name the
+  declaring agent — checked by the conformance suite
+  (`tests/unit/test_recouvrement_shadow_reformulation.py`), since a spec validator must not
+  touch the filesystem;
+- the declaration and the wiring are held together by witnesses on the thing (ADR 0026): the
+  conformance suite asserts the declaring agent's turn route spawns the layer-3 shadow seam,
+  that OFF spends nothing, that only an approved-template, policy-unblocked draft is
+  shadowed, and that the recorded row carries measurements and NEVER the candidate letter
+  (an unapproved regulated text must not enter the ledger).
+
+### A6.3 — Three rulers stay three
+
+Reformulation telemetry rides the ledger as `message.generated` rows under
+`message_kind: shadow_reformulation`, node `shadow_reformulation` — excluded from every
+client-message consumer by the kind itself, presence-checked by no business signal, counted
+by no business score. The reformulation ruler's numbers (checker pass rate, judge fidelity),
+the understanding ruler's and the business ruler's never share a denominator (A4.3, A5.3,
+insights 361–363).
 
 ## Amendment 5 (2026-08-23) — the declared understanding layer: a split plane names its own ruler
 

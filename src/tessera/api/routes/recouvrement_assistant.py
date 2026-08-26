@@ -40,7 +40,10 @@ from tessera.agent.recouvrement import (
     run_recouvrement_graph_v1,
 )
 from tessera.agent.state import ConversationMessage
-from tessera.api.config_overrides import resolve_understanding_config
+from tessera.api.config_overrides import (
+    resolve_reformulation_config,
+    resolve_understanding_config,
+)
 from tessera.api.security import actor_of, require_collections_operator
 from tessera.api.session import (
     SessionContext,  # noqa: TCH001  — FastAPI resolves Annotated at runtime
@@ -53,6 +56,11 @@ from tessera.memory.transcript import append_messages
 from tessera.observability.business_events import BusinessEventName, record_business_event
 from tessera.observability.metrics import AGENT_TURNS_TOTAL
 from tessera.recouvrement.capabilities import capability_for_task
+from tessera.recouvrement.reformulation import (
+    check_must_survive,
+    judge_template_fidelity_llm,
+    reformulate_tone_llm,
+)
 from tessera.recouvrement.understanding import UnderstandingOutcome, classify_intent_llm
 from tessera.settings import LanguageCode, get_settings
 
@@ -273,6 +281,158 @@ async def _shadow_understanding(
         sys.stderr.write(f"tessera.recouvrement.understanding: shadow failed: {exc}\n")
 
 
+def _draft_for_reformulation(result: Mapping[str, object]) -> tuple[str, dict[str, str]] | None:
+    """The approved-template draft this turn produced, plus its provenance — or ``None``.
+
+    Layer 3 shadows ONLY a client-message draft that (a) was assembled from an approved
+    template (its own policy event says so), and (b) was not blocked by the drafting
+    policy — reformulating a blocked draft would measure nothing the fallback rule cares
+    about. The draft text read here IS the rendered referent (ADR 0054 §1).
+    """
+    artifact = result.get("artifact")
+    content = artifact.get("content") if isinstance(artifact, dict) else None
+    draft = content.get("message_client") if isinstance(content, dict) else None
+    if not isinstance(draft, str) or not draft.strip():
+        return None
+    for row in _turn_events(result):
+        payload = row.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("policy_rule") != "recouvrement.client_message_safety":
+            continue
+        if payload.get("generation_mode") != "approved_template":
+            return None
+        if payload.get("policy_review_status") == "blocked":
+            return None
+        return draft, {
+            "template_id": str(payload.get("template_id") or ""),
+            "template_version": str(payload.get("template_version") or ""),
+        }
+    return None
+
+
+async def _shadow_reformulation(
+    *,
+    draft: str,
+    provenance: dict[str, str],
+    language: str,
+    surface: str,
+    conversation_id: str,
+    turn_id: str,
+    case_id: str,
+    environment: str,
+) -> None:
+    """ADR 0054 §3: draft a tone rewrite in shadow, prove it, score it, record it.
+
+    The governed mode is resolved HERE, inside the background task, so the hot path
+    never pays even the cached read: ``off`` (the base — the compliance pass is a
+    precondition to shadow) returns without a model call. The candidate text itself is
+    deliberately NEVER written to the ledger — it is an unapproved letter; only the
+    deterministic check result, the judge's score and the latency land (the shadow's
+    whole product is measurement). Nothing here may ever reach the operator's reply.
+    """
+    try:
+        config = await resolve_reformulation_config()
+        if config.mode == "off":
+            return
+        outcome = await reformulate_tone_llm(
+            draft,
+            # The one rewrite the template system supports today (rewrite_tone -> the
+            # empathic template): the shadow drafts what layer 3 WOULD have produced.
+            tone_instruction="plus_empathique",
+            language=language,
+            timeout_s=config.timeout_s,
+            model=config.model,
+        )
+        checker_ok: bool | None = None
+        checker_failures: list[str] = []
+        fidelity: float | None = None
+        judge_status: str | None = None
+        if outcome.status == "candidate" and outcome.text is not None:
+            check = check_must_survive(draft, outcome.text, language=language)
+            checker_ok = check.ok
+            checker_failures = list(check.failures)[:12]
+            judgement = await judge_template_fidelity_llm(
+                draft,
+                outcome.text,
+                language=language,
+                timeout_s=config.timeout_s,
+                model=config.model,
+            )
+            judge_status = judgement.status
+            fidelity = judgement.fidelity
+        record_business_event(
+            author=AGENT_TURN_ACTOR,
+            event_name=BusinessEventName.MESSAGE_GENERATED,
+            payload={
+                "message_kind": "shadow_reformulation",
+                "generation_mode": "llm_rewrite",
+                "template_id": provenance["template_id"] or None,
+                "template_version": provenance["template_version"] or None,
+                "model_id": outcome.model or None,
+                "prompt_version": outcome.prompt_version,
+                "client_message_generation": {
+                    "shadow": True,
+                    "mode": config.mode,
+                    "tone_instruction": "plus_empathique",
+                    "llm_status": outcome.status,
+                    "checker_ok": checker_ok,
+                    "checker_failures": checker_failures,
+                    "fidelity": fidelity,
+                    "judge_status": judge_status,
+                    "llm_latency_ms": round(outcome.latency_ms, 1),
+                    "llm_detail": outcome.detail,
+                },
+                "no_message_sent": True,
+                "no_external_effect": True,
+            },
+            agent_id=RECOUVREMENT_AGENT_ID,
+            workflow_id=RECOUVREMENT_WORKFLOW_ID,
+            capability_id=None,
+            surface=surface,
+            conversation_id=conversation_id,
+            turn_id=turn_id,
+            case_id=case_id,
+            node_name="shadow_reformulation",
+            language=language,
+            model=outcome.model or RECOUVREMENT_WORKFLOW_ID,
+            environment=environment,
+        )
+    except Exception as exc:  # the shadow must never surface anywhere but stderr
+        sys.stderr.write(f"tessera.recouvrement.reformulation: shadow failed: {exc}\n")
+
+
+def _spawn_shadow_reformulation(
+    payload: RecouvrementAssistantRequest,
+    result: Mapping[str, object],
+) -> None:
+    """Fire the layer-3 shadow off the hot path; the reply never waits for it.
+
+    Costs nothing on a turn that drafted no approved-template client message, and
+    nothing at all while the governed mode is ``off`` (resolved inside the task).
+    """
+    found = _draft_for_reformulation(result)
+    events = _turn_events(result)
+    if found is None or not events:
+        return
+    draft, provenance = found
+    first = events[0]
+    task = asyncio.create_task(
+        _shadow_reformulation(
+            draft=draft,
+            provenance=provenance,
+            language=payload.language,
+            surface=str(first.get("surface", payload.surface)),
+            conversation_id=str(first.get("conversation_id", "")),
+            turn_id=str(first.get("turn_id", "")),
+            case_id=payload.case_id,
+            environment=str(first.get("environment", "dev")),
+        )
+    )
+    _SHADOW_TASKS.add(task)
+    task.add_done_callback(_SHADOW_TASKS.discard)
+
+
 def _spawn_shadow_understanding(
     payload: RecouvrementAssistantRequest,
     result: Mapping[str, object],
@@ -426,6 +586,7 @@ async def recouvrement_assistant_message(
         model=understanding_config.model,
         outcome=active_outcome,
     )
+    _spawn_shadow_reformulation(payload, guarded)
     return dict(guarded)
 
 

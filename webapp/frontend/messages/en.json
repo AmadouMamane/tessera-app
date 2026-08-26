@@ -9702,7 +9702,11 @@
       "understandingMode": "Language understanding (Recouvrement) — mode",
       "understandingThreshold": "Language understanding (Recouvrement) — confidence threshold",
       "understandingTimeout": "Language understanding (Recouvrement) — time limit (s)",
-      "understandingModel": "Language understanding (Recouvrement) — model"
+      "understandingModel": "Language understanding (Recouvrement) — model",
+      "reformulationMode": "Tone reformulation (Recouvrement) — mode",
+      "reformulationThreshold": "Tone reformulation (Recouvrement) — fidelity threshold",
+      "reformulationTimeout": "Tone reformulation (Recouvrement) — time limit (s)",
+      "reformulationModel": "Tone reformulation (Recouvrement) — model"
     }
   },
   "guardrailCatalogue": {

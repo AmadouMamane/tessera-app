@@ -35,17 +35,21 @@ def test_the_registry_is_the_org_knob_plus_one_per_fleet_agent() -> None:
     """
     keys = knob_keys()
     assert keys[0] == CHAT_MODEL_KEY
-    assert keys[1:-6] == [f"llm.chat_model.agent.{a.id}" for a in list_agents()]
-    # Frozen tail grown three times, all deliberate: ADR 0034 (the two budget knobs),
-    # ADR 0053 (the three understanding knobs, 2026-08-23), then the understanding
-    # MODEL knob (2026-08-24, same catalogue value space as the chat-model family).
-    assert keys[-6:] == [
+    assert keys[1:-10] == [f"llm.chat_model.agent.{a.id}" for a in list_agents()]
+    # Frozen tail grown four times, all deliberate: ADR 0034 (the two budget knobs),
+    # ADR 0053 (the three understanding knobs, 2026-08-23), the understanding MODEL
+    # knob (2026-08-24), then ADR 0054 (the four reformulation knobs, 2026-08-26).
+    assert keys[-10:] == [
         DAILY_BUDGET_KEY,
         BUDGET_OVERRUN_KEY,
         "recouvrement.understanding.mode",
         "recouvrement.understanding.confidence_threshold",
         "recouvrement.understanding.timeout_s",
         "recouvrement.understanding.model",
+        "recouvrement.reformulation.mode",
+        "recouvrement.reformulation.fidelity_threshold",
+        "recouvrement.reformulation.timeout_s",
+        "recouvrement.reformulation.model",
     ]
 
 

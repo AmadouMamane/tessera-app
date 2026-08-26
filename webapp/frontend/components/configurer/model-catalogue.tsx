@@ -206,6 +206,11 @@ const KNOB_LABEL_IDS: Record<string, string> = {
   "recouvrement.understanding.confidence_threshold": "understandingThreshold",
   "recouvrement.understanding.timeout_s": "understandingTimeout",
   "recouvrement.understanding.model": "understandingModel",
+  // ADR 0054 — the four layer-3 reformulation knobs, same keyed-row contract.
+  "recouvrement.reformulation.mode": "reformulationMode",
+  "recouvrement.reformulation.fidelity_threshold": "reformulationThreshold",
+  "recouvrement.reformulation.timeout_s": "reformulationTimeout",
+  "recouvrement.reformulation.model": "reformulationModel",
 };
 
 /** The governed serving-model panel (ADR 0030): org + per-agent chat model.
