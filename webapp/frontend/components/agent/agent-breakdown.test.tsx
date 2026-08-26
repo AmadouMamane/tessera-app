@@ -313,20 +313,19 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
     expect(screen.queryByText(/Valeur \(/)).toBeNull();
     expect(screen.getByText("Écart à l'objectif")).toBeTruthy();
     expect(screen.getByText("Réponses concernées")).toBeTruthy();
-    // The two clocks are named, and the release pair (verdict + its date) rides in BOTH
-    // lens modes — the lens flip only ever swaps the content of the first group.
-    expect(screen.getByText("Sur la période")).toBeTruthy();
-    expect(screen.getByText("Avant mise en ligne")).toBeTruthy();
+    // The release pair (verdict + its date) rides in BOTH lens modes — the lens flip only
+    // ever swaps the windowed columns. The labeled group row that once named the two clocks
+    // was removed on operator feedback (2026-08-26): the boundary is a drawn seam, not text.
+    expect(screen.queryByText("Sur la période")).toBeNull();
     expect(screen.getByText("Dernière évaluation")).toBeTruthy();
     // The release column is the other lane's work — it rides in every lens, untouched.
     expect(screen.getByText("Mise en ligne")).toBeTruthy();
-    // The heaviest contributor is first, and its numbers are named. (Row 0 is the group
-    // header naming the two clocks, row 1 the column header — data starts at 2.)
+    // The heaviest contributor is first, and its numbers are named.
     const rows = screen.getAllByRole("row");
-    expect(rowAt(rows, 2).textContent).toMatch(/Support Client/);
-    expect(rowAt(rows, 2).textContent).toMatch(/14 \/ 40/);
-    expect(rowAt(rows, 2).textContent).toMatch(/−30,0 pt|-30,0 pt/);
-    expect(rowAt(rows, 3).textContent).toMatch(/Onboarding/);
+    expect(rowAt(rows, 1).textContent).toMatch(/Support Client/);
+    expect(rowAt(rows, 1).textContent).toMatch(/14 \/ 40/);
+    expect(rowAt(rows, 1).textContent).toMatch(/−30,0 pt|-30,0 pt/);
+    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
     // Monitoring columns are GONE — they answered a different question.
     expect(screen.queryByText("Latence")).toBeNull();
     expect(screen.queryByText("Transferts (e/s)")).toBeNull();
@@ -388,8 +387,8 @@ describe("the alarm lens: the banner says 19 bad — the table says WHOSE", () =
       await AgentBreakdown({ fleet: twoAgentFleet(), scope: "all", locale: "fr", lens: blind }),
     );
     const rows = screen.getAllByRole("row");
-    expect(rowAt(rows, 3).textContent).toMatch(/Onboarding/);
-    expect(rowAt(rows, 3).textContent).toMatch(/—/);
+    expect(rowAt(rows, 2).textContent).toMatch(/Onboarding/);
+    expect(rowAt(rows, 2).textContent).toMatch(/—/);
     expect(
       screen.getAllByTitle(
         "La lecture n'a pas appliqué le filtre par agent ; la valeur n'est pas affichée.",
@@ -668,9 +667,9 @@ describe("the quality lens answers the page's own question when nothing breaches
     );
     expect(screen.getByText("Fidélité")).toBeTruthy();
     expect(screen.getByText("Hallucination")).toBeTruthy();
-    // The two clocks are named as spanning groups over the columns they govern.
-    expect(screen.getByText("Sur la période")).toBeTruthy();
-    expect(screen.getByText("Avant mise en ligne")).toBeTruthy();
+    // The release pair keeps its columns; the labeled group row was removed on operator
+    // feedback (2026-08-26) — the two-clocks boundary is a drawn seam, not a header.
+    expect(screen.queryByText("Sur la période")).toBeNull();
     expect(screen.getByText("Dernière évaluation")).toBeTruthy();
     // The bench's internals left this view for the Évaluations one (operator, 2026-08-26):
     // per-agent blocking failures and cases passed are the release control's work, one click

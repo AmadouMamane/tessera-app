@@ -81,39 +81,26 @@ type Translator = Awaited<ReturnType<typeof getTranslations>>;
 type FleetAgent = NonNullable<Fleet["agents"]>[number];
 
 /**
- * The two clocks of the quality/alarm lenses, named as spanning column groups: what the rail
- * windows (the period group) vs what the release lane holds (the pre-launch group — the bench
- * verdict and its date, which never follow the period on purpose). The lens flip below only
- * ever swaps the CONTENT of the first group, so the card's skeleton is invariant: two columns
- * appear to explain an alert; the table never becomes a different table. Each label carries its
- * own hairline, inset by the padding, so the two brackets read as two — not one line across.
+ * The quality/alarm tables hold two clocks: the columns the rail windows, then the release
+ * pair (the bench verdict and its date), which never follows the period on purpose. A labeled
+ * spanning-group row named the two — the operator judged it ugly (2026-08-26), so the boundary
+ * is DRAWN instead of named: one vertical hairline before the release pair, carried by this
+ * class on its header and cells. The lens flip still only ever swaps the windowed columns, so
+ * the card's skeleton stays invariant across states.
  */
-function TwoClocksHead({ windowSpan, t }: { windowSpan: number; t: Translator }) {
-  const bracket =
-    "block border-b border-[var(--tessera-border)] pb-1 text-center text-[0.55rem] font-medium uppercase tracking-[0.08em] text-[var(--tessera-text-muted)]";
-  return (
-    <tr className="text-left">
-      <th aria-hidden className="pb-1" />
-      <th colSpan={windowSpan} className="px-3 pb-1">
-        <span className={bracket}>{t("groupWindow")}</span>
-      </th>
-      <th colSpan={2} className="px-3 pb-1">
-        <span className={bracket}>{t("groupRelease")}</span>
-      </th>
-    </tr>
-  );
-}
+const CLOCK_SEAM = "border-l border-[var(--tessera-border)]";
 
 /**
  * The last-evaluation cell — the bench verdict's date, i.e. its provenance: a release
  * verdict without its date is unverifiable, so it rides beside the verdict column in BOTH
- * lens modes and, like the verdict, deliberately ignores the period rail.
+ * lens modes and, like the verdict, deliberately ignores the period rail. It opens the
+ * release pair, so it carries the seam.
  */
 function EvalFreshnessCell({ agent, t }: { agent: FleetAgent; t: Translator }) {
   const rel = agent.release?.available ? agent.release : null;
   return (
     <td
-      className={`py-1.5 text-center tabular-nums ${
+      className={`${CLOCK_SEAM} py-1.5 text-center tabular-nums ${
         rel?.verdict_stale ? "text-[var(--tessera-fg-warning)]" : ""
       }`}
       title={rel?.verdict_stale ? t("staleEval") : undefined}
@@ -445,7 +432,6 @@ function AlarmTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <TwoClocksHead windowSpan={3} t={t} />
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             {/* The measure keeps ONE name across both lens modes: the column holds the value
@@ -454,7 +440,9 @@ function AlarmTable({
             <th className="pb-2 text-center font-medium">{metricLabel(lens.metric, t)}</th>
             <th className="pb-2 text-center font-medium">{t("colSloGap")}</th>
             <th className="pb-2 text-center font-medium">{t("colContribution")}</th>
-            <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
+            <th className={`${CLOCK_SEAM} pb-2 text-center font-medium`}>
+              {t("colEvalFreshness")}
+            </th>
             <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>
@@ -583,12 +571,13 @@ function QualityTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <TwoClocksHead windowSpan={2} t={t} />
           <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colFaithfulness")}</th>
             <th className="pb-2 text-center font-medium">{t("colHallucination")}</th>
-            <th className="pb-2 text-center font-medium">{t("colEvalFreshness")}</th>
+            <th className={`${CLOCK_SEAM} pb-2 text-center font-medium`}>
+              {t("colEvalFreshness")}
+            </th>
             <th className={`${COL_VERDICT} pb-2 pr-2 text-right font-medium`}>{t("colRelease")}</th>
           </tr>
         </thead>

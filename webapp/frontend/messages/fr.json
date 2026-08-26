@@ -9101,8 +9101,6 @@
     "colFaithfulness": "Fidélité",
     "colHallucination": "Hallucination",
     "colEvalFreshness": "Dernière évaluation",
-    "groupWindow": "Sur la période",
-    "groupRelease": "Avant mise en ligne",
     "alarmNote": "Signal en alerte : {metric} — le tableau répond à ce signal, trié par contribution décroissante.",
     "qualityNote": "Qualité par agent — aucun signal n'est actuellement en alerte.",
     "securityNote": "Sécurité par agent — fuites de données personnelles, toxicité et actions refusées. Les contrôles communs restent présentés pour toute la flotte dans la page.",

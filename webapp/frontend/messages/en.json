@@ -9101,8 +9101,6 @@
     "colFaithfulness": "Faithfulness",
     "colHallucination": "Hallucination",
     "colEvalFreshness": "Last evaluation",
-    "groupWindow": "Over the period",
-    "groupRelease": "Before launch",
     "alarmNote": "Signal in breach: {metric} — the table answers this signal, sorted by descending contribution.",
     "qualityNote": "Quality by agent — no signal is currently in breach.",
     "securityNote": "Security by agent — personal-data leaks, toxicity, and denied actions. Shared controls remain shown for the whole fleet on this page.",

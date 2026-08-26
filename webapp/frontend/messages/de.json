@@ -9101,8 +9101,6 @@
     "colFaithfulness": "Faktentreue",
     "colHallucination": "Halluzination",
     "colEvalFreshness": "Letzte Bewertung",
-    "groupWindow": "Im Zeitraum",
-    "groupRelease": "Vor der Freigabe",
     "alarmNote": "Signal im Alarm: {metric} — die Tabelle beantwortet dieses Signal, sortiert nach absteigendem Beitrag.",
     "qualityNote": "Qualität pro Agent — derzeit ist kein Signal im Alarm.",
     "securityNote": "Sicherheit pro Agent — Lecks personenbezogener Daten, Toxizität und abgelehnte Aktionen. Gemeinsame Kontrollen bleiben auf dieser Seite für die gesamte Flotte sichtbar.",
