@@ -139,13 +139,19 @@ export function formatPercent(
  * EUR is fixed, not a parameter: every amount in this product is a euro amount (European retail
  * banking), and a currency argument would invite a caller to pass the wrong one.
  */
-export function formatEuro(locale: string, value: number | null | undefined): string {
+export function formatEuro(
+  locale: string,
+  value: number | null | undefined,
+  maximumFractionDigits = 2,
+): string {
   if (value === null || value === undefined) return "—";
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    // Sub-cent amounts exist here (an eval run can cost 0,014 €) — a caller that owns
+    // one passes 3 so the amount survives the format instead of rounding to a cent.
+    maximumFractionDigits,
   }).format(value);
 }
 

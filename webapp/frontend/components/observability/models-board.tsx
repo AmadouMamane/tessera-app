@@ -12,7 +12,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { QInfo } from "@/components/observability/quality-info";
@@ -27,7 +27,7 @@ import type {
   ReleaseStatus,
   RunRegistry,
 } from "@/lib/api/schemas";
-import { useEuroFormat } from "@/lib/format-number";
+import { formatDecimal, useDecimalFormat, useEuroFormat } from "@/lib/format-number";
 
 const DASH = "—";
 
@@ -170,6 +170,7 @@ function ModelsKpis({
   release: ReleaseStatus | undefined;
 }) {
   const tq = useTranslations("quality");
+  const fmtDec2 = useDecimalFormat(2);
   const models = comparison?.models ?? [];
   const ref = models[0];
   const kappa = calibration?.kappa;
@@ -201,7 +202,7 @@ function ModelsKpis({
         icon={<Target className="h-3.5 w-3.5" />}
         label={tq("models.kpi.faithfulness")}
         explainKey="modelFaith"
-        value={ref?.faithfulness != null ? ref.faithfulness.toFixed(2) : DASH}
+        value={ref?.faithfulness != null ? fmtDec2(ref.faithfulness) : DASH}
       />
       <Kpi
         icon={<Crosshair className="h-3.5 w-3.5" />}
@@ -226,7 +227,7 @@ function ModelsKpis({
         icon={<Sparkles className="h-3.5 w-3.5" />}
         label={tq("models.kpi.kappa")}
         explainKey="modelKappa"
-        value={kappa != null ? kappa.toFixed(2) : DASH}
+        value={kappa != null ? fmtDec2(kappa) : DASH}
         sub={tq("models.kpi.kappaGlobal")}
       />
       <Kpi
@@ -659,8 +660,8 @@ function DriftKpi({ label, value, level }: { label: string; value: string; level
   );
 }
 
-function fmtDiv(d: number | null | undefined): string {
-  return d == null ? DASH : d.toFixed(3);
+function fmtDiv(locale: string, d: number | null | undefined): string {
+  return d == null ? DASH : formatDecimal(locale, d, 3);
 }
 
 function DriftStability({
@@ -675,18 +676,19 @@ function DriftStability({
   series: ModelSeries[];
 }) {
   const tq = useTranslations("quality");
+  const locale = useLocale();
   const disagree = consensus?.consensus_rate != null ? 1 - consensus.consensus_rate : null;
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-3 gap-2">
         <DriftKpi
           label={tq("models.drift.faith")}
-          value={fmtDiv(faithDrift?.divergence)}
+          value={fmtDiv(locale, faithDrift?.divergence)}
           level={faithDrift?.level ?? null}
         />
         <DriftKpi
           label={tq("models.drift.ground")}
-          value={fmtDiv(groundingDrift?.divergence)}
+          value={fmtDiv(locale, groundingDrift?.divergence)}
           level={groundingDrift?.level ?? null}
         />
         <DriftKpi
@@ -737,6 +739,7 @@ function Spark({ values }: { values: number[] | undefined }) {
 function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }) {
   const tq = useTranslations("quality");
   const fmtCost = useCost();
+  const fmtDec2 = useDecimalFormat(2);
   const models = comparison?.models ?? [];
   const verdictLabel = (v: string) =>
     ["best", "balanced", "economic", "avoid"].includes(v) ? tq(`models.verdict.${v}`) : v;
@@ -795,7 +798,7 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
                       <span style={{ color: scoreBand(m.pass_rate) }}>{fmtScore(m.pass_rate)}</span>
                     </td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">
-                      {m.faithfulness != null ? m.faithfulness.toFixed(2) : DASH}
+                      {m.faithfulness != null ? fmtDec2(m.faithfulness) : DASH}
                     </td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">
                       {pctOrDash(m.grounding)}

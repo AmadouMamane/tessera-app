@@ -305,6 +305,8 @@ export interface ControlFmt {
   times: (v: number) => string;
   /** A bare decimal — an F1, a kappa. */
   num: (v: number, digits?: number) => string;
+  /** A euro amount — the symbol and its side belong to the reader's language. */
+  eur: (v: number) => string;
 }
 
 export function controlFmt(locale: string): ControlFmt {
@@ -332,10 +334,17 @@ export function controlFmt(locale: string): ControlFmt {
     decimal(2),
   ];
   const clamp = (n: number): 0 | 1 | 2 => (n <= 0 ? 0 : n === 1 ? 1 : 2);
+  const euro = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   return {
     pct: (v, digits = 0) => p[clamp(digits)].format(v),
     times: (v) => `${d[1].format(v)}×`,
     num: (v, digits = 2) => d[clamp(digits)].format(v),
+    eur: (v) => euro.format(v),
   };
 }
 
@@ -719,7 +728,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
       const kappa = a.kappa ?? 0;
       return {
         ratio: kappa,
-        text: kappa.toFixed(2),
+        text: fmt.num(kappa, 2),
         n,
         severity: Math.max(0, 0.6 - kappa),
         detail: {
@@ -856,7 +865,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
     impactKey: "quality",
     asOfCapable: true,
     calibrated: true,
-    read: (d) => {
+    read: (d, fmt) => {
       const c = d.cost;
       if (!c) return null;
       return {
@@ -867,7 +876,7 @@ const SPECS: Record<ControlId, ControlSpec> = {
         detail: {
           key: "cost",
           values: {
-            eur: c.estimated_cost_eur.toFixed(2),
+            eur: fmt.eur(c.estimated_cost_eur),
             anomalies: String(c.n_anomalies),
           },
         },

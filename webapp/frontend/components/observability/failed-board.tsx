@@ -15,7 +15,7 @@ import {
   Sparkles,
   UserPlus,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { AuthorityLabel } from "@/components/cockpit/authority-label";
@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truncate } from "@/components/ui/truncate";
 import { Link } from "@/i18n/navigation";
 import type { FailedRunCase, FailedRunsReport, ReleaseStatus } from "@/lib/api/schemas";
+import { formatDecimal } from "@/lib/format-number";
 
 const DASH = "—";
 const PAGE_SIZE = 25;
@@ -405,6 +406,7 @@ export function FailedBoard({
 }) {
   const tq = useTranslations("quality");
   const tt = useTranslations("table");
+  const locale = useLocale();
   const catLabel = useCatLabel();
   const [sev, setSev] = useState("all");
   const [cat, setCat] = useState("all");
@@ -757,7 +759,7 @@ export function FailedBoard({
             </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-1 pt-1 text-[0.7rem]">
-            <SlaRow label={tq("failed.sla.meanLatency")} value={fmtLatency(meanLatency)} />
+            <SlaRow label={tq("failed.sla.meanLatency")} value={fmtLatency(locale, meanLatency)} />
             <SlaRow label={tq("failed.sla.critical")} value={pct(report?.n_critical ?? 0, total)} />
             <SlaRow label={tq("failed.sla.new")} value={pct(report?.n_new ?? 0, total)} />
             <SlaRow label={tq("failed.sla.models")} value={String(report?.models.length ?? 0)} />
@@ -768,10 +770,10 @@ export function FailedBoard({
   );
 }
 
-function fmtLatency(ms: number | null): string {
+function fmtLatency(locale: string, ms: number | null): string {
   if (ms == null) return DASH;
   if (ms < 1000) return `${Math.round(ms)} ms`;
-  return `${(ms / 1000).toFixed(1)} s`;
+  return `${formatDecimal(locale, ms / 1000, 1)} s`;
 }
 
 function SlaRow({ label, value }: { label: string; value: string }) {

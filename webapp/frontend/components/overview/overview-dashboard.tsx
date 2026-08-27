@@ -99,7 +99,12 @@ import {
   readControlSeries,
   readControls,
 } from "@/lib/control-registry";
-import { useIntFormat } from "@/lib/format-number";
+import {
+  useDecimalFormat,
+  useEuroFormat,
+  useIntFormat,
+  useNumberFormat,
+} from "@/lib/format-number";
 import {
   type OverviewTone,
   dotBg,
@@ -165,6 +170,14 @@ export function OverviewDashboard({
   const t = useTranslations("overview");
   const locale = useLocale();
   const fmtInt = useIntFormat();
+  const fmtDec1 = useDecimalFormat(1);
+  const fmtEuro = useEuroFormat();
+  // The sign is part of the reader's number format, never glued on by hand.
+  const fmtSignedDelta = useNumberFormat({
+    signDisplay: "always",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   // Global agent scope (?agent=) — the same filter the GOUVERNER/PLATEFORME surfaces
   // carry (lib/agent-scope). It descends into the score-/bundle-/audit-backed queries
   // so the whole dashboard reads ONE agent's own signals, not just the "Vue par agent"
@@ -460,7 +473,7 @@ export function OverviewDashboard({
                 ? t("kpi.vsBaseline", {
                     delta: signedPts(sloReady.good_rate - sloReady.target),
                   })
-                : t("kpi.qualityDelta", { burn: sloReady.burn_rate.toFixed(1) })
+                : t("kpi.qualityDelta", { burn: fmtDec1(sloReady.burn_rate) })
               : historyMode
                 ? t("kpi.noDataAtT")
                 : ""
@@ -514,7 +527,7 @@ export function OverviewDashboard({
           }
           delta={
             whatChanged.data?.score_delta != null
-              ? `${whatChanged.data.score_delta >= 0 ? "+" : ""}${whatChanged.data.score_delta.toFixed(2)}`
+              ? fmtSignedDelta.format(whatChanged.data.score_delta)
               : ""
           }
           tone={
@@ -532,7 +545,7 @@ export function OverviewDashboard({
           label={t("kpi.cost")}
           infoKey="cost"
           href="/surveiller/fiabilite-cout"
-          value={cost.data ? `${cost.data.estimated_cost_eur.toFixed(2)} €` : "—"}
+          value={cost.data ? fmtEuro(cost.data.estimated_cost_eur) : "—"}
           delta={
             cost.data
               ? t("kpi.costDelta", {
@@ -796,7 +809,7 @@ function TimeTagChip({ kind, className }: { kind: TimeTagKind; className?: strin
     <span
       title={config.title}
       className={cn(
-        "inline-flex cursor-help items-center gap-1 rounded px-1.5 py-0.5 text-[0.58rem] font-medium uppercase leading-none tracking-wide",
+        "inline-flex cursor-help items-center gap-1 rounded px-1.5 py-0.5 text-[0.66rem] font-medium uppercase leading-none tracking-wide",
         config.tone,
         className,
       )}
@@ -922,7 +935,7 @@ function KpiCard({
                 drawable trend yet; when there's no data at all the delta line
                 already says "Aucune donnée à T", so don't repeat it here. */}
             {trend.length <= 1 && value !== "—" ? (
-              <span className="absolute inset-0 flex items-center justify-center text-[0.58rem] text-[var(--muted-foreground)]">
+              <span className="absolute inset-0 flex items-center justify-center text-[0.66rem] text-[var(--muted-foreground)]">
                 {trendEmptyLabel}
               </span>
             ) : null}
@@ -1090,7 +1103,7 @@ function CriticalControlsTable({
                           {agentScoped && isOrgWide(registryIdFor(c.id)) ? (
                             <span
                               title={tas("orgWideHint")}
-                              className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
+                              className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.66rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
                             >
                               {tas("orgWide")}
                             </span>
@@ -1107,7 +1120,7 @@ function CriticalControlsTable({
                           !signalSupports(registryIdFor(c.id), "time") ? (
                             <span
                               title={t("currentPolicyHint")}
-                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium uppercase leading-none tracking-wide text-[var(--tessera-fg-warning)]/90"
+                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.66rem] font-medium uppercase leading-none tracking-wide text-[var(--tessera-fg-warning)]/90"
                             >
                               <Activity className="h-2.5 w-2.5" />
                               {t("currentPolicy")}
@@ -1115,12 +1128,12 @@ function CriticalControlsTable({
                           ) : null}
                         </div>
                         {sig?.catalogued && sig.signal_name ? (
-                          <div className="font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                          <div className="font-mono text-[0.66rem] text-[var(--muted-foreground)]">
                             {sig.signal_id} · {sig.signal_name}
                           </div>
                         ) : sig ? (
                           <div
-                            className="text-[0.6rem] text-[var(--muted-foreground)]"
+                            className="text-[0.66rem] text-[var(--muted-foreground)]"
                             title={tt("liveTooltip")}
                           >
                             {t("liveProbe")}
@@ -1155,7 +1168,7 @@ function CriticalControlsTable({
                           the same label. One of the two had to stop being the headline; neither
                           had to disappear. */}
                         {c.detail ? (
-                          <div className="text-[0.6rem] font-normal text-[var(--muted-foreground)]">
+                          <div className="text-[0.66rem] font-normal text-[var(--muted-foreground)]">
                             {tcd(c.detail.key, c.detail.values)}
                           </div>
                         ) : null}
@@ -1172,7 +1185,7 @@ function CriticalControlsTable({
                           fixable gap gets read as a permanent one. */}
                         {c.noCurve ? (
                           <span
-                            className="text-[0.6rem] text-[var(--muted-foreground)]"
+                            className="text-[0.66rem] text-[var(--muted-foreground)]"
                             title={tnc(`why.${c.noCurve}`)}
                           >
                             {tnc(c.noCurve)}
@@ -1194,7 +1207,7 @@ function CriticalControlsTable({
                           <NoHistoryLabel
                             values={c.trend ?? []}
                             bucketHours={bucketHours}
-                            className="text-[0.6rem] text-[var(--muted-foreground)]"
+                            className="text-[0.66rem] text-[var(--muted-foreground)]"
                           />
                         )}
                       </td>
@@ -1508,7 +1521,7 @@ function GovernedActivityCard({
                     </Truncate>
                     <Truncate
                       full={meta}
-                      className="font-mono text-[0.6rem] text-[var(--muted-foreground)]"
+                      className="font-mono text-[0.66rem] text-[var(--muted-foreground)]"
                     >
                       {meta}
                     </Truncate>
@@ -1527,10 +1540,10 @@ function GovernedActivityCard({
 // Trace observability — real Langfuse data (best tool for the job)
 // ---------------------------------------------------------------------------
 
-/** Latency seconds → a compact "N ms" / "N.N s" label. */
-function fmtLatency(s: number | null): string {
+/** Latency seconds → a compact "N ms" / "N,NN s" label, in the reader's language. */
+function fmtLatency(s: number | null, fmtDec2: (v: number | null | undefined) => string): string {
   if (s == null) return "—";
-  return s < 1 ? `${Math.round(s * 1000)} ms` : `${s.toFixed(2)} s`;
+  return s < 1 ? `${Math.round(s * 1000)} ms` : `${fmtDec2(s)} s`;
 }
 
 function TraceLink({ href, label }: { href: string; label: string }) {
@@ -1566,6 +1579,7 @@ function ObservabilityTracesCard({
 }) {
   const t = useTranslations("overview.traces");
   const fmtInt = useIntFormat();
+  const fmtDec2 = useDecimalFormat(2);
   return (
     <Card>
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 pb-2">
@@ -1596,12 +1610,16 @@ function ObservabilityTracesCard({
               <div className="flex items-center gap-3 text-right">
                 <Gauge className="h-4 w-4 text-[var(--muted-foreground)]" />
                 <div>
-                  <p className="text-[0.6rem] uppercase text-[var(--muted-foreground)]">p50</p>
-                  <p className="font-mono text-sm tabular-nums">{fmtLatency(data.latency_p50_s)}</p>
+                  <p className="text-[0.66rem] uppercase text-[var(--muted-foreground)]">p50</p>
+                  <p className="font-mono text-sm tabular-nums">
+                    {fmtLatency(data.latency_p50_s, fmtDec2)}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-[0.6rem] uppercase text-[var(--muted-foreground)]">p95</p>
-                  <p className="font-mono text-sm tabular-nums">{fmtLatency(data.latency_p95_s)}</p>
+                  <p className="text-[0.66rem] uppercase text-[var(--muted-foreground)]">p95</p>
+                  <p className="font-mono text-sm tabular-nums">
+                    {fmtLatency(data.latency_p95_s, fmtDec2)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1828,6 +1846,7 @@ function ReleaseCard({
   provTag: TimeTagKind | null;
 }) {
   const t = useTranslations("overview.rightColumn");
+  const fmtDec2 = useDecimalFormat(2);
 
   const qualityPass = slo ? !slo.breaching : undefined;
   const securityPass =
@@ -1858,7 +1877,7 @@ function ReleaseCard({
           whatChanged.score_before != null &&
           whatChanged.score_after != null ? (
             <p className="mt-2 font-serif text-xl font-semibold tabular-nums">
-              {whatChanged.score_before.toFixed(2)} → {whatChanged.score_after.toFixed(2)}
+              {fmtDec2(whatChanged.score_before)} → {fmtDec2(whatChanged.score_after)}
             </p>
           ) : (
             <p className="mt-2 text-sm text-[var(--muted-foreground)]">{t("noBaseline")}</p>
@@ -1971,7 +1990,7 @@ function QuickActionsCard({
                   </Badge>
                 ) : null}
                 {histDisabled ? (
-                  <span className="ml-auto text-[0.6rem] uppercase text-[var(--muted-foreground)]">
+                  <span className="ml-auto text-[0.66rem] uppercase text-[var(--muted-foreground)]">
                     {t("histTag")}
                   </span>
                 ) : null}
@@ -1997,6 +2016,7 @@ function RecentActivitiesCard({
   provTag: TimeTagKind | null;
 }) {
   const t = useTranslations("overview.rightColumn");
+  const fmtDec2 = useDecimalFormat(2);
   const rows = scores ? [...scores].reverse().slice(0, 6) : [];
   return (
     <Card>
@@ -2025,7 +2045,7 @@ function RecentActivitiesCard({
                 {s.metric} · <span className="uppercase">{s.language}</span>
               </Truncate>
               <span className="font-mono tabular-nums text-[var(--muted-foreground)]">
-                {s.score.toFixed(2)}
+                {fmtDec2(s.score)}
               </span>
             </div>
           ))
@@ -2052,6 +2072,7 @@ function AnalyticsSection({
 }) {
   const t = useTranslations("overview.analytics");
   const ts = useTranslations("overview.signals");
+  const fmtDec2 = useDecimalFormat(2);
   const directionTone: OverviewTone =
     trend?.direction === "improving"
       ? "success"
@@ -2078,10 +2099,10 @@ function AnalyticsSection({
                 className="h-16"
                 height={64}
               />
-              <div className="mt-2 flex items-center justify-between text-[0.65rem] text-[var(--muted-foreground)]">
+              <div className="mt-2 flex items-center justify-between text-[0.66rem] text-[var(--muted-foreground)]">
                 <span>{t(`direction.${trend.direction}`)}</span>
                 <span className="tabular-nums">
-                  {trend.first_half_mean.toFixed(2)} → {trend.second_half_mean.toFixed(2)}
+                  {fmtDec2(trend.first_half_mean)} → {fmtDec2(trend.second_half_mean)}
                 </span>
               </div>
             </div>

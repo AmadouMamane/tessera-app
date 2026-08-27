@@ -1,11 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ModelComparison, RunRegistry } from "@/lib/api/schemas";
+import { formatDecimal, formatEuro } from "@/lib/format-number";
 
 const VERDICT_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   best: "success",
@@ -42,15 +43,15 @@ function RateBar({ rate }: { rate: number }) {
   );
 }
 
-function fmtCost(c: number | null, free: string): string {
+function fmtCost(locale: string, c: number | null, free: string): string {
   if (c == null) return free;
   if (c === 0) return free;
-  return `${c.toFixed(3)} €`;
+  return formatEuro(locale, c, 3);
 }
 
-function fmtLatency(ms: number | null): string {
+function fmtLatency(locale: string, ms: number | null): string {
   if (ms == null) return "—";
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`;
+  return ms >= 1000 ? `${formatDecimal(locale, ms / 1000, 1)} s` : `${Math.round(ms)} ms`;
 }
 
 /** Eval run registry table + dataset summary (Runs & datasets tab, image 02). */
@@ -64,6 +65,7 @@ export function RunsTable({
   limit?: number;
 }) {
   const tq = useTranslations("quality");
+  const locale = useLocale();
 
   if (loading && !registry) {
     return (
@@ -132,10 +134,10 @@ export function RunsTable({
                       <RateBar rate={r.pass_rate} />
                     </td>
                     <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                      {fmtCost(r.est_cost_eur, tq("runs.free"))}
+                      {fmtCost(locale, r.est_cost_eur, tq("runs.free"))}
                     </td>
                     <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                      {fmtLatency(r.mean_latency_ms)}
+                      {fmtLatency(locale, r.mean_latency_ms)}
                     </td>
                     <td className="py-2 tabular-nums text-[var(--muted-foreground)]">
                       {parseRunAt(r.run_at)}
@@ -160,6 +162,7 @@ export function ModelComparisonTable({
   loading: boolean;
 }) {
   const tq = useTranslations("quality");
+  const locale = useLocale();
   const verdictLabel = (v: string) => (KNOWN_VERDICTS.includes(v) ? tq(`models.verdict.${v}`) : v);
 
   if (loading && !data) {
@@ -216,10 +219,10 @@ export function ModelComparisonTable({
                       <RateBar rate={m.pass_rate} />
                     </td>
                     <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                      {fmtCost(m.est_cost_eur, tq("runs.free"))}
+                      {fmtCost(locale, m.est_cost_eur, tq("runs.free"))}
                     </td>
                     <td className="py-2 pr-4 tabular-nums text-[var(--muted-foreground)]">
-                      {fmtLatency(m.mean_latency_ms)}
+                      {fmtLatency(locale, m.mean_latency_ms)}
                     </td>
                     <td className="py-2">
                       <Badge tone={VERDICT_TONE[m.verdict] ?? "neutral"}>

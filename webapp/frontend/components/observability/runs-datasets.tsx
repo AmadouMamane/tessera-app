@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { useEuroFormat, useIntFormat } from "@/lib/format-number";
+import { useDecimalFormat, useEuroFormat, useIntFormat } from "@/lib/format-number";
 import { type ReactNode, useState } from "react";
 
 import { DetailDrawer } from "@/components/cockpit/detail-drawer";
@@ -466,6 +466,7 @@ export function RunsKpis({
   const fmtEur = useEur();
   const tq = useTranslations("quality");
   const fmtInt = useIntFormat();
+  const fmtDec2 = useDecimalFormat(2);
   const tes = useTranslations("observability.embeddingSkew");
   const [skewOpen, setSkewOpen] = useState(false);
   const win = windowRuns(registry);
@@ -536,7 +537,7 @@ export function RunsKpis({
         icon={<GitBranch className="h-3 w-3" />}
         label={tq("runs.kpi.drift")}
         explainKey="runDrift"
-        value={meanDrift == null ? DASH : meanDrift.toFixed(2)}
+        value={meanDrift == null ? DASH : fmtDec2(meanDrift)}
         tone={meanDrift == null ? MUTED : meanDrift >= 0.3 ? WARN : undefined}
         sub={meanDrift == null ? tq("runs.kpi.driftNa") : tq("runs.kpi.driftMean")}
       />
@@ -601,6 +602,7 @@ function deltaForRun(registry: RunRegistry | undefined, run: RunSummary): number
 }
 
 function DeltaCell({ delta }: { delta: number | null }) {
+  const fmtDec2 = useDecimalFormat(2);
   if (delta == null) return <span className={MUTED}>{DASH}</span>;
   const up = delta >= 0;
   const tone = Math.abs(delta) < 0.005 ? MUTED : up ? GOOD : BAD;
@@ -608,7 +610,7 @@ function DeltaCell({ delta }: { delta: number | null }) {
   return (
     <span className={`tabular-nums ${tone}`}>
       {sign}
-      {Math.abs(delta).toFixed(2)}
+      {fmtDec2(Math.abs(delta))}
     </span>
   );
 }
@@ -897,13 +899,14 @@ function fmtDay(stamp: string | null): string {
 }
 
 function DriftCell({ drift }: { drift: number | null }) {
+  const fmtDec2 = useDecimalFormat(2);
   if (drift == null) return <span className={MUTED}>{DASH}</span>;
   const up = drift >= 0;
   const tone = Math.abs(drift) < 0.005 ? MUTED : up ? GOOD : BAD;
   return (
     <span className={`tabular-nums ${tone}`}>
       {up ? "+" : "−"}
-      {Math.abs(drift).toFixed(2)}
+      {fmtDec2(Math.abs(drift))}
     </span>
   );
 }
@@ -1171,6 +1174,7 @@ function CoverageBars({ items }: { items: { label: string; value: number }[] }) 
 
 /** Per-dataset mean drift, horizontal bars coloured by magnitude (teal→amber→red). */
 function DriftBars({ items }: { items: { label: string; value: number }[] }) {
+  const fmtDec2 = useDecimalFormat(2);
   if (items.length === 0) return <ChartEmpty />;
   const max = Math.max(...items.map((i) => Math.abs(i.value)), 0.1);
   return (
@@ -1189,7 +1193,7 @@ function DriftBars({ items }: { items: { label: string; value: number }[] }) {
               />
             </div>
             <span className="w-9 shrink-0 text-right tabular-nums text-[var(--foreground)]">
-              {abs.toFixed(2)}
+              {fmtDec2(abs)}
             </span>
           </div>
         );

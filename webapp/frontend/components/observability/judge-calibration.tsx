@@ -31,7 +31,7 @@ import type {
   ReleaseStatus,
   SeriesBucket,
 } from "@/lib/api/schemas";
-import { usePercentFormat } from "@/lib/format-number";
+import { useDecimalFormat, usePercentFormat } from "@/lib/format-number";
 
 const GOOD = "text-emerald-600 dark:text-emerald-400";
 const WARN = "text-amber-600 dark:text-amber-400";
@@ -223,6 +223,8 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
 /** Histogram of judge scores in five bins, with mean/median footer. */
 function ScoreDistribution({ points }: { points: CalibrationPoint[] }) {
   const tq = useTranslations("quality");
+  const fmtDec1 = useDecimalFormat(1);
+  const fmtDec2 = useDecimalFormat(2);
   const bins = [0, 0, 0, 0, 0];
   for (const p of points) {
     const idx = Math.min(4, Math.max(0, Math.floor(p.judge_score * 5)));
@@ -243,13 +245,13 @@ function ScoreDistribution({ points }: { points: CalibrationPoint[] }) {
               style={{ height: `${(c / max) * 100}%`, minHeight: c > 0 ? "4px" : "0" }}
             />
             <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">
-              {(i * 0.2).toFixed(1)}
+              {fmtDec1(i * 0.2)}
             </span>
           </div>
         ))}
       </div>
       <p className="text-[0.65rem] text-[var(--muted-foreground)]">
-        {tq("judge.meanMedian", { m: mean.toFixed(2), md: median.toFixed(2) })}
+        {tq("judge.meanMedian", { m: fmtDec2(mean), md: fmtDec2(median) })}
       </p>
     </div>
   );
@@ -344,6 +346,7 @@ function GroupRows({
   labelKey?: (label: string) => string;
   showKappa?: boolean;
 }) {
+  const fmtDec2 = useDecimalFormat(2);
   return (
     <ul className="flex flex-col gap-1.5">
       {groups.map((g) => {
@@ -363,7 +366,7 @@ function GroupRows({
             </span>
             {showKappa ? (
               <span className="w-12 shrink-0 text-right tabular-nums text-[var(--muted-foreground)]">
-                κ {g.kappa.toFixed(2)}
+                κ {fmtDec2(g.kappa)}
               </span>
             ) : null}
           </li>
@@ -490,6 +493,7 @@ export function JudgeCalibration({
   loading: boolean;
 }) {
   const pctFmt = usePercentFormat(1);
+  const fmtDec2 = useDecimalFormat(2);
   const tq = useTranslations("quality");
 
   if (loading && !data) {
@@ -552,7 +556,7 @@ export function JudgeCalibration({
         <Kpi
           label={tq("judge.kappaTitle")}
           explainKey="jgKappa"
-          value={kappa.toFixed(2)}
+          value={fmtDec2(kappa)}
           tone={kappaTone}
           hint={tq("judge.vsBaseline")}
         />
@@ -580,21 +584,21 @@ export function JudgeCalibration({
         <Kpi
           label={tq("judge.verbosityBias")}
           explainKey="jgVerbosity"
-          value={verbosity.toFixed(2)}
+          value={fmtDec2(verbosity)}
           tone={verbTone}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.clemency")}
           explainKey="jgClemency"
-          value={clemency.toFixed(2)}
+          value={fmtDec2(clemency)}
           tone={clemency < 0.2 ? GOOD : clemency < 0.4 ? WARN : BAD}
           hint={tq("judge.vsBaseline")}
         />
         <Kpi
           label={tq("judge.drift")}
           explainKey="jgDrift"
-          value={driftDiv == null ? "—" : driftDiv.toFixed(2)}
+          value={driftDiv == null ? "—" : fmtDec2(driftDiv)}
           tone={driftDiv == null ? MUTED : driftDiv < 0.05 ? GOOD : driftDiv < 0.1 ? WARN : BAD}
           hint={tq("judge.vsBaseline")}
         />
@@ -718,7 +722,7 @@ export function JudgeCalibration({
                         {tq(`judge.cat.${p.category}`)}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 tabular-nums">{p.judge_score.toFixed(2)}</td>
+                    <td className="py-2 pr-3 tabular-nums">{fmtDec2(p.judge_score)}</td>
                     <td className="py-2 pr-3">
                       <Badge tone="danger">{tq("judge.disagree")}</Badge>
                     </td>
@@ -857,6 +861,7 @@ export function JudgeRail({
   onEvidence: () => void;
 }) {
   const tq = useTranslations("quality");
+  const fmtDec2 = useDecimalFormat(2);
   const kappa = data?.kappa ?? null;
   const agreement = data?.agreement ?? null;
   const driftDiv = drift?.divergence ?? null;
@@ -901,7 +906,7 @@ export function JudgeRail({
   const gates: { label: string; value: string; pass: boolean | null }[] = [
     {
       label: tq("judge.gateCalibration"),
-      value: kappa == null ? "—" : kappa.toFixed(2),
+      value: kappa == null ? "—" : fmtDec2(kappa),
       pass: kappa == null ? null : kappa >= 0.8,
     },
     {
@@ -911,7 +916,7 @@ export function JudgeRail({
     },
     {
       label: tq("judge.gateDrift"),
-      value: driftDiv == null ? "—" : driftDiv.toFixed(2),
+      value: driftDiv == null ? "—" : fmtDec2(driftDiv),
       pass: driftDiv == null ? null : driftDiv < 0.1,
     },
   ];
