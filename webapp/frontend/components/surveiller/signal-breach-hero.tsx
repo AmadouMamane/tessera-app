@@ -13,6 +13,7 @@ import { AlertRibbon, type RibbonVariant } from "@/components/cockpit/alert-ribb
 import { Link } from "@/i18n/navigation";
 import { AGENT_SCOPE_PARAM, parseAgentScope } from "@/lib/agent-scope";
 import { fetchSLO } from "@/lib/api/client";
+import { rateMarginPts } from "@/lib/rate-confidence";
 
 /**
  * A RATE IS NOT PUBLISHED UNTIL THE SAMPLE CAN CARRY ONE.
@@ -136,6 +137,17 @@ export function SignalBreachHero({
   // in what LEADS: a percentage, or the counts it was computed from.
   const rateIsPublishable = data.n >= MIN_N_FOR_A_RATE;
 
+  // Where a rate leads, it carries how far the true rate can plausibly sit from it. Below
+  // the floor the counts already say everything exactly, so no margin is shown there.
+  const marginPts = rateIsPublishable ? rateMarginPts(data.n_good, data.n) : null;
+  const marginTitle = marginPts != null ? t("marginInfo", { pts: decimal(marginPts) }) : undefined;
+  const margin =
+    marginPts != null ? (
+      <span className="tabular-nums" title={marginTitle}>
+        {t("margin", { pts: decimal(marginPts), n: data.n })}
+      </span>
+    ) : null;
+
   if (!data.breaching) {
     const okTitle = rateIsPublishable
       ? t("okShort", { metric, rate: pct(data.good_rate), threshold: pct(data.target) })
@@ -146,7 +158,15 @@ export function SignalBreachHero({
           threshold: pct(data.target),
         });
     if (variant === "slim") {
-      return <AlertRibbon variant="slim" severity="ok" icon={ShieldCheck} title={okTitle} />;
+      return (
+        <AlertRibbon
+          variant="slim"
+          severity="ok"
+          icon={ShieldCheck}
+          title={okTitle}
+          meta={margin ?? undefined}
+        />
+      );
     }
     return (
       <AlertRibbon
@@ -155,6 +175,7 @@ export function SignalBreachHero({
         icon={ShieldCheck}
         eyebrow={t("title")}
         title={okTitle}
+        meta={margin ?? undefined}
         // A needle is a percentage drawn instead of written, so it inherits the same rule: on
         // too small a sample it is the fabricated precision again, in a second notation. This
         // is the reasoning already committed for `n === 0`, applied one step further along.
@@ -164,6 +185,7 @@ export function SignalBreachHero({
                 value: data.good_rate,
                 threshold: data.target,
                 thresholdLabel: pctTight(data.target),
+                caption: margin ?? undefined,
               }
             : undefined
         }
@@ -184,6 +206,17 @@ export function SignalBreachHero({
     bad: data.n_bad,
     n: data.n,
   });
+  // One burn line, used by every red presentation below — with the rate's margin riding
+  // along where a rate is published, so the alarm and its uncertainty travel together.
+  const burnLine = (
+    <span className="inline-flex items-center gap-1.5 tabular-nums">
+      <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
+      {burn}
+      {marginPts != null ? (
+        <span title={marginTitle}>· {t("marginShort", { pts: decimal(marginPts) })}</span>
+      ) : null}
+    </span>
+  );
   const remediate = (
     <Link
       href={"/agir/incidents-playbooks" as Route}
@@ -200,12 +233,7 @@ export function SignalBreachHero({
         severity="critical"
         icon={TriangleAlert}
         title={title}
-        meta={
-          <span className="inline-flex items-center gap-1.5 tabular-nums">
-            <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
-            {burn}
-          </span>
-        }
+        meta={burnLine}
         action={remediate}
       />
     );
@@ -222,12 +250,7 @@ export function SignalBreachHero({
       title={title}
       // The ribbon falls back to `meta` when there is no gauge, so the burn line — which
       // carries the SAMPLE — survives the needle's removal instead of going with it.
-      meta={
-        <span className="inline-flex items-center gap-1.5 tabular-nums">
-          <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
-          {burn}
-        </span>
-      }
+      meta={burnLine}
       gauge={
         // Same rule as the green band and as `n === 0`: a needle is a percentage drawn rather
         // than written, so too small a sample forbids it in either notation. The band keeps its
@@ -238,12 +261,7 @@ export function SignalBreachHero({
               value: data.good_rate,
               threshold: data.target,
               thresholdLabel: pctTight(data.target),
-              caption: (
-                <span className="inline-flex items-center gap-1.5">
-                  <Flame className="h-3 w-3 shrink-0 text-[var(--tessera-fg-danger)]" aria-hidden />
-                  {burn}
-                </span>
-              ),
+              caption: burnLine,
             }
           : undefined
       }

@@ -470,7 +470,7 @@
       "impact": "Impact",
       "action": "Action",
       "investigate": "Investiguer",
-      "liveProbe": "mesure actuelle · hors catalogue",
+      "liveProbe": "mesure en direct, sans référence",
       "viewAll": "Voir tous les signaux",
       "currentPolicy": "Politique actuelle",
       "currentPolicyHint": "Calibration de la politique de garde actuellement en vigueur. Recalculée à chaque affichage mais inchangée tant que la politique n'est pas redéployée — elle n'est donc pas reconstituée à l'instant choisi."
@@ -668,7 +668,7 @@
       "sessions": "{n} sessions",
       "recall": "rappel {recall}",
       "themes": "{n} thèmes",
-      "cost": "{eur} € · {anomalies} anomalies",
+      "cost": "{eur} · {anomalies} anomalies",
       "turns": "{n} tours",
       "unknown": "{n} inconnus",
       "agreement": "accord {agreement}",
@@ -9315,6 +9315,9 @@
     "burnBad": "{bad} réponses sur {n} sous l'objectif",
     "stopPulse": "Marquer comme vu",
     "remediate": "Ouvrir les actions",
+    "margin": "± {pts} pts · {n} réponses jugées",
+    "marginShort": "± {pts} pts",
+    "marginInfo": "Marge de lecture à 95 % : avec cet échantillon, le taux réel se situe très probablement à moins de {pts} points du taux affiché.",
     "metric": {
       "faithfulness": "Fidélité",
       "relevance": "Pertinence",
@@ -11247,7 +11250,7 @@
       "link": "Vue métier"
     },
     "unscored": {
-      "label": "Réponses non notées (choix déclaré)",
+      "label": "Réponses non notées (par choix)",
       "observedNote": "{observed, plural, one {<v>#</v> de ces agents publie déjà son activité et apparaît dans les métriques du cockpit — seule la notation de ses réponses est absente} other {<v>#</v> de ces agents publient déjà leur activité et apparaissent dans les métriques du cockpit — seule la notation de leurs réponses est absente}}"
     },
     "unreadable": "Impossible de lire qui est noté comment — l'information est indisponible pour le moment.",
@@ -11260,7 +11263,7 @@
     },
     "judgeCard": {
       "business": "Cet agent n'est pas noté par le juge IA : ses exécutions sont vérifiées par des contrôles métier automatiques.",
-      "unscored": "Cet agent n'est pas noté : choix déclaré, expliqué sur la page Qualité IA."
+      "unscored": "Cet agent n'est pas noté — un choix assumé, expliqué sur la page Qualité IA."
     },
     "since": {
       "date": "depuis le {date}",

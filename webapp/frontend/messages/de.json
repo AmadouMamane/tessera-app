@@ -470,7 +470,7 @@
       "impact": "Auswirkung",
       "action": "Aktion",
       "investigate": "Untersuchen",
-      "liveProbe": "Aktuelle Messung · nicht im Katalog",
+      "liveProbe": "Live-Messung, ohne Referenz",
       "viewAll": "Alle Signale",
       "currentPolicy": "Aktuelle Richtlinie",
       "currentPolicyHint": "Kalibrierung der aktuell geltenden Schutzrichtlinie. Bei jeder Anzeige neu berechnet, aber unverändert bis zur erneuten Bereitstellung der Richtlinie — daher nicht auf den gewählten Zeitpunkt zurückgerechnet."
@@ -668,7 +668,7 @@
       "sessions": "{n} Sitzungen",
       "recall": "Trefferquote {recall}",
       "themes": "{n} Themen",
-      "cost": "{eur} € · {anomalies} Anomalien",
+      "cost": "{eur} · {anomalies} Anomalien",
       "turns": "{n} Turns",
       "unknown": "{n} unbekannt",
       "agreement": "Übereinstimmung {agreement}",
@@ -9315,6 +9315,9 @@
     "burnBad": "{bad} von {n} Antworten unter dem Ziel",
     "stopPulse": "Als gesehen markieren",
     "remediate": "Maßnahmen öffnen",
+    "margin": "± {pts} Pkt. · {n} bewertete Antworten",
+    "marginShort": "± {pts} Pkt.",
+    "marginInfo": "95-%-Lesemarge: Bei dieser Stichprobe liegt die tatsächliche Quote sehr wahrscheinlich innerhalb von {pts} Punkten der angezeigten Quote.",
     "metric": {
       "faithfulness": "Faktentreue",
       "relevance": "Relevanz",
@@ -11247,7 +11250,7 @@
       "link": "Fachansicht"
     },
     "unscored": {
-      "label": "Antworten ohne Bewertung (deklarierte Entscheidung)",
+      "label": "Antworten ohne Bewertung (bewusste Entscheidung)",
       "observedNote": "{observed, plural, one {<v>#</v> dieser Agenten veröffentlicht bereits seine Aktivität und erscheint in den Cockpit-Metriken — nur die Bewertung seiner Antworten fehlt} other {<v>#</v> dieser Agenten veröffentlichen bereits ihre Aktivität und erscheinen in den Cockpit-Metriken — nur die Bewertung ihrer Antworten fehlt}}"
     },
     "unreadable": "Nicht lesbar, wer wie bewertet wird — die Information ist derzeit nicht verfügbar.",
@@ -11260,7 +11263,7 @@
     },
     "judgeCard": {
       "business": "Dieser Agent wird nicht vom KI-Prüfer bewertet: seine Ausführungen werden durch automatische Fachkontrollen geprüft.",
-      "unscored": "Dieser Agent wird nicht bewertet: eine erklärte Entscheidung, erläutert auf der Seite KI-Qualität."
+      "unscored": "Dieser Agent wird nicht bewertet — eine bewusste Entscheidung, erläutert auf der Seite KI-Qualität."
     },
     "since": {
       "date": "seit dem {date}",

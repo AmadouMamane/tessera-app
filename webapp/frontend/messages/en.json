@@ -470,7 +470,7 @@
       "impact": "Impact",
       "action": "Action",
       "investigate": "Investigate",
-      "liveProbe": "current measurement · not in catalogue",
+      "liveProbe": "live measurement, no reference",
       "viewAll": "View all signals",
       "currentPolicy": "Current policy",
       "currentPolicyHint": "Calibration of the currently-deployed guard policy. Recomputed on each view but unchanged until the policy is redeployed — so it is not reconstructed at the chosen instant."
@@ -668,7 +668,7 @@
       "sessions": "{n} sessions",
       "recall": "recall {recall}",
       "themes": "{n} themes",
-      "cost": "{eur} € · {anomalies} anomalies",
+      "cost": "{eur} · {anomalies} anomalies",
       "turns": "{n} turns",
       "unknown": "{n} unknown",
       "agreement": "agreement {agreement}",
@@ -9315,6 +9315,9 @@
     "burnBad": "{bad} of {n} responses below target",
     "stopPulse": "Acknowledge",
     "remediate": "Open actions",
+    "margin": "± {pts} pts · {n} judged responses",
+    "marginShort": "± {pts} pts",
+    "marginInfo": "95% reading margin: with this sample, the true rate is very likely within {pts} points of the displayed rate.",
     "metric": {
       "faithfulness": "Faithfulness",
       "relevance": "Relevance",
@@ -11233,7 +11236,7 @@
       "link": "Business view"
     },
     "unscored": {
-      "label": "Responses not rated (a declared choice)",
+      "label": "Responses not rated (by choice)",
       "observedNote": "{observed, plural, one {<v>#</v> of these agents already publishes its activity and appears in the cockpit's metrics — only its answer rating is missing} other {<v>#</v> of these agents already publish their activity and appear in the cockpit's metrics — only their answer rating is missing}}"
     },
     "unreadable": "Cannot read who is rated how — the information is unavailable right now.",
@@ -11246,7 +11249,7 @@
     },
     "judgeCard": {
       "business": "This agent is not rated by the AI judge: its runs are checked by automated business controls.",
-      "unscored": "This agent is not rated: a declared choice, explained on the AI Quality page."
+      "unscored": "This agent is not rated — a deliberate choice, explained on the AI Quality page."
     },
     "since": {
       "date": "since {date}",
