@@ -1665,6 +1665,11 @@ function ObservabilityTracesCard({
 // Push alerts — what leaves the cockpit when a watched state changes (ADR 0055)
 // ---------------------------------------------------------------------------
 
+/** The card draws its own severity dot, so a glyph in the journalled text would render as a
+ * double bullet. New journal lines are plain; this strips the glyph from lines journalled
+ * before the split (2026-08-27) rather than pretending they never carried one. */
+const stripSeverityGlyph = (text: string) => text.replace(/^[🔴🟢]\s*/u, "");
+
 function PushAlertsCard({ data, loading }: { data?: PushAlerts; loading: boolean }) {
   const t = useTranslations("overview.pushAlerts");
   const format = useFormatter();
@@ -1747,7 +1752,9 @@ function PushAlertsCard({ data, loading }: { data?: PushAlerts; loading: boolean
                           ev.kind === "critical" ? "bg-red-500" : "bg-[var(--tessera-green)]",
                         )}
                       />
-                      <Truncate full={ev.text}>{ev.text}</Truncate>
+                      <Truncate full={stripSeverityGlyph(ev.text)}>
+                        {stripSeverityGlyph(ev.text)}
+                      </Truncate>
                       <span className="tabular-nums text-[var(--muted-foreground)]">
                         {fmtAt(ev.at)}
                       </span>

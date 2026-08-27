@@ -104,6 +104,32 @@ def test_delivery_is_read_off_the_response_not_the_intent(
         get_settings.cache_clear()
 
 
+def test_the_glyph_rides_the_webhook_line_and_never_the_journal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The severity emoji is CHANNEL presentation, not part of the fact: the cockpit card
+    draws its own severity dot, so a glyph baked into the journalled text rendered as a
+    double bullet on screen (operator report, 2026-08-27)."""
+    from tessera.settings import get_settings
+
+    monkeypatch.setenv("TESSERA_OBS_ALERT_WEBHOOK_URL", "https://hooks.invalid/x")
+    get_settings.cache_clear()
+    try:
+        sent: list[str] = []
+
+        def _sink(_url: str, text: str) -> dict[str, object]:
+            sent.append(text)
+            return {"delivered": True, "status": 200}
+
+        monkeypatch.setattr(alerts, "push_webhook", _sink)
+        events = alerts.process_beat([_reading(True)], now=_T0)
+        events += alerts.process_beat([_reading(False)], now=_T0)
+        assert sent == ["🔴 Composant indisponible", "🟢 Composant rétabli"]
+        assert [e["text"] for e in events] == ["Composant indisponible", "Composant rétabli"]
+    finally:
+        get_settings.cache_clear()
+
+
 def test_the_journal_is_append_only_and_the_report_reads_its_tail() -> None:
     alerts.process_beat([_reading(True)], now=_T0)
     alerts.process_beat([_reading(False)], now=_T0)

@@ -181,8 +181,12 @@ def process_beat(
             continue
         kind = "critical" if reading.active else "recovered"
         text = reading.message if reading.active else reading.recovery
+        # The severity emoji belongs to the CHANNEL's presentation, not to the fact: the
+        # cockpit card draws its own severity dot, so an emoji baked into the journalled
+        # text rendered as a double bullet there (operator report, 2026-08-27). The journal
+        # keeps the plain sentence; the webhook line gets the glyph at send time.
         delivery: dict[str, object] = (
-            push_webhook(webhook, text)
+            push_webhook(webhook, f"{'🔴' if reading.active else '🟢'} {text}")
             if webhook
             else {"delivered": False, "skipped": "no-webhook"}
         )

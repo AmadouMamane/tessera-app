@@ -184,8 +184,8 @@ def _alert_readings(
             alerts.AlertReading(
                 condition="stack_down",
                 active=bool(failing),
-                message=f"🔴 Tessera — composants en échec : {shown}.",
-                recovery="🟢 Tessera — tous les composants déclarés répondent de nouveau.",
+                message=f"Tessera — composants en échec : {shown}.",
+                recovery="Tessera — tous les composants déclarés répondent de nouveau.",
             )
         )
     try:
@@ -206,11 +206,11 @@ def _alert_readings(
                 condition="slo_breach",
                 active=active,
                 message=(
-                    f"🔴 Tessera — objectif de qualité non tenu : {_fr_pct(good)} de réponses"
+                    f"Tessera — objectif de qualité non tenu : {_fr_pct(good)} de réponses"
                     f" conformes sur {n} jugées (objectif {_fr_pct(target)}, fenêtre 7 j)."
                 ),
                 recovery=(
-                    f"🟢 Tessera — objectif de qualité tenu de nouveau : {_fr_pct(good)}"
+                    f"Tessera — objectif de qualité tenu de nouveau : {_fr_pct(good)}"
                     f" sur {n} réponses jugées (fenêtre 7 j)."
                 ),
             )
