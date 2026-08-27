@@ -4730,6 +4730,28 @@ export const TracesObsSchema = z.object({
 });
 export type TracesObs = z.infer<typeof TracesObsSchema>;
 
+// ---------------------------------------------------------------------------
+
+/**
+ * ADR 0055 — the push-alert channel: posture, last definite state per watched condition,
+ * and the journal tail. `configured` is a boolean on purpose: the webhook URL never leaves
+ * the backend process.
+ */
+export const PushAlertsSchema = z.object({
+  configured: z.boolean(),
+  conditions: z.record(z.string(), z.boolean()),
+  recent: z.array(
+    z.object({
+      at: z.string(),
+      condition: z.string(),
+      kind: z.string(),
+      text: z.string(),
+      delivery: z.object({ delivered: z.boolean() }),
+    }),
+  ),
+});
+export type PushAlerts = z.infer<typeof PushAlertsSchema>;
+
 const AsMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   time: z.string(),

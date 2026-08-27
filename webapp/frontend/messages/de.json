@@ -417,6 +417,11 @@
         "what": "Das Volumen der AUFBEWAHRTEN Ausführungs-Traces und die beobachteten p50/p95-Latenzen. Kein Gesamtwert seit jeher: der Store hält nur die letzten 15 Tage, die Zahl pendelt sich also ein statt zu wachsen, und ein Rückgang kann ebenso von der Bereinigung wie von weniger Aktivität kommen.",
         "how": "Aus dem Langfuse-Stack gelesen (OpenTelemetry-Traces). Der Großteil des Volumens ist die Selbstinstrumentierung der Plattform — ihre eigenen Store-Lesezugriffe —, keine Konversationen."
       },
+      "pushAlerts": {
+        "what": "Was die Plattform aus dem Cockpit hinausmeldet, wenn sich ein überwachter Zustand ändert: eine Komponente ausgefallen, das Qualitätsziel verfehlt — mit Zustellnachweis für jeden Versand.",
+        "how": "Ein Alarm geht nur bei einem Zustandswechsel hinaus (nie wiederholt, solange sich nichts ändert), und die Zustellung wird an der Antwort des Kanals abgelesen, nicht an der Sendeabsicht. Ohne angeschlossenen Kanal werden Zustandswechsel weiterhin hier protokolliert.",
+        "source": "Das Alarmjournal, geschrieben von der kontinuierlichen Überwachungsschleife."
+      },
       "rightIncidents": {
         "what": "Die aktiven Sicherheits- und Qualitätsvorfälle.",
         "how": "Verfahren nach wiederholten Sicherheitsablehnungen oder schwacher Quellenbindung sowie erkannte ungewöhnliche Sitzungen.",
@@ -506,6 +511,22 @@
       "title": "Observability · Traces",
       "traces": "Aufbewahrte Traces",
       "unavailable": "Observability-Stack nicht erreichbar"
+    },
+    "pushAlerts": {
+      "title": "Externe Alarme",
+      "armed": "Kanal aktiv",
+      "notConfigured": "Kein Kanal",
+      "stateActive": "Alarm",
+      "stateQuiet": "ruhig",
+      "condition": {
+        "stack_down": "Plattform-Komponenten",
+        "slo_breach": "Qualitätsziel"
+      },
+      "noBaseline": "Noch keine Bedingung beobachtet.",
+      "notConfiguredHint": "Zustandswechsel werden hier protokolliert; ein angeschlossener Kanal (Webhook) sendet sie auch aus dem Cockpit hinaus.",
+      "unreadable": "Kanalzustand derzeit nicht lesbar.",
+      "delivered": "zugestellt",
+      "notDelivered": "nicht zugestellt"
     },
     "signals": {
       "faithfulness": "Quellengestützte Antworten (Serviceziel)",

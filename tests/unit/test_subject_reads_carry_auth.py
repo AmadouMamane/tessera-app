@@ -401,7 +401,12 @@ def test_the_public_aggregate_surface_is_not_locked(app: FastAPI) -> None:
     # the business-scored plane (runs total, per-status signal counts). It quotes the same
     # builders the bearer-guarded Métier reads use but exposes only their COUNTS: no run
     # timeline, no artifact, no case id — declarations and integers, the /slo posture.
-    assert len(public) == 140
+    # 141 (2026-08-27): GET /observability/alerts — the push-alert channel's posture
+    # (ADR 0055): `configured` as a boolean (the webhook URL never leaves the process), the
+    # last definite state per watched condition, and the journal tail whose texts name
+    # component keys and aggregate rates — the same facts /observability/components and
+    # /observability/slo already publish on this surface. No store row, no subject.
+    assert len(public) == 141
 
 
 def test_the_read_role_set_admits_the_auditor() -> None:

@@ -42,7 +42,13 @@ from typing import Final
 from fastapi import APIRouter, Depends, Query
 
 from tessera.api.security import require_bearer
-from tessera.observability import component_history, probe_scheduler, quality_nets
+from tessera.observability import (
+    alerts,
+    component_history,
+    logging as obs_logging,
+    probe_scheduler,
+    quality_nets,
+)
 from tessera.observability.langfuse_obs import langfuse_read_health
 from tessera.observability.stack_components import (
     STACK_COMPONENTS,
@@ -143,6 +149,77 @@ def _read_verdicts(report: PreflightReport) -> dict[str, Verdict]:
     return {key: verdict for key, (verdict, _) in _read_observations(report).items()}
 
 
+#: How many failing checks the stack alert names before folding the rest into "+N".
+_ALERT_NAMED_FAILURES: Final = 3
+
+
+def _fr_pct(ratio: float) -> str:
+    """A ratio as French percent text for the alert channel — one reader, one language."""
+    return f"{ratio * 100:.1f}".replace(".", ",") + " %"
+
+
+def _alert_readings(
+    observations: tuple[StackObservation, ...] | None,
+) -> list[alerts.AlertReading]:
+    """The two ADR 0055 conditions, read off this beat's own facts.
+
+    ``stack_down`` reads the stack observations the beat just produced — the thirteen
+    declared components, public edge included (the thing, not a neighbour); ``slo_breach``
+    reads the SAME derivation the cockpit hero reads (``slo_payload`` over the 7-day org
+    window), so the page and the push can never disagree about whether the objective
+    holds. A reading that cannot be taken comes back ``active=None`` — the alert layer
+    freezes on it rather than guessing (ADR 0026).
+    """
+    named = _ALERT_NAMED_FAILURES
+    readings: list[alerts.AlertReading] = []
+    if observations is None or all(o.check.verdict is Verdict.BLIND for o in observations):
+        # No observation, or nothing but blindness (an empty tuple included): cannot say.
+        readings.append(alerts.AlertReading("stack_down", None, "", ""))
+    else:
+        failing = [o.check.name for o in observations if o.check.verdict is Verdict.FAIL]
+        shown = ", ".join(failing[:named]) + (
+            f" +{len(failing) - named}" if len(failing) > named else ""
+        )
+        readings.append(
+            alerts.AlertReading(
+                condition="stack_down",
+                active=bool(failing),
+                message=f"🔴 Tessera — composants en échec : {shown}.",
+                recovery="🟢 Tessera — tous les composants déclarés répondent de nouveau.",
+            )
+        )
+    try:
+        from tessera.api.routes.observability._common import _scores_for
+        from tessera.observability.slo import slo_payload
+
+        payload = slo_payload(_scores_for(None, None, 7.0))
+        n_raw = payload.get("n")
+        n = n_raw if isinstance(n_raw, int) else 0
+        good_raw = payload.get("good_rate")
+        good = float(good_raw) if isinstance(good_raw, int | float) else 0.0
+        target_raw = payload.get("target")
+        target = float(target_raw) if isinstance(target_raw, int | float) else 0.0
+        # n == 0 is "nothing measured", which is neither breached nor met — freeze.
+        active: bool | None = bool(payload.get("breaching")) if n > 0 else None
+        readings.append(
+            alerts.AlertReading(
+                condition="slo_breach",
+                active=active,
+                message=(
+                    f"🔴 Tessera — objectif de qualité non tenu : {_fr_pct(good)} de réponses"
+                    f" conformes sur {n} jugées (objectif {_fr_pct(target)}, fenêtre 7 j)."
+                ),
+                recovery=(
+                    f"🟢 Tessera — objectif de qualité tenu de nouveau : {_fr_pct(good)}"
+                    f" sur {n} réponses jugées (fenêtre 7 j)."
+                ),
+            )
+        )
+    except Exception:  # a broken read is a frozen condition, never a dead beat
+        readings.append(alerts.AlertReading("slo_breach", None, "", ""))
+    return readings
+
+
 def probe_for_scheduler() -> float:
     """One scheduler beat: ensure a fresh stack observation exists, then stamp liveness.
 
@@ -151,8 +228,16 @@ def probe_for_scheduler() -> float:
     stays where it belongs, on the actual probe. The stamp is written on every beat regardless:
     it vouches for the LOOP being alive, which is a different fact from an observation having
     happened, and the history endpoint reports it as such.
+
+    The beat also folds the ADR 0055 alert conditions, under its own try/except: a broken
+    alert layer must never cost the loop its stamp, and a failed probe (the loop already
+    survives one) simply skips the alert step — the layer freezes rather than guesses.
     """
-    observed_at, _ = _stack()
+    observed_at, observations = _stack()
+    try:
+        alerts.process_beat(_alert_readings(observations))
+    except Exception as exc:  # alerting must never break the probe loop
+        obs_logging.get_logger("tessera.alerts").warning("alerts.beat_failed", error=str(exc))
     probe_scheduler.write_stamp()
     return observed_at
 
@@ -447,6 +532,18 @@ async def observability_component_history(
         ],
         "continuity_window_s": component_history.CONTINUITY_WINDOW.total_seconds(),
     }
+
+
+@router.get("/observability/alerts", dependencies=[Depends(require_bearer)])
+def observability_alerts() -> dict[str, object]:
+    """Push-alert channel posture (ADR 0055) — derived from the journal, never the intent.
+
+    ``configured`` says whether a webhook is set (the URL itself never leaves the process);
+    ``conditions`` is the last definite state per watched condition; ``recent`` is the tail
+    of the alert journal, each event carrying the delivery outcome read off the HTTP
+    response at push time.
+    """
+    return alerts.alerts_report()
 
 
 @router.get("/observability/instrumentation-coverage", dependencies=[Depends(require_bearer)])

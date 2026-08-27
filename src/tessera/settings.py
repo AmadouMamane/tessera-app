@@ -282,6 +282,19 @@ class ObservabilitySettings(BaseSettings):
     # only, so N workers never multiply it — and unit tests, which have no Postgres to elect a
     # leader with, never start it at all.
     probe_interval_s: int = 60
+    # ADR 0055 — where a state-transition alert is pushed OUT of the cockpit (Slack-compatible
+    # webhook, `{"text": ...}`). None = no push: conditions are still evaluated and journalled
+    # on the leader beat, only the egress is skipped — and the cockpit card says "no channel"
+    # out loud instead of looking armed. Arming it is a deliberate operator act (an env var),
+    # like the canary switch above.
+    alert_webhook_url: str | None = None
+
+    @field_validator("alert_webhook_url")
+    @classmethod
+    def _alert_webhook_is_http(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith(("http://", "https://")):
+            raise ValueError(f"alert_webhook_url must be an http(s) URL; got {value!r}")
+        return value
 
     @field_validator("online_eval_sample_rate")
     @classmethod

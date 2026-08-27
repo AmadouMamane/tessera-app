@@ -222,6 +222,8 @@ import {
   ProposeAgentSchema,
   type ProvenanceReport,
   ProvenanceReportSchema,
+  type PushAlerts,
+  PushAlertsSchema,
   type QualityDatasetsReport,
   QualityDatasetsReportSchema,
   type QualityRegimes,
@@ -1480,6 +1482,11 @@ export async function fetchGovernance(
 /** Real trace observability read back from the Langfuse stack, live or as of T. */
 export async function fetchTracesObs(signal?: AbortSignal, at?: string): Promise<TracesObs> {
   return request(withAsOf("/observability/traces-obs", at), { signal }, TracesObsSchema);
+}
+
+/** ADR 0055 — the push-alert channel's posture and journal tail (a live surface, never as-of). */
+export async function fetchPushAlerts(signal?: AbortSignal): Promise<PushAlerts> {
+  return request("/observability/alerts", { signal }, PushAlertsSchema);
 }
 
 /** Persist a status/assignee change for one queue item; returns the fresh payload. */

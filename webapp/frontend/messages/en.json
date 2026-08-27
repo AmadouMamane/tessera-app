@@ -417,6 +417,11 @@
         "what": "The volume of execution traces RETAINED and the observed p50/p95 latencies. This is not an all-time total: the store keeps only the last 15 days, so the number settles instead of growing, and a drop can come from the purge as much as from less activity.",
         "how": "Read from the Langfuse stack (OpenTelemetry traces). Most of the volume is the platform instrumenting its own store reads, not conversations."
       },
+      "pushAlerts": {
+        "what": "What the platform pushes outside the cockpit when a watched state changes: a component down, the quality target breached — with delivery proof for every send.",
+        "how": "An alert leaves on a state change only (never repeated while nothing changes), and its delivery is read off the channel's response, not off the intent to send. With no channel connected, state changes are still journalled here.",
+        "source": "The alert journal, written by the continuous monitoring loop."
+      },
       "rightIncidents": {
         "what": "The active security and quality incidents.",
         "how": "Procedures triggered by repeated safety refusals or poor source support, plus detected unusual sessions.",
@@ -506,6 +511,22 @@
       "title": "Observability · traces",
       "traces": "Traces retained",
       "unavailable": "Observability stack unreachable"
+    },
+    "pushAlerts": {
+      "title": "External alerts",
+      "armed": "Channel armed",
+      "notConfigured": "No channel",
+      "stateActive": "alerting",
+      "stateQuiet": "quiet",
+      "condition": {
+        "stack_down": "Platform components",
+        "slo_breach": "Quality target"
+      },
+      "noBaseline": "No condition observed yet.",
+      "notConfiguredHint": "State changes are journalled here; connecting a channel (webhook) will also send them outside the cockpit.",
+      "unreadable": "Channel state unreadable right now.",
+      "delivered": "delivered",
+      "notDelivered": "not delivered"
     },
     "signals": {
       "faithfulness": "Source-backed answers (service target)",

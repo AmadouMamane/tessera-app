@@ -417,6 +417,11 @@
         "what": "Le volume de traces d'exécution CONSERVÉES et les latences p50/p95 observées. Ce n'est pas un cumul depuis toujours : le store n'en garde que les 15 derniers jours, donc ce nombre se stabilise au lieu de croître, et une baisse peut venir de la purge autant que d'une baisse d'activité.",
         "how": "Lu depuis la pile Langfuse (traces OpenTelemetry). L'essentiel du volume est l'auto-instrumentation de la plateforme — ses propres lectures de stores —, pas des conversations."
       },
+      "pushAlerts": {
+        "what": "Ce que la plateforme pousse hors du cockpit quand un état surveillé change : composant en panne, objectif de qualité franchi — et la preuve de remise de chaque envoi.",
+        "how": "Une alerte part au changement d'état seulement (jamais répétée tant que rien ne change), et sa remise est constatée sur la réponse du canal, pas sur l'intention d'envoi. Sans canal branché, les changements restent journalisés ici.",
+        "source": "Journal des alertes, écrit par la boucle de surveillance continue."
+      },
       "rightIncidents": {
         "what": "Les incidents de sécurité et qualité actifs.",
         "how": "Procédures déclenchées après une série de refus de sécurité ou une faible fidélité aux sources, auxquelles s'ajoutent les sessions anormales détectées.",
@@ -506,6 +511,22 @@
       "title": "Observabilité · traces",
       "traces": "Traces conservées",
       "unavailable": "Stack d’observabilité injoignable"
+    },
+    "pushAlerts": {
+      "title": "Alertes externes",
+      "armed": "Canal armé",
+      "notConfigured": "Aucun canal",
+      "stateActive": "en alerte",
+      "stateQuiet": "calme",
+      "condition": {
+        "stack_down": "Composants de la plateforme",
+        "slo_breach": "Objectif de qualité"
+      },
+      "noBaseline": "Aucune condition observée pour l’instant.",
+      "notConfiguredHint": "Les changements d’état sont journalisés ici ; brancher un canal (webhook) les enverra aussi hors du cockpit.",
+      "unreadable": "État du canal illisible pour le moment.",
+      "delivered": "remis",
+      "notDelivered": "non remis"
     },
     "signals": {
       "faithfulness": "Fidélité (objectif de service)",

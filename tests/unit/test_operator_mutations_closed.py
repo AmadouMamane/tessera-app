@@ -181,13 +181,17 @@ def test_the_public_reads_are_untouched() -> None:
     regime (ADR 0017 §Amendment 4), read from the versioned manifest, plus aggregate counts
     for the business-scored plane (runs total, per-status signal counts). Declarations and
     counts only: no store row, no subject, same public-aggregate posture as /observability/slo.
+    +1 on 2026-08-27: GET /observability/alerts — the push-alert channel's posture
+    (ADR 0055): `configured` as a boolean (the webhook URL never leaves the process), the
+    last definite state per watched condition, and the journal tail with each event's
+    delivery outcome. Aggregate channel state only — no store row, no subject, no content.
     """
     from tessera.api.security import require_operator
 
     read_routes = [
         route for route in observability_router.routes if "GET" in getattr(route, "methods", set())
     ]
-    assert len(read_routes) == 145
+    assert len(read_routes) == 146
     for route in read_routes:
         guards = [dep.dependency for dep in getattr(route, "dependencies", [])]
         assert require_operator not in guards, (

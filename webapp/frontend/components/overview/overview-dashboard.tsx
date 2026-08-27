@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowRightLeft,
   ArrowUpRight,
+  BellRing,
   CalendarRange,
   ChevronRight,
   Clock,
@@ -22,7 +23,7 @@ import {
   TriangleAlert,
   UploadCloud,
 } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -46,6 +47,7 @@ import {
   fetchHealth,
   fetchOverviewCases,
   fetchOverviewSnapshot,
+  fetchPushAlerts,
   fetchReadiness,
   fetchTimeline,
   runRedteam,
@@ -83,6 +85,7 @@ import type {
   InboxOverview,
   PIILeakSummary,
   PlaybookReport,
+  PushAlerts,
   RefusalReport,
   SLOReport,
   ToolValidity,
@@ -358,6 +361,13 @@ export function OverviewDashboard({
   const inbox = useQuery({
     queryKey: ["ov-inbox"],
     queryFn: ({ signal }) => fetchOverviewCases(signal),
+    refetchInterval: POLL_MS,
+  });
+  // Push-alert channel (ADR 0055) — a LIVE operational surface like the inbox: its
+  // journal is append-only and its posture has no as-of substrate, so it never re-keys on T.
+  const pushAlerts = useQuery({
+    queryKey: ["ov-push-alerts"],
+    queryFn: ({ signal }) => fetchPushAlerts(signal),
     refetchInterval: POLL_MS,
   });
   // Trace observability read back from the running Langfuse stack (the OTel traces);
@@ -640,6 +650,7 @@ export function OverviewDashboard({
             loading={tracesObs.isLoading}
             provTag={provenanceTag}
           />
+          <PushAlertsCard data={pushAlerts.data} loading={pushAlerts.isLoading} />
         </aside>
       </div>
 
@@ -1643,6 +1654,112 @@ function ObservabilityTracesCard({
               <TraceLink href={data.grafana_url} label="Grafana" />
               <TraceLink href={data.phoenix_url} label="Phoenix" />
             </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Push alerts — what leaves the cockpit when a watched state changes (ADR 0055)
+// ---------------------------------------------------------------------------
+
+function PushAlertsCard({ data, loading }: { data?: PushAlerts; loading: boolean }) {
+  const t = useTranslations("overview.pushAlerts");
+  const format = useFormatter();
+  const conditionLabel = (key: string) =>
+    key === "stack_down" || key === "slo_breach" ? t(`condition.${key}`) : key;
+  const fmtAt = (iso: string) => {
+    const parsed = new Date(iso);
+    return Number.isNaN(parsed.getTime())
+      ? iso
+      : format.dateTime(parsed, {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+  };
+  return (
+    <Card>
+      <CardHeader className="flex-row flex-wrap items-center justify-between pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <BellRing className="h-4 w-4 text-[var(--tessera-fg-warning)]" />
+          {t("title")}
+          <SectionInfo title={t("title")} explainKey="pushAlerts" />
+        </CardTitle>
+        {data ? (
+          data.configured ? (
+            <Badge tone="success">{t("armed")}</Badge>
+          ) : (
+            <Badge tone="neutral">{t("notConfigured")}</Badge>
+          )
+        ) : null}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        {loading && !data ? (
+          <Skeleton className="h-16 w-full" />
+        ) : !data ? (
+          <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
+            {t("unreadable")}
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1.5">
+              {Object.entries(data.conditions).map(([key, active]) => (
+                <div key={key} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-[var(--muted-foreground)]">{conditionLabel(key)}</span>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5",
+                      active ? "text-[var(--tessera-fg-danger)]" : "text-[var(--tessera-green)]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        active ? "bg-red-500" : "bg-[var(--tessera-green)]",
+                      )}
+                    />
+                    {active ? t("stateActive") : t("stateQuiet")}
+                  </span>
+                </div>
+              ))}
+              {Object.keys(data.conditions).length === 0 ? (
+                <p className="text-xs text-[var(--muted-foreground)]">{t("noBaseline")}</p>
+              ) : null}
+            </div>
+            {data.recent.length > 0 ? (
+              <div className="flex flex-col gap-1 border-t border-[var(--border)] pt-2">
+                {data.recent
+                  .slice(-3)
+                  .reverse()
+                  .map((ev, i) => (
+                    <div
+                      key={`${ev.at}-${i}`}
+                      className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-[0.66rem]"
+                      title={ev.delivery.delivered ? t("delivered") : t("notDelivered")}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          ev.kind === "critical" ? "bg-red-500" : "bg-[var(--tessera-green)]",
+                        )}
+                      />
+                      <Truncate full={ev.text}>{ev.text}</Truncate>
+                      <span className="tabular-nums text-[var(--muted-foreground)]">
+                        {fmtAt(ev.at)}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            ) : null}
+            {!data.configured ? (
+              <p className="text-[0.66rem] text-[var(--muted-foreground)]">
+                {t("notConfiguredHint")}
+              </p>
+            ) : null}
           </>
         )}
       </CardContent>
