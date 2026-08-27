@@ -90,7 +90,7 @@ const figure = (chunks: ReactNode) => (
 
 /** Shared chip chrome — every chip is a Link (Métier view or agent page). */
 const CHIP_CLASS =
-  "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text)]";
+  "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.66rem] text-[var(--tessera-text)]";
 
 /**
  * "Last spoke: N days ago" — the liveness line every counting card carries (ADR 0052:
@@ -312,7 +312,7 @@ export function QualityRegimeBand() {
                 <span className="min-w-0 flex-1 text-[0.7rem] font-semibold leading-snug">
                   {t(`${regime}.label`)}
                 </span>
-                <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
+                <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.66rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
                   {t("agentCount", { count: entries.length })}
                 </span>
               </div>
@@ -345,7 +345,7 @@ export function QualityRegimeBand() {
                   </Link>
                 ))}
                 {hiddenNames > 0 ? (
-                  <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+                  <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
                     {t("moreNames", { count: hiddenNames })}
                   </span>
                 ) : null}
@@ -470,7 +470,7 @@ function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
         <span className="min-w-0 flex-1 text-[0.7rem] font-semibold leading-snug">
           {t("understanding.label")}
         </span>
-        <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
+        <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.66rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
           {t("agentCount", { count: entries.length })}
         </span>
       </div>
@@ -490,7 +490,7 @@ function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
           </Link>
         ))}
         {entries.length > MAX_NAMES ? (
-          <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+          <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
             {t("moreNames", { count: entries.length - MAX_NAMES })}
           </span>
         ) : null}

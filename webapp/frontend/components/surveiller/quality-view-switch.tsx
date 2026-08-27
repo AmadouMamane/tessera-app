@@ -111,11 +111,11 @@ export async function QualityViewSwitch({
               ) : null}
             </span>
             {isActive ? (
-              <span className="shrink-0 text-[0.62rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
+              <span className="shrink-0 text-[0.66rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
                 {t("views.current")}
               </span>
             ) : (
-              <span className="flex shrink-0 items-center gap-0.5 text-[0.62rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-text)]">
+              <span className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-text)]">
                 {t("views.enter")}
                 <ChevronRight
                   className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"

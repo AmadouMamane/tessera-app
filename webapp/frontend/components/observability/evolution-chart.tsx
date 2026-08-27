@@ -91,7 +91,7 @@ export function MetricKpi({
               guard scans quoted text and a French label in a comment reads to it exactly like a
               hardcoded one. It is right to — a comment is a poor place to prove intent.) */}
           {mean != null ? (
-            <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+            <span className="text-[0.66rem] text-[var(--muted-foreground)]">
               {tq("kpi.meanTag")}
             </span>
           ) : null}

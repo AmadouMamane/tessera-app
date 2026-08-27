@@ -669,7 +669,7 @@ export function TemporalRail({
         {!hideStartBound ? (
           <>
             <span className="pointer-events-none absolute left-0 top-1.5 h-2.5 w-px bg-[var(--tessera-border-strong)]" />
-            <span className="pointer-events-none absolute left-0 top-5 whitespace-nowrap text-[0.6rem] tabular-nums text-[var(--muted-foreground)] opacity-70">
+            <span className="pointer-events-none absolute left-0 top-5 whitespace-nowrap text-[0.66rem] tabular-nums text-[var(--muted-foreground)] opacity-70">
               {fmtDay(viewStart)}
             </span>
           </>
@@ -677,7 +677,7 @@ export function TemporalRail({
         {!hideEndBound ? (
           <>
             <span className="pointer-events-none absolute right-0 top-1.5 h-2.5 w-px bg-[var(--tessera-border-strong)]" />
-            <span className="pointer-events-none absolute right-0 top-5 whitespace-nowrap text-[0.6rem] tabular-nums text-[var(--muted-foreground)] opacity-70">
+            <span className="pointer-events-none absolute right-0 top-5 whitespace-nowrap text-[0.66rem] tabular-nums text-[var(--muted-foreground)] opacity-70">
               {anchored ? fmtDay(end) : t("now")}
             </span>
           </>
@@ -745,10 +745,10 @@ export function TemporalRail({
                 : { left: `${handlePos}%`, transform: "translateX(-50%)" }
             }
           >
-            <span className="text-[0.55rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <span className="text-[0.66rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {t("previewLabel")}
             </span>
-            <span className="tabular-nums text-[0.62rem] font-semibold text-[var(--tessera-fg-gold)]/80">
+            <span className="tabular-nums text-[0.66rem] font-semibold text-[var(--tessera-fg-gold)]/80">
               {fmtInstant(previewAt)}
             </span>
           </span>
@@ -764,7 +764,7 @@ export function TemporalRail({
           >
             <span
               className={cn(
-                "text-[0.55rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-gold)]/80",
+                "text-[0.66rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-gold)]/80",
                 isSignal && "[text-shadow:0_0_12px_rgba(232,201,130,0.24)]",
               )}
             >
@@ -772,7 +772,7 @@ export function TemporalRail({
             </span>
             <span
               className={cn(
-                "tabular-nums text-[0.62rem] font-semibold",
+                "tabular-nums text-[0.66rem] font-semibold",
                 isSignal
                   ? "text-[var(--tessera-fg-gold)] [text-shadow:0_0_16px_rgba(232,201,130,0.26)]"
                   : "text-[var(--tessera-fg-gold)]",
@@ -785,7 +785,7 @@ export function TemporalRail({
       </div>
 
       {/* Legend — what the scrubber ticks mean. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.62rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[0.66rem] text-[var(--muted-foreground)]">
         <span className="font-medium text-[var(--foreground)]">{t("legendScores")} :</span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-0.5 rounded bg-emerald-400" />
@@ -1210,7 +1210,7 @@ function RailMarker({
           <span
             title={title}
             className={cn(
-              "absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.6rem] font-medium",
+              "absolute top-[1.7rem] flex -translate-x-1/2 cursor-help items-center gap-1 whitespace-nowrap text-[0.66rem] font-medium",
               signal ? "text-[rgba(150,200,228,0.85)]" : "text-[var(--tessera-text-muted)]/90",
             )}
             style={{ left: `${pos}%` }}
@@ -1264,7 +1264,7 @@ function RailEvent({
         )}
       />
       {label ? (
-        <span className="mt-1.5 max-w-[7rem] truncate text-[0.6rem] font-medium text-[var(--foreground)]">
+        <span className="mt-1.5 max-w-[7rem] truncate text-[0.66rem] font-medium text-[var(--foreground)]">
           {label}
         </span>
       ) : null}

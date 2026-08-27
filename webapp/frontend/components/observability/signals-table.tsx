@@ -700,7 +700,7 @@ export function SignalsTable({
                                 </Truncate>
                                 <Truncate
                                   full={r.metric}
-                                  className="font-mono text-[0.65rem] text-[var(--muted-foreground)]"
+                                  className="font-mono text-[0.66rem] text-[var(--muted-foreground)]"
                                 >
                                   {r.metric}
                                 </Truncate>
@@ -753,7 +753,7 @@ export function SignalsTable({
                                   (served 2026-08-25 — all three na rows read as unexplained
                                   holes while every source had answered). */}
                               {r.status === "na" && r.sample !== "—" ? (
-                                <span className="mt-0.5 block max-w-[13rem] text-[0.6rem] leading-snug text-[var(--muted-foreground)]">
+                                <span className="mt-0.5 block max-w-[13rem] text-[0.66rem] leading-snug text-[var(--muted-foreground)]">
                                   {r.sample}
                                 </span>
                               ) : null}
@@ -764,7 +764,7 @@ export function SignalsTable({
                                 answers a different question ("which way, over what sample")
                                 and it is the only thing this column said until 2026-08-01. */}
                               {r.noCurve ? (
-                                <span className="text-[0.6rem]" title={tnc(`why.${r.noCurve}`)}>
+                                <span className="text-[0.66rem]" title={tnc(`why.${r.noCurve}`)}>
                                   {tnc(r.noCurve)}
                                 </span>
                               ) : hasDrawableCurve(r.curve ?? []) ? (
@@ -778,10 +778,10 @@ export function SignalsTable({
                                 <NoHistoryLabel
                                   values={r.curve ?? []}
                                   bucketHours={r.bucketHours}
-                                  className="text-[0.6rem]"
+                                  className="text-[0.66rem]"
                                 />
                               )}
-                              <span className="block text-[0.6rem]">
+                              <span className="block text-[0.66rem]">
                                 {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
                               </span>
                             </td>
@@ -926,7 +926,7 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
               <span className="max-w-[63px] truncate font-serif text-xl font-semibold leading-none tabular-nums">
                 {total}
               </span>
-              <span className="line-clamp-2 max-w-[63px] break-words text-center text-[0.6rem] leading-tight text-[var(--muted-foreground)]">
+              <span className="line-clamp-2 max-w-[63px] break-words text-center text-[0.66rem] leading-tight text-[var(--muted-foreground)]">
                 {tq("signalsTable.signalsLabel")}
               </span>
             </div>
@@ -977,7 +977,7 @@ export function SignalHeatmap({ rows }: { rows: SignalRow[] }) {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full text-[0.65rem]">
+          <table className="w-full text-[0.66rem]">
             <thead>
               <tr className="text-[var(--muted-foreground)]">
                 <th className="pb-1 text-left font-medium">{tq("signalsTable.cols.entity")}</th>
@@ -1076,17 +1076,17 @@ function DeltaVsYesterday({
 }) {
   const tq = useTranslations("quality");
   if (delta == null)
-    return <span className="text-[0.65rem] text-[var(--muted-foreground)]">—</span>;
+    return <span className="text-[0.66rem] text-[var(--muted-foreground)]">—</span>;
   if (delta === 0)
     return (
-      <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+      <span className="text-[0.66rem] text-[var(--muted-foreground)]">
         — {tq("signalsKpi.stable")}
       </span>
     );
   const up = delta > 0;
   const tone = up === goodUp ? "var(--tessera-fg-success)" : color;
   return (
-    <span className="flex items-center gap-1 text-[0.65rem] tabular-nums" style={{ color: tone }}>
+    <span className="flex items-center gap-1 text-[0.66rem] tabular-nums" style={{ color: tone }}>
       {up ? "▲" : "▼"} {up ? "+" : ""}
       {delta} {tq("signalsKpi.vsYesterday")}
     </span>
@@ -1391,7 +1391,7 @@ export function SignalsRail({
                 <div key={a.key} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
                   <Truncate className="min-w-0 flex-1 text-[0.7rem]">{a.label}</Truncate>
-                  <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                  <span className="shrink-0 font-mono text-[0.66rem] text-[var(--muted-foreground)]">
                     {a.detail}
                   </span>
                 </div>

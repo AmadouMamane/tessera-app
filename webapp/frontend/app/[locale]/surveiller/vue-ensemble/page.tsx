@@ -51,7 +51,7 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
         lead={<SignalBreachHero />}
       >
         {isScopedToAgent(scope) ? (
-          <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <p className="mb-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
             {ts("orgSignalsNote")}
           </p>
         ) : null}

@@ -168,7 +168,7 @@ export function MonitoringFleetTable({
       <div className="overflow-x-auto">
         <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
           <thead>
-            <tr className="text-left text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
               <th className="pb-2 text-center font-medium">{t("colVolume")}</th>
               <th className="pb-2 text-center font-medium">{t("colEscalation")}</th>
@@ -221,7 +221,7 @@ export function MonitoringFleetTable({
               </td>
               <td
                 colSpan={4}
-                className="py-2 pr-2 text-right text-[0.62rem] text-[var(--tessera-text-muted)]"
+                className="py-2 pr-2 text-right text-[0.66rem] text-[var(--tessera-text-muted)]"
               >
                 <DedupFooter
                   fleet={fleet}

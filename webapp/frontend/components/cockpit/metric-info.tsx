@@ -64,7 +64,7 @@ export function MetricInfo({ title, what, how, source, className }: MetricInfoPr
           </p>
           {how ? (
             <div className="mt-2 border-[var(--tessera-tooltip-border)] border-t pt-2">
-              <p className="font-medium text-[0.58rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
+              <p className="font-medium text-[0.66rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("calcul")}
               </p>
               <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
@@ -74,7 +74,7 @@ export function MetricInfo({ title, what, how, source, className }: MetricInfoPr
           ) : null}
           {source ? (
             <div className="mt-2 border-[var(--tessera-tooltip-border)] border-t pt-2">
-              <p className="font-medium text-[0.58rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
+              <p className="font-medium text-[0.66rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("source")}
               </p>
               <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">

@@ -43,7 +43,7 @@ function CardTabLink({
     <button
       type="button"
       onClick={() => onOpen(tab)}
-      className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+      className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.66rem] text-[var(--tessera-green)] hover:underline"
     >
       {label}
       <ChevronRight className="h-3 w-3" />
@@ -115,7 +115,7 @@ function ValueKpi({
       </div>
       {hint ? (
         <div
-          className={`text-[0.6rem] text-[var(--muted-foreground)] ${
+          className={`text-[0.66rem] text-[var(--muted-foreground)] ${
             onDrill ? "pointer-events-none relative z-20" : ""
           }`}
         >
@@ -500,11 +500,11 @@ export function FaithGroundingScatter({
                 ))}
               </svg>
             </div>
-            <div className="mt-0.5 flex justify-between text-[0.6rem] text-[var(--muted-foreground)]">
+            <div className="mt-0.5 flex justify-between text-[0.66rem] text-[var(--muted-foreground)]">
               <span>↑ {tq("metrics.grounding")}</span>
               <span>{tq("metrics.faithfulness")} →</span>
             </div>
-            <ul className="mt-1 flex flex-wrap gap-x-2 text-[0.6rem] text-[var(--muted-foreground)]">
+            <ul className="mt-1 flex flex-wrap gap-x-2 text-[0.66rem] text-[var(--muted-foreground)]">
               <li className="flex items-center gap-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 {tq("charts.good")}
@@ -545,7 +545,7 @@ function MiniBarRow({
 }: { label: string; value: string; pct: number; color: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-center justify-between gap-2 text-[0.65rem]">
+      <div className="flex items-center justify-between gap-2 text-[0.66rem]">
         <Truncate className="min-w-0">{label}</Truncate>
         <span className="shrink-0 tabular-nums text-[var(--muted-foreground)]">{value}</span>
       </div>
@@ -671,7 +671,7 @@ export function PredictiveSignals({
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-[var(--tessera-border)] pt-1.5">
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] font-medium text-[var(--muted-foreground)]">
+                <span className="text-[0.66rem] font-medium text-[var(--muted-foreground)]">
                   {tq("pred.intents")}
                 </span>
                 {intents.length === 0 ? (
@@ -692,7 +692,7 @@ export function PredictiveSignals({
                 )}
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] font-medium text-[var(--muted-foreground)]">
+                <span className="text-[0.66rem] font-medium text-[var(--muted-foreground)]">
                   {tq("pred.langs")}
                 </span>
                 {/* An unmeasured localization report is NOT a complete one. The endpoint
