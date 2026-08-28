@@ -369,7 +369,7 @@ function PriorityLots({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
               <th className="px-2 py-1.5 font-medium">{t("col.category")}</th>
               <th className="px-2 py-1.5 font-medium">{t("col.risk")}</th>
@@ -384,7 +384,7 @@ function PriorityLots({
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
                 <td
-                  className="max-w-[130px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[var(--tessera-fg-info)]"
+                  className="max-w-[130px] truncate px-2 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]"
                   title={lot.id}
                 >
                   {lot.id}
@@ -479,7 +479,7 @@ function CandidateRows({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-left text-xs">
         <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
             <th className="px-2 py-1.5 font-medium">{t("col.agent")}</th>
             <th className="px-2 py-1.5 font-medium">{t("col.category")}</th>
@@ -499,7 +499,7 @@ function CandidateRows({
               className="border-b border-[var(--tessera-border)]/60 last:border-0"
             >
               <td
-                className="max-w-[170px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[var(--tessera-fg-info)]"
+                className="max-w-[170px] truncate px-2 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]"
                 title={lot.title}
               >
                 {lot.id}
@@ -647,7 +647,7 @@ function HistoryTab({ t, data }: { t: T; data: Data }) {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-xs">
               <thead>
-                <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                   <th className="px-2 py-1.5 font-medium">{t("col.decidedAt")}</th>
                   <th className="px-2 py-1.5 font-medium">{t("col.id")}</th>
                   <th className="px-2 py-1.5 font-medium">{t("col.agent")}</th>
@@ -665,7 +665,7 @@ function HistoryTab({ t, data }: { t: T; data: Data }) {
                       {fmtDecidedAt(lot.decided_at, locale)}
                     </td>
                     <td
-                      className="max-w-[190px] truncate px-2 py-1.5 font-mono text-[0.68rem] text-[var(--tessera-fg-info)]"
+                      className="max-w-[190px] truncate px-2 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]"
                       title={lot.title}
                     >
                       {lot.id}
@@ -727,9 +727,9 @@ function WhyTours({ t, data, className }: { t: T; data: Data; className?: string
     >
       <ProvenanceNotice signalId="curation" compact />
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("whyCol.reason")}</th>
               <th className="px-1.5 py-1 font-medium">{t("whyCol.value")}</th>
               <th className="px-1.5 py-1 text-right font-medium">{t("whyCol.cost")}</th>
@@ -779,7 +779,7 @@ function CoverageHeatmap({ t, data, className }: { t: T; data: Data; className?:
     >
       <ProvenanceNotice signalId="curation" compact />
       <div className="overflow-x-auto">
-        <table className="w-full border-separate border-spacing-1 text-[0.6rem]">
+        <table className="w-full border-separate border-spacing-1 text-xs">
           <thead>
             <tr>
               <th />
@@ -826,7 +826,7 @@ function QualitySignals({ t, data, className }: { t: T; data: Data; className?: 
       <ProvenanceNotice signalId="curation" compact />
       <ul className="flex flex-col gap-2">
         {data.quality_signals.map((s) => (
-          <li key={s.key} className="flex flex-col gap-1 text-[0.66rem]">
+          <li key={s.key} className="flex flex-col gap-1 text-xs">
             <div className="flex items-center justify-between gap-1.5">
               <Truncate full={t(`signal.${s.key}`)} className="min-w-0 text-[var(--tessera-text)]">
                 {t(`signal.${s.key}`)}
@@ -868,9 +868,9 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
     >
       <ProvenanceNotice signalId="curation" compact />
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.68rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("dsCol.dataset")}</th>
               <th className="px-1.5 py-1 font-medium">{t("dsCol.size")}</th>
               <th className="px-1.5 py-1 font-medium">{t("dsCol.updated")}</th>
@@ -879,7 +879,7 @@ function LinkedDatasets({ t, data, className }: { t: T; data: Data; className?: 
           <tbody>
             {data.linked_datasets.map((d) => (
               <tr key={d.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-text)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-text)]">
                   {d.name}
                 </td>
                 <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
@@ -909,7 +909,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
       >
         <ul className="flex flex-col gap-1.5">
           {data.workflow.map((w) => (
-            <li key={w.step} className="flex items-center gap-2 text-[0.7rem]">
+            <li key={w.step} className="flex items-center gap-2 text-xs">
               <Truncate full={w.step} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {w.step}
               </Truncate>
@@ -930,14 +930,14 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         action={<ViewAll label={t("release.viewDetail")} href="/agir/release-control" />}
       >
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2 text-[0.72rem]">
+          <div className="flex items-center justify-between gap-2 text-xs">
             <span className="font-mono text-[var(--tessera-fg-info)]">{data.release.id}</span>
             <Badge className="border-emerald-500/30 bg-emerald-500/15 text-[var(--tessera-fg-success)]">
               {data.release.status}
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <span className="text-xs text-[var(--tessera-text-muted)]">
               {t("release.readiness")}
             </span>
             <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
@@ -957,12 +957,10 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         title={t("panel.linkedEvidence")}
         info={<ExplainInfo k="panel.linkedEvidence" title={t("panel.linkedEvidence")} />}
       >
-        <div className="flex flex-col gap-2 text-[0.72rem]">
+        <div className="flex flex-col gap-2 text-xs">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[var(--tessera-text-muted)]">{t("evidence.currentCohort")}</span>
-            <span className="font-mono text-[0.66rem] text-[var(--tessera-text)]">
-              {data.cohort}
-            </span>
+            <span className="font-mono text-xs text-[var(--tessera-text)]">{data.cohort}</span>
           </div>
           <Link
             href="/prouver/evidence-store"
@@ -978,9 +976,9 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
         info={<ExplainInfo k="panel.owners" title={t("panel.owners")} />}
       >
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-[0.68rem]">
+          <table className="w-full border-collapse text-left text-xs">
             <thead>
-              <tr className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <tr className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 <th className="pb-1 font-medium">{t("ownerCol.role")}</th>
                 <th className="pb-1 text-center font-medium">{t("ownerCol.required")}</th>
                 <th className="pb-1 text-center font-medium">{t("ownerCol.assigned")}</th>
@@ -1030,7 +1028,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
               {q.href ? (
                 <Link
                   href={q.href}
-                  className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
+                  className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
                   <Truncate
@@ -1045,7 +1043,7 @@ function CurationRail({ t, data }: { t: T; data: Data }) {
                   type="button"
                   disabled
                   title={tc("notWired")}
-                  className="flex w-full cursor-not-allowed items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] opacity-60"
+                  className="flex w-full cursor-not-allowed items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs opacity-60"
                 >
                   <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
                   <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
@@ -1068,7 +1066,7 @@ function ActionCard({ action, t }: { action: Data["actions"][number]; t: T }) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <Icon className="h-4 w-4 text-[var(--tessera-green)]" />
-      <p className="text-[0.74rem] font-medium leading-snug text-[var(--tessera-text)]">
+      <p className="text-xs font-medium leading-snug text-[var(--tessera-text)]">
         {t(`action.${action.key}`)}
       </p>
       <div className="mt-auto flex flex-wrap items-center gap-1">
@@ -1101,9 +1099,9 @@ function RecentActivity({
       action={<ViewAll label={t("viewAll.activities")} onClick={onViewAll} />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("actCol.time")}</th>
               <th className="px-1.5 py-1 font-medium">{t("actCol.action")}</th>
               <th className="px-1.5 py-1 font-medium">{t("actCol.actor")}</th>
@@ -1151,7 +1149,7 @@ function BacklogTrend({ t, data, className }: { t: T; data: Data; className?: st
           ticks={b.labels}
         />
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]">
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--tessera-text-muted)]">
         <Legend color="var(--tessera-fg-info)" label={t("backlogLegend.total")} />
         <Legend color="var(--tessera-fg-warning)" label={t("backlogLegend.toCurate")} />
         <Legend color="var(--tessera-fg-success)" label={t("backlogLegend.promotable")} />
@@ -1202,7 +1200,7 @@ function BalanceChart({ t, data, className }: { t: T; data: Data; className?: st
         })}
       </div>
       <div className="mt-1 flex flex-wrap items-center justify-between">
-        <div className="flex gap-1.5 pl-0 text-[0.55rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <div className="flex gap-1.5 pl-0 text-xs tabular-nums text-[var(--tessera-text-muted)]">
           {b.labels.map((l) => (
             <span key={l} className="flex-1 text-center">
               {l.slice(0, 5)}
@@ -1210,7 +1208,7 @@ function BalanceChart({ t, data, className }: { t: T; data: Data; className?: st
           ))}
         </div>
       </div>
-      <div className="mt-0.5 flex flex-wrap gap-x-3 text-[0.58rem] text-[var(--tessera-text-muted)]">
+      <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-[var(--tessera-text-muted)]">
         <Legend color="var(--tessera-fg-success)" label={t("balanceLegend.promote")} />
         <Legend color="var(--tessera-fg-warning)" label={t("balanceLegend.review")} />
         <Legend color="var(--tessera-fg-danger)" label={t("balanceLegend.reject")} />
@@ -1238,18 +1236,18 @@ function ImpactPanel({ t, data, className }: { t: T; data: Data; className?: str
               key={bar.label}
               className="flex h-[90px] flex-1 flex-col items-center justify-end gap-1"
             >
-              <span className="text-[0.7rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
+              <span className="text-xs font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                 {bar.val}
               </span>
               <div
                 className="w-full rounded-t-sm"
                 style={{ height: `${bar.v}%`, background: bar.color }}
               />
-              <span className="text-[0.55rem] text-[var(--tessera-text-muted)]">{bar.label}</span>
+              <span className="text-xs text-[var(--tessera-text-muted)]">{bar.label}</span>
             </div>
           ))}
         </div>
-        <dl className="flex w-[42%] shrink-0 flex-col justify-center gap-1.5 border-l border-[var(--tessera-border)] pl-3 text-[0.68rem]">
+        <dl className="flex w-[42%] shrink-0 flex-col justify-center gap-1.5 border-l border-[var(--tessera-border)] pl-3 text-xs">
           <KV label={t("impact.currentRate")} value={im.current} />
           <KV label={t("impact.projectedRate")} value={im.projected} />
           <KV
@@ -1268,7 +1266,7 @@ function ImpactPanel({ t, data, className }: { t: T; data: Data; className?: str
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <Chip icon={GitBranch} label={t("footer.release", { id: f.release })} />
       <Chip icon={ShieldCheck} tone="text-[var(--tessera-green)]" label={t("footer.chain")} />
       <Chip icon={Database} label={t("footer.source", { src: f.source })} />
@@ -1285,7 +1283,7 @@ function Zone({ label, info, children }: { label: string; info?: ReactNode; chil
       data-slot="card"
       className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
     >
-      <h2 className="mb-2 flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {label}
         {info}
       </h2>
@@ -1343,7 +1341,7 @@ function KpiTile({
       data-slot="card"
       className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <Truncate full={label} className="min-w-0">
           {label}
         </Truncate>
@@ -1359,7 +1357,7 @@ function KpiTile({
           tone={kpi.good_is_up ? "success" : "danger"}
         />
       </div>
-      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-xs font-medium">
         <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
@@ -1421,12 +1419,12 @@ function Donut({
           <span className="max-w-[49px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
-          <span className="line-clamp-2 max-w-[49px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+          <span className="line-clamp-2 max-w-[49px] break-words text-center text-xs uppercase leading-tight text-[var(--tessera-text-muted)]">
             {caption}
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
@@ -1499,7 +1497,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -1529,7 +1527,7 @@ function Legend({ color, label }: { color: string; label: string }) {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
+    "flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

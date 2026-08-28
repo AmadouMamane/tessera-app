@@ -38,7 +38,7 @@ export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCr
             <KeyRound className="h-3.5 w-3.5 text-[var(--champagne-strong)]" />
             {t("demo.title")}
           </div>
-          <p className="mt-1.5 text-[11px] leading-[1.45] text-[var(--text-secondary)]">
+          <p className="mt-1.5 text-xs leading-[1.45] text-[var(--text-secondary)]">
             {t("demo.hint")}
           </p>
         </div>
@@ -83,10 +83,10 @@ export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCr
                 </span>
               </span>
               <span className="mt-2.5 min-w-0">
-                <span className="block min-h-[28px] text-[11px] font-medium leading-[1.25] text-[var(--text-primary)]">
+                <span className="block min-h-[28px] text-xs font-medium leading-[1.25] text-[var(--text-primary)]">
                   {tRoles(account.role)}
                 </span>
-                <span className="mt-1 block truncate font-mono text-[9px] leading-4 text-[var(--text-secondary)]">
+                <span className="mt-1 block truncate font-mono text-xs leading-4 text-[var(--text-secondary)]">
                   {account.username}
                   <br />
                   {account.password}

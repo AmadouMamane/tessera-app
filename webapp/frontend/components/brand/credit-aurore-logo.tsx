@@ -90,7 +90,7 @@ export function CreditAuroreLogo({
         </strong>
         <small
           className={cn(
-            "mt-[3px] block font-bold text-[9.5px] text-[#6f5c35] uppercase tracking-[0.7px]",
+            "mt-[3px] block font-bold text-xs text-[#6f5c35] uppercase tracking-[0.7px]",
             taglineClassName,
           )}
         >

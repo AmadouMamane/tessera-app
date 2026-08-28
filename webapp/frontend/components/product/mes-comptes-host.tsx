@@ -95,7 +95,7 @@ export function MesComptesHost() {
             CA
           </div>
           <span className="hidden text-sm font-semibold tracking-wide sm:inline">{t("brand")}</span>
-          <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-gold-500/30 bg-gold-500/10 px-2.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-gold-300">
+          <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-gold-500/30 bg-gold-500/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider text-gold-300">
             <Lock className="h-3 w-3" />
             {t("demoBadge")}
           </span>
@@ -103,12 +103,12 @@ export function MesComptesHost() {
             {headerIcons.map(({ key, label, Icon, badge }) => (
               <span
                 key={key}
-                className="relative flex flex-col items-center gap-0.5 text-[0.6rem] font-medium text-white/85"
+                className="relative flex flex-col items-center gap-0.5 text-xs font-medium text-white/85"
               >
                 <span className="relative">
                   <Icon className="h-[18px] w-[18px]" />
                   {badge && (
-                    <span className="absolute -right-1.5 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-gold-500 px-1 text-[0.55rem] font-bold text-navy-950">
+                    <span className="absolute -right-1.5 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-gold-500 px-1 text-xs font-bold text-navy-950">
                       3
                     </span>
                   )}
@@ -194,16 +194,14 @@ export function MesComptesHost() {
           {/* Credit promo banner */}
           <div className="flex items-stretch overflow-hidden rounded-xl border border-navy-800/60 bg-gradient-to-r from-navy-900 to-navy-950 text-white shadow-sm">
             <div className="flex flex-1 flex-col gap-2 p-5">
-              <span className="w-fit rounded-full bg-gold-500/15 px-2.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wider text-gold-300">
+              <span className="w-fit rounded-full bg-gold-500/15 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-gold-300">
                 {t("promo.tag")}
               </span>
               <div className="flex items-end gap-2">
                 <span className="text-3xl font-bold text-gold-400">{t("promo.rate")}</span>
                 <span className="pb-1 text-sm font-medium">{t("promo.title")}</span>
               </div>
-              <p className="max-w-md text-[0.62rem] leading-snug text-white/60">
-                {t("promo.legal")}
-              </p>
+              <p className="max-w-md text-xs leading-snug text-white/60">{t("promo.legal")}</p>
               <span className="mt-1 w-fit rounded-lg bg-gold-500 px-4 py-2 text-xs font-semibold text-navy-950">
                 {t("promo.cta")}
               </span>
@@ -312,7 +310,7 @@ function AccountRow({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-[var(--foreground)]">{label}</span>
           {badge && (
-            <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-[0.6rem] font-medium text-[var(--muted-foreground)]">
+            <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-xs font-medium text-[var(--muted-foreground)]">
               {badge}
             </span>
           )}

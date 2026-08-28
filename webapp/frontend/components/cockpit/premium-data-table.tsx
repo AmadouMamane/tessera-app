@@ -16,7 +16,7 @@ export type PremiumColumn<T> = {
   render: (row: T) => ReactNode;
 };
 
-const PER_PAGE = [10, 25, 50] as const;
+const PER_PAGE = [5, 10, 25, 50] as const;
 
 function pageWindow(page: number, totalPages: number): number[] {
   const span = Math.min(5, totalPages);
@@ -61,6 +61,11 @@ export function PremiumDataTable<T>({
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(defaultPerPage);
+  useEffect(() => {
+    if (defaultPerPage > 5 && window.matchMedia("(max-width: 639px)").matches) {
+      setPerPage(5);
+    }
+  }, [defaultPerPage]);
   const collator = useMemo(
     () => new Intl.Collator(locale, { numeric: true, sensitivity: "base" }),
     [locale],
@@ -110,10 +115,10 @@ export function PremiumDataTable<T>({
         className,
       )}
     >
-      <div className="overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable]">
+      <div className="hidden overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable] sm:block">
         <table className="w-full table-fixed border-collapse text-left" style={{ minWidth }}>
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.65rem] uppercase tracking-[0.06em] text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-[0.06em] text-[var(--tessera-text-muted)]">
               {columns.map((column, index) => {
                 const sortable = column.sortable !== false && Boolean(column.sortValue);
                 return (
@@ -211,7 +216,7 @@ export function PremiumDataTable<T>({
                   ))}
                   {clickable ? (
                     <td className="px-3 py-2.5">
-                      <span className="flex items-center justify-end gap-1 whitespace-nowrap text-[0.7rem] text-[var(--tessera-fg-info)]">
+                      <span className="flex items-center justify-end gap-1 whitespace-nowrap text-xs text-[var(--tessera-fg-info)]">
                         <span className="opacity-0 transition-opacity motion-reduce:transition-none group-hover:opacity-100 group-focus-visible:opacity-100">
                           {t("rowOpen")}
                         </span>
@@ -236,7 +241,82 @@ export function PremiumDataTable<T>({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="divide-y divide-[var(--tessera-border)] sm:hidden">
+        {visibleRows.map((row) => {
+          const key = rowKey(row);
+          const selected = key === selectedKey;
+          const identity = columns[0];
+          return (
+            <article
+              key={key}
+              role={clickable ? "button" : undefined}
+              aria-haspopup={clickable ? "dialog" : undefined}
+              aria-label={clickable ? rowLabel?.(row) : undefined}
+              aria-pressed={clickable ? selected : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              onClick={clickable ? () => onRowOpen?.(row) : undefined}
+              onKeyDown={
+                clickable
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRowOpen?.(row);
+                      }
+                    }
+                  : undefined
+              }
+              className={cn(
+                "px-3 py-3 outline-none transition-colors motion-reduce:transition-none",
+                clickable &&
+                  "cursor-pointer hover:bg-[var(--tessera-bg-soft)] focus-visible:bg-[var(--tessera-bg-soft)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--tessera-fg-info)]/45",
+                selected &&
+                  "bg-[color-mix(in_oklch,var(--tessera-fg-info)_11%,transparent)] shadow-[inset_3px_0_0_var(--tessera-fg-info)]",
+              )}
+            >
+              {identity ? (
+                <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+                  <div className="min-w-0 text-sm font-semibold text-[var(--tessera-text-strong)]">
+                    {identity.render(row)}
+                  </div>
+                  {clickable ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--tessera-fg-info)]">
+                      {t("rowOpen")}
+                      <ChevronRight className="h-4 w-4" aria-hidden />
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+              <dl className="grid gap-2">
+                {columns.slice(1).map((column) => (
+                  <div
+                    key={column.key}
+                    className="grid min-w-0 grid-cols-[minmax(6.5rem,38%)_minmax(0,1fr)] items-start gap-3"
+                  >
+                    <dt className="text-xs font-medium text-[var(--tessera-text-muted)]">
+                      {column.label}
+                    </dt>
+                    <dd
+                      className={cn(
+                        "min-w-0 break-words text-xs leading-5 text-[var(--tessera-text)]",
+                        column.numeric && "text-right tabular-nums",
+                      )}
+                    >
+                      {column.render(row)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          );
+        })}
+        {visibleRows.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-[var(--tessera-text-muted)]">
+            {emptyLabel}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
         <span className="tabular-nums" aria-live="polite">
           {t("summary", { start, end, total })}
         </span>
@@ -271,7 +351,7 @@ export function PremiumDataTable<T>({
           <select
             value={perPage}
             onChange={(event) => setPerPage(Number(event.target.value))}
-            className="h-8 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-xs text-[var(--tessera-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-fg-info)]/45"
+            className="h-11 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-xs text-[var(--tessera-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-fg-info)]/45 sm:h-8"
           >
             {PER_PAGE.map((size) => (
               <option key={size} value={size}>
@@ -306,7 +386,7 @@ function PageButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs tabular-nums outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-fg-info)]/45 disabled:opacity-40",
+        "flex h-11 min-w-11 items-center justify-center rounded-md border px-2 text-xs tabular-nums outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[var(--tessera-fg-info)]/45 disabled:opacity-40 sm:h-8 sm:min-w-8",
         current
           ? "border-[var(--tessera-fg-info)]/55 bg-[var(--tessera-fg-info)]/12 font-medium text-[var(--tessera-text-strong)]"
           : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",

@@ -50,7 +50,7 @@ export function CitationList({
   const t = useTranslations("chat");
   return (
     <div className="mt-1.5 flex flex-col gap-1 px-1">
-      <span className="flex items-center gap-1 text-[0.6rem] font-medium uppercase tracking-wide text-slate-500">
+      <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500">
         <BookOpen className="h-3 w-3" />
         {sourcesLabel}
       </span>
@@ -61,8 +61,8 @@ export function CitationList({
           return (
             <li key={`${c.source}-${c.locator}-${idx}`}>
               <details className="group rounded-md border border-slate-200 bg-white transition-colors open:border-slate-300 open:bg-white hover:border-slate-300 hover:bg-white">
-                <summary className="grid min-h-10 cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-[0.68rem] [&::-webkit-details-marker]:hidden">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 bg-white text-[0.62rem] font-semibold text-gray-500 tabular-nums transition-colors group-hover:text-gray-800">
+                <summary className="grid min-h-10 cursor-pointer list-none grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-2 px-2 py-1.5 text-xs [&::-webkit-details-marker]:hidden">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-gray-200 bg-white text-xs font-semibold text-gray-500 tabular-nums transition-colors group-hover:text-gray-800">
                     {idx + 1}
                   </span>
                   <span className="min-w-0">
@@ -71,13 +71,13 @@ export function CitationList({
                       <span className="truncate">{title}</span>
                     </span>
                     {hasTitle && (
-                      <span className="block truncate font-mono text-[0.62rem] text-slate-500">
+                      <span className="block truncate font-mono text-xs text-slate-500">
                         {c.source}
                       </span>
                     )}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
-                    <span className="rounded border border-gray-200 px-1 py-px text-[0.55rem] font-medium text-gray-500 uppercase tracking-wide">
+                    <span className="rounded border border-gray-200 px-1 py-px text-xs font-medium text-gray-500 uppercase tracking-wide">
                       {c.language}
                     </span>
                     <ChevronDown className="h-3.5 w-3.5 text-[var(--tessera-text-muted)] transition-transform group-open:rotate-180" />

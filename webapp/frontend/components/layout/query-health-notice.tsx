@@ -147,12 +147,12 @@ export function QueryHealthNotice() {
                 {failure.href ? (
                   <Link
                     href={failure.href}
-                    className="truncate text-[0.7rem] font-semibold text-[var(--tessera-text)] underline-offset-2 hover:underline"
+                    className="truncate text-xs font-semibold text-[var(--tessera-text)] underline-offset-2 hover:underline"
                   >
                     {label}
                   </Link>
                 ) : (
-                  <span className="truncate text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+                  <span className="truncate text-xs font-semibold text-[var(--tessera-text)]">
                     {label}
                   </span>
                 )}
@@ -160,7 +160,7 @@ export function QueryHealthNotice() {
                   <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden="true" />
                 ) : null}
               </div>
-              <p className="mt-0.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
+              <p className="mt-0.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
                 {t(`kind.${failure.kind}`)} · {lastSuccess}
               </p>
             </li>
@@ -168,7 +168,7 @@ export function QueryHealthNotice() {
         })}
       </ul>
       {count > 4 ? (
-        <p className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <p className="text-xs text-[var(--tessera-text-muted)]">
           {t("more", { count: count - 4 })}
         </p>
       ) : null}

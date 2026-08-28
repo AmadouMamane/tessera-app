@@ -113,9 +113,9 @@ function FocusHint({ onExit }: { onExit: () => void }) {
     <button
       type="button"
       onClick={onExit}
-      className="fade-in-0 fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 animate-in items-center gap-2 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/90 px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)] shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:text-[var(--tessera-text)] motion-reduce:animate-none"
+      className="fade-in-0 fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 animate-in items-center gap-2 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/90 px-3 py-1.5 text-xs text-[var(--tessera-text-muted)] shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:text-[var(--tessera-text)] motion-reduce:animate-none"
     >
-      <kbd className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-[0.62rem]">
+      <kbd className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-xs">
         Esc
       </kbd>
       {t("focus.exitHint")}

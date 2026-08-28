@@ -138,10 +138,10 @@ export function MessageBubble({
         {/* Name + timestamp + badges — hidden for grouped messages */}
         {!isGrouped && (
           <div className={cn("flex items-baseline gap-2", isUser ? "justify-end px-1" : "")}>
-            <span className="text-[0.7rem] font-medium text-slate-700">
+            <span className="text-xs font-medium text-slate-700">
               {isUser ? t("youSaid") : assistantLabel}
             </span>
-            <span className="text-[0.62rem] tabular-nums text-slate-500">
+            <span className="text-xs tabular-nums text-slate-500">
               {formatTime(message.createdAt)}
             </span>
             {!isUser && typeof message.confidence === "number" && (
@@ -184,16 +184,16 @@ export function MessageBubble({
             <div className="self-end flex flex-col items-end gap-1">
               {/* Truncation warning — only when this is not the last user message */}
               {!isLastUserMessage && (
-                <p className="text-[0.6rem] text-[var(--tessera-fg-warning)] font-medium select-none">
+                <p className="text-xs text-[var(--tessera-fg-warning)] font-medium select-none">
                   ⚠ {t("editWillTruncate")}
                 </p>
               )}
               <div className="flex items-center gap-2">
-                <p className="text-[0.6rem] text-navy-300/80 select-none">{t("editHint")}</p>
+                <p className="text-xs text-navy-300/80 select-none">{t("editHint")}</p>
                 <button
                   type="button"
                   onClick={cancelEdit}
-                  className="flex items-center gap-1 text-[0.62rem] text-slate-600 hover:text-slate-800 transition-colors duration-150"
+                  className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-800 transition-colors duration-150"
                 >
                   {t("cancel")}
                 </button>
@@ -201,7 +201,7 @@ export function MessageBubble({
                   type="button"
                   onClick={confirmEdit}
                   disabled={!draft.trim() || draft.trim() === message.content}
-                  className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-fg-gold)] hover:text-gold-700 :text-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                  className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-fg-gold)] hover:text-gold-700 :text-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   {t("confirm")}
                 </button>
@@ -215,7 +215,7 @@ export function MessageBubble({
                 onClick={handleUserCopy}
                 aria-label={userCopied ? t("copied") : t("copy")}
                 className={cn(
-                  "flex items-center gap-1 text-[0.62rem] transition-colors duration-150",
+                  "flex items-center gap-1 text-xs transition-colors duration-150",
                   "text-slate-600 hover:text-slate-800",
                   userCopied && "!opacity-100 text-[var(--tessera-fg-success)] ",
                 )}
@@ -229,7 +229,7 @@ export function MessageBubble({
                   onClick={startEdit}
                   disabled={isStreaming}
                   aria-label={t("edit")}
-                  className="flex items-center gap-1 text-[0.62rem] text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                  className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                 >
                   <Pencil className="h-3 w-3" />
                   {t("edit")}
@@ -245,7 +245,7 @@ export function MessageBubble({
             onClick={handleCopy}
             aria-label={copied ? t("copied") : t("copy")}
             className={cn(
-              "self-start flex items-center gap-1 px-1 text-[0.62rem] transition-all duration-150",
+              "self-start flex items-center gap-1 px-1 text-xs transition-all duration-150",
               "text-slate-600 hover:text-slate-800",
               "opacity-60 group-hover:opacity-100",
               copied && "!opacity-100 text-[var(--tessera-fg-success)] ",
@@ -299,7 +299,7 @@ function AssistantFeedback({ turnId }: { turnId: string }) {
 
   return (
     <div className="self-start flex items-center gap-2 px-1 opacity-60 group-hover:opacity-100 transition-opacity duration-150">
-      <span className="text-[0.62rem] text-slate-500 select-none">
+      <span className="text-xs text-slate-500 select-none">
         {rating ? t("feedbackThanks") : t("feedbackPrompt")}
       </span>
       <button
@@ -345,7 +345,7 @@ function ConfidenceBadge({ value }: { value: number }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-1.5 py-px text-[0.65rem] font-medium tabular-nums",
+        "inline-flex items-center rounded-full border px-1.5 py-px text-xs font-medium tabular-nums",
         tone,
       )}
     >

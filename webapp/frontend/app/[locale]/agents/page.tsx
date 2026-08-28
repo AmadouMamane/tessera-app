@@ -64,7 +64,7 @@ export default async function FleetPage({ params }: PageProps) {
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
         <div className="flex flex-wrap items-center gap-6">
           <div>
-            <p className="flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <p className="flex items-center gap-1 text-xs text-[var(--tessera-text-muted)]">
               {t("orgConversations")}
               <MetricInfo
                 title={t("orgConversations")}
@@ -78,7 +78,7 @@ export default async function FleetPage({ params }: PageProps) {
             </p>
           </div>
           <div>
-            <p className="flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <p className="flex items-center gap-1 text-xs text-[var(--tessera-text-muted)]">
               {t("naiveSum")}
               <MetricInfo
                 title={t("naiveSum")}
@@ -91,7 +91,7 @@ export default async function FleetPage({ params }: PageProps) {
             </p>
           </div>
           <div>
-            <p className="flex items-center gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <p className="flex items-center gap-1 text-xs text-[var(--tessera-text-muted)]">
               {t("dedupSaved")}
               <MetricInfo
                 title={t("dedupSaved")}
@@ -103,7 +103,7 @@ export default async function FleetPage({ params }: PageProps) {
             <p className="text-[1.3rem] font-semibold tabular-nums text-[var(--tessera-fg-success)]">
               {fmtInt(data?.dedup_saved ?? 0)}
             </p>
-            <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+            <p className="text-xs text-[var(--tessera-text-muted)]">
               {fmtInt(data?.shared_conversations ?? 0)} {t("shared")}
             </p>
           </div>
@@ -116,7 +116,7 @@ export default async function FleetPage({ params }: PageProps) {
           Both render the same payload shape, so an operator moving between them was comparing
           figures that were never the same measurement, with nothing on either screen saying
           so. The window now travels in the payload and is stated here. */}
-      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+      <p className="text-xs text-[var(--tessera-text-muted)]">
         {/* THREE states, not two. `window_ === undefined` means the payload did not say —
             an older cached snapshot, or a server that stopped emitting the field. Collapsing
             it into "all history" would rebuild, one level down, the very conflation this lot
@@ -131,7 +131,7 @@ export default async function FleetPage({ params }: PageProps) {
       {/* Rich agent directory — search · audience filters + counters · grid/list. */}
       <FleetExplorer agents={agents} />
 
-      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNote")}</p>
+      <p className="text-xs text-[var(--tessera-text-muted)]">{t("releaseNote")}</p>
     </div>
   );
 }

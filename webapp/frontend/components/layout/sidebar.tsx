@@ -21,6 +21,7 @@ import {
   LockKeyhole,
   type LucideIcon,
   MemoryStick,
+  Menu,
   PlayCircle,
   Plug,
   ScrollText,
@@ -39,6 +40,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AuthControl } from "@/components/auth/auth-control";
 import { TesseraLogo, TesseraMark } from "@/components/brand/tessera-logo";
+import { DetailDrawer } from "@/components/cockpit/detail-drawer";
 import { Link, usePathname } from "@/i18n/navigation";
 import { type ChromeBadgeKey, type ChromeTone, useChromeBadge } from "@/lib/chrome";
 import { cn } from "@/lib/cn";
@@ -351,51 +353,196 @@ export function Sidebar() {
 
   const toggle = (key: string) => setOpen((p) => ({ ...p, [key]: !p[key] }));
   const { collapsed, toggleCollapsed } = useShellChrome();
+  const mobileNavigation = <MobileNavigation pathname={pathname} tree={tree} t={t} />;
 
   if (collapsed) {
     // Reduced to an icon rail — the brand mark + nav logos stay visible (never a
     // blank gutter); the edge handle expands it back. ⌘B is the keyboard twin.
     return (
-      <aside className="group/sidebar relative flex h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-chrome-line)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)]">
-        <BrandHeader collapsed />
-        <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-          <ul className="flex flex-col gap-1">
+      <>
+        <aside className="group/sidebar relative hidden h-full w-16 shrink-0 flex-col border-r border-[var(--tessera-chrome-line)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] sm:flex">
+          <BrandHeader collapsed />
+          <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+            <ul className="flex flex-col gap-1">
+              {tree.map((node) => (
+                <RailNode
+                  key={isBranch(node) ? node.key : node.href}
+                  node={node}
+                  pathname={pathname}
+                  t={t}
+                />
+              ))}
+            </ul>
+          </nav>
+          <EdgeCollapseHandle collapsed onToggle={toggleCollapsed} label={t("rail.expand")} />
+        </aside>
+        {mobileNavigation}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <aside className="group/sidebar relative hidden h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-chrome-line)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] sm:flex lg:w-[252px]">
+        <BrandHeader />
+        <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 lg:px-3">
+          <ul className="flex flex-col gap-2">
             {tree.map((node) => (
-              <RailNode
+              <NavTreeNode
                 key={isBranch(node) ? node.key : node.href}
                 node={node}
+                depth={0}
                 pathname={pathname}
+                open={open}
+                toggle={toggle}
                 t={t}
               />
             ))}
           </ul>
         </nav>
-        <EdgeCollapseHandle collapsed onToggle={toggleCollapsed} label={t("rail.expand")} />
+        <IdentityBlock />
+        <EdgeCollapseHandle onToggle={toggleCollapsed} label={t("rail.collapse")} />
       </aside>
-    );
-  }
+      {mobileNavigation}
+    </>
+  );
+}
+
+const MOBILE_PRIMARY: ReadonlyArray<Leaf> = [
+  { href: "/surveiller/vue-ensemble", icon: Home, labelKey: "item.vueEnsemble" },
+  { href: "/agents", icon: Bot, labelKey: "item.flotte" },
+  { href: "/a-traiter", icon: Inbox, labelKey: "item.aTraiter", badgeKey: "a_traiter" },
+  {
+    href: "/agir/incidents-playbooks",
+    icon: Wrench,
+    labelKey: "item.incidentsPlaybooks",
+    badgeKey: "incidents",
+  },
+];
+
+const MOBILE_SHORT_LABEL: Partial<Record<RouteHref, string>> = {
+  "/surveiller/vue-ensemble": "mobile.overview",
+  "/agir/incidents-playbooks": "mobile.incidents",
+};
+
+function flattenLeaves(nodes: ReadonlyArray<NavNode>): Leaf[] {
+  return nodes.flatMap((node) => (isBranch(node) ? flattenLeaves(node.children) : [node]));
+}
+
+/** Phone navigation: four high-frequency destinations plus a complete, focus-trapped menu. */
+function MobileNavigation({
+  pathname,
+  tree,
+  t,
+}: {
+  pathname: string;
+  tree: ReadonlyArray<NavNode>;
+  t: T;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <aside className="group/sidebar relative flex h-full w-20 shrink-0 flex-col border-r border-[var(--tessera-chrome-line)] bg-[var(--tessera-bg-soft)] text-[var(--tessera-text)] lg:w-[252px]">
-      <BrandHeader />
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3 lg:px-3">
-        <ul className="flex flex-col gap-2">
-          {tree.map((node) => (
-            <NavTreeNode
-              key={isBranch(node) ? node.key : node.href}
-              node={node}
-              depth={0}
-              pathname={pathname}
-              open={open}
-              toggle={toggle}
-              t={t}
-            />
-          ))}
-        </ul>
+    <>
+      <nav
+        aria-label={t("mobile.primary")}
+        className="fixed inset-x-0 bottom-0 z-50 grid min-h-[4.5rem] grid-cols-5 border-[var(--tessera-chrome-line)] border-t bg-[color-mix(in_oklab,var(--tessera-bg)_94%,transparent)] px-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-[0_-12px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:hidden"
+      >
+        {MOBILE_PRIMARY.map((leaf) => (
+          <MobileDestination key={leaf.href} leaf={leaf} pathname={pathname} t={t} />
+        ))}
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+          className="flex min-h-11 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 text-xs font-medium text-[var(--tessera-text-muted)] outline-none transition-colors hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+        >
+          <Menu className="h-5 w-5" aria-hidden />
+          <span className="max-w-full truncate">{t("mobile.more")}</span>
+        </button>
       </nav>
-      <IdentityBlock />
-      <EdgeCollapseHandle onToggle={toggleCollapsed} label={t("rail.collapse")} />
-    </aside>
+      {menuOpen ? (
+        <DetailDrawer
+          title={t("mobile.menu")}
+          onClose={() => setMenuOpen(false)}
+          width="max-w-none"
+        >
+          <nav aria-label={t("mobile.menu")} className="flex flex-col gap-5 pb-6">
+            {tree.map((node) => {
+              const leaves = isBranch(node) ? flattenLeaves(node.children) : [node];
+              const label = isBranch(node) ? t(node.labelKey) : t("mobile.menu");
+              return (
+                <section key={isBranch(node) ? node.key : node.href}>
+                  <h2 className="mb-2 text-sm font-semibold uppercase tracking-[0.08em] text-[var(--tessera-text-muted)]">
+                    {label}
+                  </h2>
+                  <ul className="grid grid-cols-2 gap-2">
+                    {leaves.map((leaf) => (
+                      <li key={leaf.href}>
+                        <MobileDestination
+                          leaf={leaf}
+                          pathname={pathname}
+                          t={t}
+                          expanded
+                          onNavigate={() => setMenuOpen(false)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </nav>
+        </DetailDrawer>
+      ) : null}
+    </>
+  );
+}
+
+function MobileDestination({
+  leaf,
+  pathname,
+  t,
+  expanded = false,
+  onNavigate,
+}: {
+  leaf: Leaf;
+  pathname: string;
+  t: T;
+  expanded?: boolean;
+  onNavigate?: () => void;
+}) {
+  const active = leafActive(leaf.href, pathname);
+  const badge = useChromeBadge(leaf.badgeKey);
+  const label = t(leaf.labelKey);
+  const visibleLabel = expanded ? label : t(MOBILE_SHORT_LABEL[leaf.href] ?? leaf.labelKey);
+
+  return (
+    <Link
+      href={leaf.href}
+      aria-current={active ? "page" : undefined}
+      aria-label={label}
+      onClick={onNavigate}
+      className={cn(
+        "relative flex min-h-11 min-w-0 items-center rounded-lg text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+        expanded
+          ? "h-full gap-2.5 border border-[var(--tessera-border)] bg-[var(--tessera-bg-soft)] px-3 py-2.5 text-left"
+          : "flex-col justify-center gap-1 px-1 text-center",
+        active
+          ? "bg-[var(--tessera-surface-elevated)] text-[var(--tessera-text-strong)]"
+          : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)]",
+      )}
+    >
+      <leaf.icon className="h-5 w-5 shrink-0" aria-hidden />
+      <span className={cn("min-w-0", expanded ? "line-clamp-2" : "max-w-full truncate")}>
+        {visibleLabel}
+      </span>
+      {badge ? (
+        <span className="absolute right-1 top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[var(--tessera-danger,#b4453a)] px-1 text-xs font-semibold text-white">
+          {badge.count}
+        </span>
+      ) : null}
+    </Link>
   );
 }
 
@@ -484,7 +631,7 @@ function RailNode({
           <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
         ) : null}
         {badge ? (
-          <span className="absolute top-1 right-1 inline-flex min-w-3.5 items-center justify-center rounded-full bg-[var(--tessera-danger,#b4453a)] px-1 text-[0.55rem] font-semibold text-white">
+          <span className="absolute top-1 right-1 inline-flex min-w-3.5 items-center justify-center rounded-full bg-[var(--tessera-danger,#b4453a)] px-1 text-xs font-semibold text-white">
             {badge.count}
           </span>
         ) : null}
@@ -560,11 +707,11 @@ function NavTreeNode({
     "group flex min-h-9 w-full items-center gap-2 rounded-md py-2 pr-2 font-medium transition-colors",
     isSuper
       ? cn(
-          "border-l-2 text-[0.7rem] uppercase tracking-[0.1em] text-[var(--tessera-text-strong)]",
+          "border-l-2 text-xs uppercase tracking-[0.1em] text-[var(--tessera-text-strong)]",
           ACCENT[node.accent ?? "green"],
         )
       : cn(
-          "text-[0.66rem] uppercase tracking-wide",
+          "text-xs uppercase tracking-wide",
           containsActive
             ? "text-[var(--tessera-text)]"
             : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -625,7 +772,7 @@ function Badge({ tone, active, value }: { tone: ChromeTone; active: boolean; val
   return (
     <span
       className={cn(
-        "hidden rounded-full px-2 py-0.5 text-[0.65rem] font-semibold lg:inline-flex",
+        "hidden rounded-full px-2 py-0.5 text-xs font-semibold lg:inline-flex",
         tone === "danger"
           ? "bg-red-500 text-white"
           : tone === "warning"

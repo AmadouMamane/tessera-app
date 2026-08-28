@@ -202,14 +202,14 @@ function CodeBlock({ lang, text }: { lang: string; text: string }) {
   return (
     <div className="group/code rounded-xl border border-[var(--border)] bg-[var(--muted)]/60 dark:bg-navy-800/80">
       <div className="flex items-center justify-between border-b border-[var(--border)] px-3 py-1.5">
-        <span className="text-[0.63rem] font-medium uppercase tracking-wider text-[var(--muted-foreground)]/60">
+        <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]/60">
           {lang || "text"}
         </span>
         <button
           type="button"
           onClick={handleCopy}
           className={cn(
-            "flex items-center gap-1 text-[0.63rem] transition-all duration-150",
+            "flex items-center gap-1 text-xs transition-all duration-150",
             "text-[var(--muted-foreground)]/40 hover:text-[var(--muted-foreground)]",
             "opacity-0 group-hover/code:opacity-100",
             copied && "!opacity-100 text-green-600 dark:text-green-400",

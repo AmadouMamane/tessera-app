@@ -125,7 +125,7 @@ function Kpi({
 }) {
   return (
     <Card className="flex flex-col gap-0.5 p-2.5">
-      <span className="flex items-center gap-1 text-[0.62rem] text-[var(--muted-foreground)]">
+      <span className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
         <span className="opacity-70">{icon}</span>
         {label}
         {explainKey ? <QInfo title={label} k={explainKey} /> : null}
@@ -133,7 +133,7 @@ function Kpi({
       <span className={`text-lg font-semibold leading-tight tabular-nums ${tone ?? ""}`}>
         {value}
       </span>
-      {sub ? <span className="text-[0.58rem] text-[var(--muted-foreground)]">{sub}</span> : null}
+      {sub ? <span className="text-xs text-[var(--muted-foreground)]">{sub}</span> : null}
     </Card>
   );
 }
@@ -184,7 +184,7 @@ function ModelsKpis({
         value={ref ? shortModel(ref.model) : DASH}
         sub={
           ref ? (
-            <Badge tone="success" className="text-[0.52rem]">
+            <Badge tone="success" className="text-xs">
               {tq("models.kpi.referentBadge")}
             </Badge>
           ) : undefined
@@ -268,7 +268,7 @@ function ScoreLines({ series }: { series: ModelSeries[] }) {
   const tq = useTranslations("quality");
   const usable = series.filter((s) => s.values.length >= 2);
   if (usable.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
+    return <p className="text-xs text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   const w = 220;
   const h = 96;
   const maxLen = Math.max(...usable.map((s) => s.values.length));
@@ -318,7 +318,7 @@ function ScoreLines({ series }: { series: ModelSeries[] }) {
 
 function ModelLegend({ models }: { models: { model: string }[] }) {
   return (
-    <ul className="flex flex-wrap gap-x-2 gap-y-0.5 text-[0.55rem] text-[var(--muted-foreground)]">
+    <ul className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-[var(--muted-foreground)]">
       {models.map((m, i) => (
         <li key={m.model} className="flex items-center gap-1">
           <span
@@ -346,7 +346,7 @@ function QualityRadar({ models }: { models: ModelStat[] }) {
   ];
   const usable = models.slice(0, 6);
   if (usable.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
+    return <p className="text-xs text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   const cx = 60;
   const cy = 56;
   const r = 42;
@@ -384,7 +384,7 @@ function QualityRadar({ models }: { models: ModelStat[] }) {
           );
         })}
       </svg>
-      <ul className="flex flex-col gap-0.5 text-[0.55rem] text-[var(--muted-foreground)]">
+      <ul className="flex flex-col gap-0.5 text-xs text-[var(--muted-foreground)]">
         {axes.map((a) => (
           <li key={a.key}>{a.key}</li>
         ))}
@@ -407,10 +407,10 @@ function CategoryHeatmap({ models }: { models: ModelStat[] }) {
   const catLabel = useCatLabel();
   const present = CATEGORIES.filter((c) => models.some((m) => m.categories?.[c] != null));
   if (models.length === 0 || present.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
+    return <p className="text-xs text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   return (
     <div className="overflow-x-auto">
-      <table className="text-[0.55rem]">
+      <table className="text-xs">
         <thead>
           <tr>
             <th className="pr-1 text-left font-medium text-[var(--muted-foreground)]" />
@@ -435,7 +435,7 @@ function CategoryHeatmap({ models }: { models: ModelStat[] }) {
                 return (
                   <td key={c} className="p-0.5">
                     <span
-                      className="flex h-4 w-7 items-center justify-center rounded-xs text-[0.5rem] text-black/70"
+                      className="flex h-4 w-7 items-center justify-center rounded-xs text-xs text-black/70"
                       style={{ background: v == null ? "var(--muted)" : heatColor(v) }}
                       title={`${catLabel(c)}: ${v == null ? DASH : `${Math.round(v * 100)}%`}`}
                     >
@@ -474,7 +474,7 @@ function ModelScatter({
       (p): p is { m: ModelStat; i: number; xv: number; yv: number } => p.xv != null && p.yv != null,
     );
   if (pts.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
+    return <p className="text-xs text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   const xs = pts.map((p) => p.xv);
   const ys = pts.map((p) => p.yv);
   const [xMin, xMax, yMin, yMax] = [
@@ -503,11 +503,11 @@ function ModelScatter({
           x={w / 2}
           y={h - 2}
           textAnchor="middle"
-          className="fill-[var(--muted-foreground)] text-[6px]"
+          className="fill-[var(--muted-foreground)] text-xs"
         >
           {xLabel}
         </text>
-        <text x={3} y={8} className="fill-[var(--muted-foreground)] text-[6px]">
+        <text x={3} y={8} className="fill-[var(--muted-foreground)] text-xs">
           {yLabel}
         </text>
       </svg>
@@ -562,11 +562,11 @@ function PassRateRuns({
     .sort((a, b) => parseRunAt(b.run_at) - parseRunAt(a.run_at))
     .slice(0, 7);
   if (runs.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
+    return <p className="text-xs text-[var(--muted-foreground)]">{tq("models.noData")}</p>;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-[0.65rem]">
-        <thead className="text-[0.58rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+      <table className="w-full text-left text-xs">
+        <thead className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
           <tr className="border-b border-[var(--border)]">
             <th className="py-1 pr-2 font-medium">{tq("models.runs.model")}</th>
             <th className="py-1 pr-2 text-right font-medium">{tq("models.runs.cases")}</th>
@@ -605,7 +605,7 @@ function RegressionsByModel({ release }: { release: ReleaseStatus | undefined })
   const regs = release?.regressions ?? [];
   if (regs.length === 0)
     return (
-      <p className="py-4 text-center text-[0.7rem] text-[var(--tessera-fg-success)]">
+      <p className="py-4 text-center text-xs text-[var(--tessera-fg-success)]">
         {tq("models.noRegressions")}
       </p>
     );
@@ -613,10 +613,7 @@ function RegressionsByModel({ release }: { release: ReleaseStatus | undefined })
   return (
     <div className="flex flex-col gap-1.5">
       {regs.map((r) => (
-        <div
-          key={`${r.model}-${r.last_run_at}`}
-          className="flex items-center gap-1.5 text-[0.6rem]"
-        >
+        <div key={`${r.model}-${r.last_run_at}`} className="flex items-center gap-1.5 text-xs">
           <span className="w-20 shrink-0 truncate text-[var(--muted-foreground)]">
             {shortModel(r.model)}
           </span>
@@ -649,10 +646,10 @@ function DriftKpi({ label, value, level }: { label: string; value: string; level
           : "text-[var(--tessera-fg-success)]";
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[0.58rem] text-[var(--muted-foreground)]">{label}</span>
+      <span className="text-xs text-[var(--muted-foreground)]">{label}</span>
       <span className={`text-base font-semibold tabular-nums ${tone}`}>{value}</span>
       {level ? (
-        <span className="text-[0.55rem] text-[var(--muted-foreground)]">
+        <span className="text-xs text-[var(--muted-foreground)]">
           {tq(`models.drift.${level}`)}
         </span>
       ) : null}
@@ -751,7 +748,7 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
           <QInfo title={tq("models.table.title")} k="modelTable" />
         </CardTitle>
         {comparison?.judge_model ? (
-          <Badge tone="neutral" className="text-[0.6rem]">
+          <Badge tone="neutral" className="text-xs">
             {tq("models.table.judge", { m: comparison.judge_model })}
           </Badge>
         ) : null}
@@ -763,8 +760,8 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[0.7rem]">
-              <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+            <table className="w-full text-left text-xs">
+              <thead className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                 <tr className="border-b border-[var(--border)]">
                   <th className="py-1.5 pr-2 font-medium">{tq("models.cols.model")}</th>
                   <th className="py-1.5 pr-2 text-right font-medium">{tq("models.cols.score")}</th>
@@ -788,7 +785,7 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
                       <span className="flex items-center gap-1.5">
                         {shortModel(m.model)}
                         {i === 0 ? (
-                          <Badge tone="success" className="text-[0.5rem]">
+                          <Badge tone="success" className="text-xs">
                             {tq("models.kpi.referentBadge")}
                           </Badge>
                         ) : null}
@@ -822,7 +819,7 @@ function ModelsTable({ comparison }: { comparison: ModelComparison | undefined }
                       <Spark values={m.evolution} />
                     </td>
                     <td className="py-1.5 pr-2">
-                      <Badge tone={VERDICT_TONE[m.verdict] ?? "neutral"} className="text-[0.6rem]">
+                      <Badge tone={VERDICT_TONE[m.verdict] ?? "neutral"} className="text-xs">
                         {verdictLabel(m.verdict)}
                       </Badge>
                     </td>
@@ -851,7 +848,7 @@ function ChartCard({
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+        <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
           {title}
           {explainKey ? <QInfo title={title} k={explainKey} /> : null}
         </CardTitle>
@@ -867,16 +864,14 @@ function IntentUnavailable() {
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+        <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
           {tq("models.intent.title")}
           <QInfo title={tq("models.intent.title")} k="modelIntent" />
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-center gap-1 py-6 text-center">
         <Layers className="h-5 w-5 text-[var(--muted-foreground)] opacity-40" />
-        <p className="text-[0.65rem] text-[var(--muted-foreground)]">
-          {tq("models.intent.unavailable")}
-        </p>
+        <p className="text-xs text-[var(--muted-foreground)]">{tq("models.intent.unavailable")}</p>
       </CardContent>
     </Card>
   );
@@ -941,13 +936,13 @@ export function ModelsPeriodRail({
         </CardHeader>
         <CardContent className="flex flex-col gap-2 pt-1">
           <div className="flex flex-col gap-1">
-            <span className="text-[0.6rem] text-[var(--muted-foreground)]">
+            <span className="text-xs text-[var(--muted-foreground)]">
               {tq("models.period.selected")}
             </span>
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-[0.72rem]"
+              className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-xs"
             >
               {PERIOD_PRESETS.map((d) => (
                 <option key={d} value={d}>
@@ -958,9 +953,7 @@ export function ModelsPeriodRail({
           </div>
 
           {items.length === 0 ? (
-            <p className="py-2 text-[0.7rem] text-[var(--muted-foreground)]">
-              {tq("models.noData")}
-            </p>
+            <p className="py-2 text-xs text-[var(--muted-foreground)]">{tq("models.noData")}</p>
           ) : (
             <ol className="flex flex-col">
               {items.map((it, i) => {
@@ -984,7 +977,7 @@ export function ModelsPeriodRail({
                     <button
                       type="button"
                       onClick={() => setAnchor(it.stamp)}
-                      className={`mb-1.5 flex-1 rounded-md px-2 py-1 text-left text-[0.72rem] tabular-nums ${
+                      className={`mb-1.5 flex-1 rounded-md px-2 py-1 text-left text-xs tabular-nums ${
                         sel
                           ? "bg-[var(--primary)] font-medium text-[var(--tessera-text-strong)]"
                           : "text-[var(--muted-foreground)] hover:bg-[var(--accent)]/40"
@@ -998,7 +991,7 @@ export function ModelsPeriodRail({
             </ol>
           )}
 
-          <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] px-2 py-1.5 text-[0.62rem] text-[var(--muted-foreground)]">
+          <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] px-2 py-1.5 text-xs text-[var(--muted-foreground)]">
             <span>{tq("models.period.from")}</span>
             <span className="tabular-nums text-[var(--foreground)]">
               {days > 0 ? fmtFullDate(start) : DASH} → {fmtFullDate(newest)}
@@ -1008,7 +1001,7 @@ export function ModelsPeriodRail({
           <button
             type="button"
             onClick={() => onApply({ days, anchor })}
-            className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-[0.72rem] font-medium text-[var(--tessera-text-strong)] hover:brightness-110"
+            className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-xs font-medium text-[var(--tessera-text-strong)] hover:brightness-110"
           >
             {tq("models.period.apply")}
           </button>
@@ -1094,7 +1087,7 @@ export function ModelsBoard({
         </ChartCard>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
               <Activity className="h-3.5 w-3.5" />
               {tq("models.charts.drift")}
               <QInfo title={tq("models.charts.drift")} k="modelDrift" />

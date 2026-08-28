@@ -143,7 +143,7 @@ function SparkEmpty({ label }: { label: string }) {
   return (
     <div className="relative h-5 w-full">
       <span className="absolute inset-x-0 bottom-0 h-px bg-[var(--tessera-border)]" />
-      <span className="absolute inset-0 flex items-center justify-center text-[0.55rem] text-[var(--muted-foreground)]">
+      <span className="absolute inset-0 flex items-center justify-center text-xs text-[var(--muted-foreground)]">
         {label}
       </span>
     </div>
@@ -179,7 +179,7 @@ function Panel({
       </CardHeader>
       <CardContent className="flex-1">
         {children}
-        {note ? <p className="mt-1 text-[0.6rem] text-[var(--muted-foreground)]">{note}</p> : null}
+        {note ? <p className="mt-1 text-xs text-[var(--muted-foreground)]">{note}</p> : null}
       </CardContent>
     </Card>
   );
@@ -250,7 +250,7 @@ function Kpi({
         {value}
       </div>
       {showDelta ? (
-        <div className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${drill}`}>
+        <div className={`flex items-center gap-1 text-xs tabular-nums ${drill}`}>
           <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
             {up ? "↗" : "↘"} {Math.abs((delta as number) * 100).toFixed(0)}
             {deltaUnit === "%" ? " %" : ` ${tr("kpi.pts")}`}
@@ -258,9 +258,7 @@ function Kpi({
           <span className="truncate text-[var(--muted-foreground)]">{tr("kpi.vsPrev")}</span>
         </div>
       ) : sub ? (
-        <div className={`truncate text-[0.65rem] text-[var(--muted-foreground)] ${drill}`}>
-          {sub}
-        </div>
+        <div className={`truncate text-xs text-[var(--muted-foreground)] ${drill}`}>{sub}</div>
       ) : null}
       {series && series.length > 1 ? (
         <div className={drill}>
@@ -320,7 +318,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
           {measuredTotal}
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.7rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
         {slices.map((s) => (
           <li key={s.label} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -338,7 +336,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
 function LatStat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <span className="text-[0.72rem] text-[var(--muted-foreground)]">{label}</span>
+      <span className="text-xs text-[var(--muted-foreground)]">{label}</span>
       <span className={`text-lg font-semibold tabular-nums ${tone}`}>{value}</span>
     </div>
   );
@@ -354,7 +352,7 @@ function MultiLine({
 }) {
   const all = lines.flatMap((l) => l.values.filter((v): v is number => v != null));
   if (all.length < 2)
-    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+    return <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">—</p>;
   const min = Math.min(...all);
   const max = Math.max(...all);
   const span = max - min || 1;
@@ -390,7 +388,7 @@ function MultiLine({
           />
         ))}
       </svg>
-      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[0.6rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--muted-foreground)]">
         {lines.map((l) => {
           const last = [...l.values].reverse().find((v): v is number => v != null);
           return (
@@ -419,7 +417,7 @@ function DayBars({
   format: (v: number) => string;
 }) {
   if (values.length === 0)
-    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+    return <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">—</p>;
   const max = Math.max(0.000001, ...values);
   const total = values.reduce((s, v) => s + v, 0);
   return (
@@ -435,7 +433,7 @@ function DayBars({
           />
         ))}
       </div>
-      <div className="text-[0.6rem] text-[var(--muted-foreground)]">{format(total)}</div>
+      <div className="text-xs text-[var(--muted-foreground)]">{format(total)}</div>
     </div>
   );
 }
@@ -653,9 +651,7 @@ export function ReliabilityDashboard() {
       infoKey="errors"
     >
       {errSlices.length === 0 ? (
-        <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
-          {tr("noErrors")}
-        </p>
+        <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">{tr("noErrors")}</p>
       ) : (
         <Donut slices={errSlices} />
       )}
@@ -687,7 +683,7 @@ export function ReliabilityDashboard() {
   const panelCostByModel = (
     <Panel title={tr("panel.costByModel", { n: d.models?.length ?? 0 })} infoKey="costByModel">
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.72rem]">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
               <th className="py-1 pr-2 font-medium">{tr("col.model")}</th>
@@ -713,7 +709,7 @@ export function ReliabilityDashboard() {
       infoKey="servicesCost"
     >
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.72rem]">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
               <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
@@ -741,12 +737,12 @@ export function ReliabilityDashboard() {
   const panelIncidents = (
     <Panel title={tr("panel.incidents", { n: d.incidents?.length ?? 0 })} infoKey="incidents">
       {(d.incidents ?? []).length === 0 ? (
-        <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+        <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
           {tr("noIncidents")}
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-[0.7rem]">
+          <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
                 <th className="py-1 pr-2 font-medium">{tr("col.date")}</th>
@@ -768,7 +764,7 @@ export function ReliabilityDashboard() {
   const panelActions = (
     <Panel title={tr("panel.actions", { n: d.actions?.length ?? 0 })} infoKey="actions">
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.7rem]">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
               <th className="py-1 pr-2 font-medium">{tr("col.priority")}</th>
@@ -789,7 +785,7 @@ export function ReliabilityDashboard() {
   const panelServices = (
     <Panel title={tr("panel.services")} infoKey="services">
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.72rem]">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
               <th className="py-1 pr-2 font-medium">{tr("col.service")}</th>
@@ -814,7 +810,7 @@ export function ReliabilityDashboard() {
     >
       <div className="flex flex-col gap-1.5">
         {(d.providers ?? []).map((p) => (
-          <div key={p.provider} className="flex items-center gap-2 text-[0.72rem]">
+          <div key={p.provider} className="flex items-center gap-2 text-xs">
             <Truncate full={p.provider} className="w-20 shrink-0">
               {p.provider}
             </Truncate>
@@ -834,7 +830,7 @@ export function ReliabilityDashboard() {
   );
   const panelBudget = (
     <Panel title={tr("panel.budgetForecast")} infoKey="budget">
-      <div className="flex flex-col gap-1.5 text-[0.72rem]">
+      <div className="flex flex-col gap-1.5 text-xs">
         <div className="mb-1 flex items-end gap-2">
           <span className="text-2xl font-semibold tabular-nums">
             {eur(d.budget_spent_eur ?? 0)}
@@ -874,7 +870,7 @@ export function ReliabilityDashboard() {
               {Math.round(((d.quality_series ?? []).at(-1) ?? 0) * 100)}%
             </span>
             {d.quality_delta != null && Math.abs(d.quality_delta) >= 0.005 ? (
-              <span className={`text-[0.7rem] tabular-nums ${d.quality_delta > 0 ? GOOD : BAD}`}>
+              <span className={`text-xs tabular-nums ${d.quality_delta > 0 ? GOOD : BAD}`}>
                 {d.quality_delta > 0 ? "↗" : "↘"} {Math.abs(d.quality_delta * 100).toFixed(0)}{" "}
                 {tr("kpi.pts")}
               </span>
@@ -883,7 +879,7 @@ export function ReliabilityDashboard() {
           <Spark values={d.quality_series ?? []} />
         </div>
       ) : (
-        <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
+        <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">—</p>
       )}
     </Panel>
   );
@@ -1072,7 +1068,7 @@ export function ReliabilityDashboard() {
         />
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--muted-foreground)]">
         <Chip icon={ShieldCheck} label={tr("status.chain")} tone="text-[var(--tessera-green)]" />
         <Chip icon={Boxes} label={tr("status.truth")} />
         <Chip icon={Activity} label={tr("status.soc")} />
@@ -1085,7 +1081,7 @@ function ModelRow({ m }: { m: ReliabilityCostRow }) {
   const eur = useEur();
   return (
     <tr className="border-b border-[var(--border)]/50">
-      <td className="py-1 pr-2 font-mono text-[0.68rem]">{m.model}</td>
+      <td className="py-1 pr-2 font-mono text-xs">{m.model}</td>
       <td className="py-1 pr-2 text-[var(--muted-foreground)]">{m.provider}</td>
       <td className="py-1 pr-2 text-right tabular-nums">{m.n_requests}</td>
       <td className="py-1 pr-2 text-right tabular-nums">{eur(m.cost_eur, 4)}</td>

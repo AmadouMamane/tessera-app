@@ -122,7 +122,7 @@ function CommandBar({
 }: { t: T; onExport: () => void; onRefresh: () => void; refreshing: boolean }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--tessera-text)]">
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--tessera-text)]">
         <Server className="h-4 w-4 text-[var(--tessera-fg-info)]" /> {t("subtitle")}
       </span>
       <div className="flex flex-wrap items-center gap-2">
@@ -156,7 +156,7 @@ function SystemKpi({
 }: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
@@ -173,13 +173,13 @@ function SystemKpi({
             {kpi.value}
           </span>
           {kpi.delta ? (
-            <span className="text-[0.62rem] font-medium text-[var(--tessera-fg-success)]">
+            <span className="text-xs font-medium text-[var(--tessera-fg-success)]">
               {kpi.delta}
             </span>
           ) : null}
         </div>
       )}
-      <Truncate as="p" className="mt-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]">
+      <Truncate as="p" className="mt-0.5 text-xs text-[var(--tessera-text-muted)]">
         {kpi.sub}
       </Truncate>
       {kpi.kind === "chart" ? (
@@ -187,9 +187,9 @@ function SystemKpi({
       ) : (
         <div className="mt-auto">
           {kpi.link ? (
-            <span className="text-[0.6rem] text-[var(--tessera-fg-info)]">{kpi.link} →</span>
+            <span className="text-xs text-[var(--tessera-fg-info)]">{kpi.link} →</span>
           ) : kpi.extra ? (
-            <span className="text-[0.58rem] text-[var(--tessera-text-muted)]">{kpi.extra}</span>
+            <span className="text-xs text-[var(--tessera-text-muted)]">{kpi.extra}</span>
           ) : null}
         </div>
       )}
@@ -213,7 +213,7 @@ function Architecture({ t, data, className }: { t: T; data: Data; className?: st
   ];
   return (
     <Panel title={t("zone.architecture")} className={className}>
-      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+      <dl className="flex flex-col gap-1.5 text-xs">
         {rows.map(([k, v]) => (
           <KV key={k} label={k} value={v} />
         ))}
@@ -237,10 +237,8 @@ function Topology({ t, data, className }: { t: T; data: Data; className?: string
               key={s.key}
               className="flex flex-col items-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-center"
             >
-              <span className="text-[0.66rem] font-medium text-[var(--tessera-text)]">
-                {s.label}
-              </span>
-              <span className="text-[0.54rem] text-[var(--tessera-text-muted)]">{s.detail}</span>
+              <span className="text-xs font-medium text-[var(--tessera-text)]">{s.label}</span>
+              <span className="text-xs text-[var(--tessera-text-muted)]">{s.detail}</span>
             </div>
           ))}
         </div>
@@ -260,10 +258,8 @@ function Row({ nodes }: { nodes: { key: string; label: string; nodes: number }[]
           key={n.key}
           className="flex items-center justify-center gap-1.5 rounded-md border border-[#2e72d2]/40 bg-[#0d3561]/40 px-2 py-1.5 text-center"
         >
-          <span className="text-[0.68rem] font-medium text-[var(--tessera-fg-info)]">
-            {n.label}
-          </span>
-          <span className="rounded bg-[var(--tessera-bg)] px-1 text-[0.54rem] tabular-nums text-[var(--tessera-text-muted)]">
+          <span className="text-xs font-medium text-[var(--tessera-fg-info)]">{n.label}</span>
+          <span className="rounded bg-[var(--tessera-bg)] px-1 text-xs tabular-nums text-[var(--tessera-text-muted)]">
             ×{n.nodes}
           </span>
         </div>
@@ -315,7 +311,7 @@ function Resources({ t, data, className }: { t: T; data: Data; className?: strin
             })}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden text-center">
-            <span className="line-clamp-2 max-w-[54px] break-words text-[0.62rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+            <span className="line-clamp-2 max-w-[54px] break-words text-xs uppercase leading-tight text-[var(--tessera-text-muted)]">
               Total
             </span>
             <span className="max-w-[44px] truncate text-[0.78rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
@@ -323,7 +319,7 @@ function Resources({ t, data, className }: { t: T; data: Data; className?: strin
             </span>
           </div>
         </div>
-        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.64rem]">
+        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
           {r.slices.map((s) => (
             <li key={s.key} className="flex flex-col gap-0.5">
               <span className="flex min-w-0 items-center gap-1">
@@ -363,7 +359,7 @@ function OsInfo({ t, data, className }: { t: T; data: Data; className?: string }
   ];
   return (
     <Panel title={t("zone.os")} className={className}>
-      <dl className="flex flex-col gap-1 text-[0.66rem]">
+      <dl className="flex flex-col gap-1 text-xs">
         {rows.map(([k, v]) => (
           <KV key={k} label={k} value={v} mono />
         ))}
@@ -386,7 +382,7 @@ function Runtime({ t, data, className }: { t: T; data: Data; className?: string 
       className={className}
       action={<ViewAll label={t("runtime.viewAudit")} href={AUDIT_HREF} />}
     >
-      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+      <dl className="flex flex-col gap-1.5 text-xs">
         {rows.map(([k, v]) => (
           <KV key={k} label={k} value={v} />
         ))}
@@ -406,7 +402,7 @@ function Health({ t, data, className }: { t: T; data: Data; className?: string }
         {data.health_checks.map((h) => (
           <li
             key={h.key}
-            className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.66rem]"
+            className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs"
           >
             <span className="min-w-0 truncate text-[var(--tessera-text)]">
               {t(`health.${h.key}`)}
@@ -431,9 +427,9 @@ function Services({ t, data, className }: { t: T; data: Data; className?: string
   return (
     <Panel title={t("zone.services")} className={className}>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("svcCol.name")}</th>
               <th className="px-1.5 py-1 font-medium">{t("svcCol.status")}</th>
               <th className="px-1.5 py-1 font-medium">{t("svcCol.version")}</th>
@@ -455,7 +451,7 @@ function Services({ t, data, className }: { t: T; data: Data; className?: string
                     </span>
                   )}
                 </td>
-                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-text-muted)]">
                   {s.version}
                 </td>
                 <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
@@ -473,13 +469,11 @@ function Services({ t, data, className }: { t: T; data: Data; className?: string
 function Versions({ t, data, className }: { t: T; data: Data; className?: string }) {
   return (
     <Panel title={t("zone.versions")} className={className}>
-      <dl className="flex flex-col gap-1.5 text-[0.68rem]">
+      <dl className="flex flex-col gap-1.5 text-xs">
         {data.versions.map((v) => (
           <div key={v.name} className="flex items-center justify-between gap-2">
             <dt className="text-[var(--tessera-text)]">{v.name}</dt>
-            <dd className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {v.version}
-            </dd>
+            <dd className="font-mono text-xs text-[var(--tessera-text-muted)]">{v.version}</dd>
           </div>
         ))}
       </dl>
@@ -498,7 +492,7 @@ function Licenses({ t, data, className }: { t: T; data: Data; className?: string
   ];
   return (
     <Panel title={t("zone.licenses")} className={className}>
-      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+      <dl className="flex flex-col gap-1.5 text-xs">
         {rows.map(([k, v]) => (
           <KV key={k} label={k} value={v} />
         ))}
@@ -546,7 +540,7 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
       <dd
         className={cn(
           "min-w-0 truncate text-right text-[var(--tessera-text)]",
-          mono && "font-mono text-[0.62rem]",
+          mono && "font-mono text-xs",
         )}
       >
         {value}
@@ -559,7 +553,7 @@ function ViewAll({ label, href }: { label: string; href: typeof AUDIT_HREF }) {
   return (
     <Link
       href={href}
-      className="flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
+      className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
     >
       {label} <ChevronRight className="h-3 w-3" />
     </Link>
@@ -568,7 +562,7 @@ function ViewAll({ label, href }: { label: string; href: typeof AUDIT_HREF }) {
 
 function Footer({ t, data }: { t: T; data: Data }) {
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="flex items-center gap-1.5">
         <Server className="h-3.5 w-3.5" /> {t("footer.version", { v: data.footer.version })}
       </span>

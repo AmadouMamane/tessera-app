@@ -192,7 +192,7 @@ function SurfaceCard({
           <span className="text-[15px] font-semibold leading-[1.2] text-[var(--text-primary)]">
             {surface.name}
           </span>
-          <span className="inline-flex items-center gap-[6px] text-[11.5px] text-[var(--text-secondary)]">
+          <span className="inline-flex items-center gap-[6px] text-xs text-[var(--text-secondary)]">
             <span
               className="h-[6px] w-[6px] rounded-full"
               style={{ background: a.dot }}
@@ -211,7 +211,7 @@ function SurfaceCard({
             requise"; open surfaces carry no chip (the "Ouvrir" CTA says it). */}
         {surface.authRequired ? (
           <span
-            className="inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-[10.5px] font-medium"
+            className="inline-flex items-center gap-[5px] rounded-full border px-[8px] py-[3px] text-xs font-medium"
             style={{
               color: "var(--amber-soft)",
               borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
@@ -225,12 +225,12 @@ function SurfaceCard({
           <span />
         )}
         {locked ? (
-          <span className="inline-flex items-center gap-[5px] text-[11.5px] font-medium text-[var(--text-secondary)]">
+          <span className="inline-flex items-center gap-[5px] text-xs font-medium text-[var(--text-secondary)]">
             <Lock className="h-[11px] w-[11px]" aria-hidden="true" />
             {t("roleLocked")}
           </span>
         ) : (
-          <span className="inline-flex items-center gap-[5px] text-[11.5px] font-semibold text-[var(--text-secondary)] transition-colors group-hover/card:text-[var(--text-primary)]">
+          <span className="inline-flex items-center gap-[5px] text-xs font-semibold text-[var(--text-secondary)] transition-colors group-hover/card:text-[var(--text-primary)]">
             {actionLabel}
             <ChevronRight className="h-[13px] w-[13px] transition-transform group-hover/card:translate-x-[2px]" />
           </span>
@@ -285,7 +285,7 @@ function SurfaceRow({
           <span className="text-[14px] font-semibold leading-none text-[var(--text-primary)]">
             {surface.name}
           </span>
-          <span className="inline-flex items-center gap-[5px] text-[11px] text-[var(--text-secondary)]">
+          <span className="inline-flex items-center gap-[5px] text-xs text-[var(--text-secondary)]">
             <span
               className="h-[6px] w-[6px] rounded-full"
               style={{ background: a.dot }}
@@ -302,7 +302,7 @@ function SurfaceRow({
           requise"; open surfaces carry no chip (the "Ouvrir" action says it). */}
       {surface.authRequired ? (
         <span
-          className="pointer-events-none hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-[11px] font-medium md:inline-flex"
+          className="pointer-events-none hidden shrink-0 items-center gap-[6px] rounded-full border px-[10px] py-[3px] text-xs font-medium md:inline-flex"
           style={{
             color: "var(--amber-soft)",
             borderColor: "color-mix(in srgb, var(--amber-soft) 42%, transparent)",
@@ -479,13 +479,13 @@ export function SpacesDirectory({ groups }: { groups: SurfaceGroup[] }) {
               )}
             >
               {f.label}
-              <span className="rounded-full bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] px-[7px] text-[10px] tabular-nums">
+              <span className="rounded-full bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)] px-[7px] text-xs tabular-nums">
                 {f.count}
               </span>
             </button>
           ))}
         </div>
-        <label className="inline-flex items-center gap-[8px] text-[11px] text-[var(--text-secondary)]">
+        <label className="inline-flex items-center gap-[8px] text-xs text-[var(--text-secondary)]">
           {t("sortLabel")}
           {/* The native chrome of a <select> is the one control on this page that ignores
               the design system entirely — a grey OS bevel next to tokenised pills. Stripped

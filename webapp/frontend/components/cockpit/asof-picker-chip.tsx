@@ -124,7 +124,7 @@ export function AsOfPickerChip({
             className="w-full border-0 bg-transparent shadow-none"
           />
           <div className="flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3 pb-3 pt-2.5">
-            <label className="flex items-center gap-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
+            <label className="flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
               <Clock3 className="h-3.5 w-3.5" />
               {ta("pickTime")}
               <input

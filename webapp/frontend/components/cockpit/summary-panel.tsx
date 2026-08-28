@@ -40,7 +40,7 @@ export function CountList({
       {items.slice(0, 3).map((item, index) => (
         <li
           key={`${item.key}-${index}`}
-          className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-[0.72rem] leading-tight"
+          className="grid grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 text-xs leading-tight"
         >
           <span className="font-mono text-[var(--tessera-text-muted)]">{index + 1}</span>
           <div className="min-w-0">

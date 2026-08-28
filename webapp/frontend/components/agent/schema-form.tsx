@@ -67,7 +67,7 @@ export function SchemaForm({
       ))}
 
       {showErrors && errors.length > 0 ? (
-        <ul className="list-inside list-disc text-[0.72rem] text-[var(--tessera-fg-danger)]">
+        <ul className="list-inside list-disc text-xs text-[var(--tessera-fg-danger)]">
           {errors.map((message) => (
             <li key={message}>{message}</li>
           ))}
@@ -114,7 +114,7 @@ function Field({
     <label htmlFor={inputId} className="text-[0.78rem] font-medium text-[var(--tessera-text)]">
       {field.label}
       {field.required ? (
-        <span className="ml-1 text-[0.65rem] font-normal uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        <span className="ml-1 text-xs font-normal uppercase tracking-wide text-[var(--tessera-text-muted)]">
           {requiredLabel}
         </span>
       ) : null}
@@ -122,7 +122,7 @@ function Field({
   );
 
   const help = field.description ? (
-    <p id={describedById} className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+    <p id={describedById} className="text-xs text-[var(--tessera-text-muted)]">
       {field.description}
     </p>
   ) : null;

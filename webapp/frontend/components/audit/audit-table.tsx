@@ -517,8 +517,8 @@ function isActorRole(value: string): value is AuditActorRole {
 function FilterSelectValue({ label, value }: { label: string; value: string }) {
   return (
     <span className="flex min-w-0 flex-col items-start leading-tight">
-      <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{label}</span>
-      <span className="max-w-full truncate text-[0.72rem] text-[var(--tessera-text)]">{value}</span>
+      <span className="text-xs text-[var(--tessera-text-muted)]">{label}</span>
+      <span className="max-w-full truncate text-xs text-[var(--tessera-text)]">{value}</span>
     </span>
   );
 }
@@ -579,7 +579,7 @@ function TabButton({
       )}
     >
       <span>{label}</span>
-      <span className="font-mono text-[0.68rem] text-[var(--tessera-text-muted)]">{count}</span>
+      <span className="font-mono text-xs text-[var(--tessera-text-muted)]">{count}</span>
     </button>
   );
 }
@@ -634,7 +634,7 @@ function AuditEventsTable({
                 }
               }}
             >
-              <TableCell className="font-mono text-[0.68rem] text-[var(--tessera-text-muted)]">
+              <TableCell className="font-mono text-xs text-[var(--tessera-text-muted)]">
                 {formatter.dateTime(new Date(entry.occurred_at), {
                   dateStyle: "short",
                   timeStyle: "medium",
@@ -650,7 +650,7 @@ function AuditEventsTable({
               <TableCell>
                 <OutcomeBadge outcome={entry.outcome} />
               </TableCell>
-              <TableCell className="font-mono text-[0.68rem] text-[var(--tessera-fg-info)]">
+              <TableCell className="font-mono text-xs text-[var(--tessera-fg-info)]">
                 {entry.proof_ref ? (
                   <span className="inline-flex items-center gap-1">
                     {entry.proof_ref}
@@ -766,16 +766,13 @@ function ProofList({
   return (
     <ul className="space-y-1 pb-1">
       {(overview?.recent_proofs ?? []).slice(0, 3).map((proof) => (
-        <li key={proof.hash} className="flex items-start gap-1.5 text-[0.7rem] leading-tight">
+        <li key={proof.hash} className="flex items-start gap-1.5 text-xs leading-tight">
           <FileJson className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
           <div className="min-w-0">
             <Truncate as="p" full={proof.hash} className="font-mono text-[var(--tessera-text)]">
               {proof.hash.slice(0, 14)}
             </Truncate>
-            <Truncate
-              as="p"
-              className="text-[0.58rem] leading-tight text-[var(--tessera-text-muted)]"
-            >
+            <Truncate as="p" className="text-xs leading-tight text-[var(--tessera-text-muted)]">
               {formatter.dateTime(new Date(proof.occurred_at), {
                 dateStyle: "short",
                 timeStyle: "short",
@@ -895,7 +892,7 @@ function AuditDetails({
         </DetailBlock>
 
         <DetailBlock title={t("payload")}>
-          <pre className="max-h-44 overflow-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 font-mono text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          <pre className="max-h-44 overflow-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 font-mono text-xs leading-relaxed text-[var(--tessera-text-muted)]">
             {JSON.stringify(entry.arguments, null, 2)}
           </pre>
         </DetailBlock>
@@ -953,15 +950,11 @@ function CausalityChain({ entry }: { entry: AuditEntry }) {
       <div className="relative grid grid-cols-4 gap-2">
         {steps.map((step, index) => (
           <div key={step.key} className="min-w-0 text-center">
-            <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-full border border-[#1b805f] bg-[#05281f] text-[0.7rem] font-semibold text-[var(--tessera-green)] shadow-[0_0_0_4px_var(--tessera-surface)]">
+            <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-full border border-[#1b805f] bg-[#05281f] text-xs font-semibold text-[var(--tessera-green)] shadow-[0_0_0_4px_var(--tessera-surface)]">
               {index + 1}
             </div>
-            <p className="mt-1 truncate text-[0.65rem] text-[var(--tessera-text)]">{step.label}</p>
-            <Truncate
-              as="p"
-              full={step.sub}
-              className="text-[0.58rem] text-[var(--tessera-text-muted)]"
-            >
+            <p className="mt-1 truncate text-xs text-[var(--tessera-text)]">{step.label}</p>
+            <Truncate as="p" full={step.sub} className="text-xs text-[var(--tessera-text-muted)]">
               {step.sub}
             </Truncate>
           </div>
@@ -999,10 +992,10 @@ function DiffColumn({
 }) {
   return (
     <div className="min-w-0 rounded-md border border-[var(--tessera-border)] p-3">
-      <p className="mb-2 text-[0.65rem] font-medium text-[var(--tessera-text-muted)]">{title}</p>
+      <p className="mb-2 text-xs font-medium text-[var(--tessera-text-muted)]">{title}</p>
       <pre
         className={cn(
-          "max-h-32 overflow-auto whitespace-pre rounded bg-[var(--tessera-bg)] p-2 font-mono text-[0.62rem] leading-relaxed",
+          "max-h-32 overflow-auto whitespace-pre rounded bg-[var(--tessera-bg)] p-2 font-mono text-xs leading-relaxed",
           after ? "text-[var(--tessera-green)]" : "text-[var(--tessera-text-muted)]",
         )}
       >
@@ -1042,11 +1035,11 @@ function DetailRow({
       <Truncate
         as="dd"
         full={value}
-        className={cn("min-w-0 text-[var(--tessera-text)]", mono && "font-mono text-[0.68rem]")}
+        className={cn("min-w-0 text-[var(--tessera-text)]", mono && "font-mono text-xs")}
       >
         {value}
         {badge ? (
-          <span className="ml-2 rounded bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <span className="ml-2 rounded bg-[var(--tessera-muted)] px-1.5 py-0.5 text-xs text-[var(--tessera-text-muted)]">
             {badge}
           </span>
         ) : null}
@@ -1079,7 +1072,7 @@ function ActionButton({
       type="button"
       variant="outline"
       size="sm"
-      className="h-7 justify-start gap-1.5 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-[0.68rem]"
+      className="h-7 justify-start gap-1.5 border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 text-xs"
       onClick={() => {
         if (downloadName) {
           const blob = new Blob([value], { type: "application/json" });

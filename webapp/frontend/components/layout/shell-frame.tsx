@@ -36,7 +36,7 @@ export function ShellFrame({
             48px then read as a hole. 24px is the settled value — and it is homogeneous only
             because the page roots no longer add their own `pb-*` on top of it (19 of them did,
             which is what made the same "end of page" measure differently across the cockpit). */}
-        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-5 pb-6 sm:px-6">
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pt-4 pb-24 sm:px-6 sm:pt-5 sm:pb-6">
           <div
             data-shell-content
             className={cn(

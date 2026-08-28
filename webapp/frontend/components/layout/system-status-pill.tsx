@@ -158,7 +158,7 @@ export function SystemStatusPanel({
           {t("description")}
         </p>
       </div>
-      <dl className="border-[var(--tessera-border)] border-t text-[0.72rem]">
+      <dl className="border-[var(--tessera-border)] border-t text-xs">
         <StatusRow label={t("environment")} value={environment} />
         <StatusRow label={t("model")} value={`${state.modelLabel} · ${state.hosting}`} />
         <StatusRow label={t("residence")} value={t("residenceValue")} />

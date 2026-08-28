@@ -52,9 +52,7 @@ export default async function AccessPage({ params }: AccessPageProps) {
       <Suspense fallback={null}>
         <div className="flex flex-wrap items-center gap-3">
           <AgentScopeFilter />
-          <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-            {t("agentFilterHint")}
-          </span>
+          <span className="text-xs text-[var(--tessera-text-muted)]">{t("agentFilterHint")}</span>
         </div>
         <div>
           <RbacAgentMatrix />

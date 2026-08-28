@@ -63,7 +63,7 @@ export function GuardrailCatalogue() {
   }, [data, scope]);
 
   if (isLoading) {
-    return <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("loading")}</p>;
+    return <p className="text-xs text-[var(--tessera-text-muted)]">{t("loading")}</p>;
   }
   // Three states, not one. `!data?.available || rows.length === 0` collapsed "the request
   // failed", "the backend says it cannot serve this" and "there are genuinely no guardrails"
@@ -75,14 +75,14 @@ export function GuardrailCatalogue() {
   }
   if (!data.available) {
     return (
-      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-xs text-[var(--tessera-text-muted)]">
         {t("unavailable")}
       </p>
     );
   }
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-xs text-[var(--tessera-text-muted)]">
         {t("empty")}
       </p>
     );
@@ -101,7 +101,7 @@ export function GuardrailCatalogue() {
               className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
             >
               <div className="flex items-center gap-1">
-                <p className="min-w-0 truncate text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <p className="min-w-0 truncate text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                   {kpi.label}
                 </p>
                 <KpiInfo k={kpi.key} title={kpi.label} />
@@ -122,7 +122,7 @@ export function GuardrailCatalogue() {
             data-testid="guardrails-table"
           >
             <thead>
-              <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {(data.columns ?? []).map((c) => (
                   <th key={c} className="px-2.5 py-2 font-medium">
                     {c}
@@ -183,9 +183,7 @@ export function GuardrailCatalogue() {
         </div>
       </div>
       {selected ? <GuardrailDetail row={selected} onClose={() => setSelectedId(null)} /> : null}
-      {data.note ? (
-        <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{data.note}</p>
-      ) : null}
+      {data.note ? <p className="text-xs text-[var(--tessera-text-muted)]">{data.note}</p> : null}
     </div>
   );
 }
@@ -209,10 +207,10 @@ function GuardrailDetail({
     >
       {d.sections.map((s) => (
         <div key={s.key}>
-          <p className="mb-1 text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="mb-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {s.title}
           </p>
-          <dl className="flex flex-col gap-1 text-[0.66rem]">
+          <dl className="flex flex-col gap-1 text-xs">
             {s.rows.map((r) => (
               <div key={r.label} className="flex items-center justify-between gap-3">
                 <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
@@ -225,11 +223,11 @@ function GuardrailDetail({
       {d.consumers ? (
         <div className="border-t border-[var(--tessera-border)] pt-2">
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--tessera-text)]">
               <Users className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {d.consumers.title}
             </span>
             {d.consumers.regate_count > 0 ? (
-              <span className="inline-flex items-center gap-1 text-[0.6rem] text-[var(--tessera-fg-warning)]">
+              <span className="inline-flex items-center gap-1 text-xs text-[var(--tessera-fg-warning)]">
                 <AlertTriangle className="h-3 w-3" /> {d.consumers.regate_label}
               </span>
             ) : null}
@@ -240,7 +238,7 @@ function GuardrailDetail({
                 <li
                   key={c.agent_id}
                   title={c.label}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.62rem]"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs"
                 >
                   <span
                     className={cn(
@@ -253,16 +251,16 @@ function GuardrailDetail({
               ))}
             </ul>
           ) : (
-            <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{d.consumers.empty}</p>
+            <p className="text-xs text-[var(--tessera-text-muted)]">{d.consumers.empty}</p>
           )}
-          <p className="mt-1.5 text-[0.56rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
             {d.consumers.note}
           </p>
           {d.consumers.count > 0 ? (
             <Link
               href={REVALIDATE_HREF}
               className={cn(
-                "mt-1.5 inline-flex items-center gap-1 text-[0.6rem] font-medium hover:underline",
+                "mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:underline",
                 d.consumers.regate_count > 0
                   ? "text-[var(--tessera-fg-warning)]"
                   : "text-[var(--tessera-fg-info)]",

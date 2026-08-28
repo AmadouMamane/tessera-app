@@ -26,7 +26,7 @@ export default async function PlatformGuardrailsPage({ params }: PageProps) {
       <Suspense fallback={null}>
         <div className="flex flex-wrap items-center gap-3">
           <AgentScopeFilter />
-          <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
+          <span className="text-xs text-[var(--tessera-text-muted)]">{t("hint")}</span>
         </div>
         <GuardrailCatalogue />
         {/* The inverse of the AGENT instance binding: which agents consume each

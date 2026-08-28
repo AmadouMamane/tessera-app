@@ -170,7 +170,7 @@ export async function AgentBreakdown({
     return (
       <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
         <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
-        <p className="mt-2 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("empty")}</p>
+        <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">{t("empty")}</p>
       </section>
     );
   }
@@ -183,7 +183,7 @@ export async function AgentBreakdown({
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
         </div>
-        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("maskedOrgWide")}</p>
+        <p className="text-xs text-[var(--tessera-text-muted)]">{t("maskedOrgWide")}</p>
       </section>
     );
   }
@@ -209,7 +209,7 @@ export async function AgentBreakdown({
     <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
-        {note ? <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">{note}</p> : null}
+        {note ? <p className="text-xs text-[var(--tessera-text-muted)]">{note}</p> : null}
       </div>
       <div className="overflow-x-auto">
         {lens.kind === "alarm" ? (
@@ -291,7 +291,7 @@ function MonitoringTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colVolume")}</th>
             <th className="pb-2 text-center font-medium">{t("colEscalation")}</th>
@@ -335,7 +335,7 @@ function MonitoringTable({
             </td>
             <td
               colSpan={4}
-              className="py-2 pr-2 text-right text-[0.66rem] text-[var(--tessera-text-muted)]"
+              className="py-2 pr-2 text-right text-xs text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
                 fmt={fmt}
@@ -423,7 +423,7 @@ function AlarmTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             {/* The measure keeps ONE name across both lens modes: the column holds the value
                 by definition, so wrapping the metric label in a "value (…)" template only
@@ -504,7 +504,7 @@ function AlarmTable({
           <tr>
             <td
               colSpan={6}
-              className="pb-1 pr-2 text-right text-[0.66rem] text-[var(--tessera-text-muted)]"
+              className="pb-1 pr-2 text-right text-xs text-[var(--tessera-text-muted)]"
             >
               {/* Contribution reconciliation — the per-agent slices vs the deduplicated org
                 total. ∑ slices = org would be a coincidence, not a proof: a handed-off
@@ -560,7 +560,7 @@ function QualityTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colFaithfulness")}</th>
             <th className="pb-2 text-center font-medium">{t("colHallucination")}</th>
@@ -618,7 +618,7 @@ function QualityTable({
             </td>
             <td
               colSpan={4}
-              className="py-2 pr-2 text-right text-[0.66rem] text-[var(--tessera-text-muted)]"
+              className="py-2 pr-2 text-right text-xs text-[var(--tessera-text-muted)]"
             >
               <DedupFooter
                 fmt={fmt}
@@ -689,7 +689,7 @@ function DomainFoot({
         <td className="py-2 pr-3 font-semibold text-[var(--tessera-fg-accent)]">{t("orgTotal")}</td>
         <td
           colSpan={span}
-          className="py-2 pr-2 text-right text-[0.66rem] text-[var(--tessera-text-muted)]"
+          className="py-2 pr-2 text-right text-xs text-[var(--tessera-text-muted)]"
         >
           <DedupFooter
             fmt={fmt}
@@ -730,7 +730,7 @@ function SecurityTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colPiiLeaks")}</th>
             <th className="pb-2 text-center font-medium">{t("colToxicity")}</th>
@@ -820,7 +820,7 @@ function ComplianceTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colGovernedActs")}</th>
             <th className="pb-2 text-center font-medium">{t("colLedgerEntries")}</th>
@@ -892,7 +892,7 @@ function ObservabilityTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colAnomalies")}</th>
             <th className="pb-2 text-center font-medium">{t("colConformance")}</th>
@@ -971,7 +971,7 @@ function ReliabilityTable({
     <div className="overflow-x-auto">
       <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
         <thead>
-          <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
             <th className="pb-2 text-center font-medium">{t("colToolErrors")}</th>
             <th className="pb-2 text-center font-medium">{t("colLatency")}</th>

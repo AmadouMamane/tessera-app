@@ -435,7 +435,7 @@ describe("every foreground literal survives the light theme", () => {
   it("has teeth: the two defects that started this are rejected if restored", () => {
     const superHeader = scanSource(
       "sidebar.tsx",
-      'cn("border-l-2 text-[0.7rem] uppercase tracking-[0.1em] text-white", ACCENT[a])',
+      'cn("border-l-2 text-xs uppercase tracking-[0.1em] text-white", ACCENT[a])',
     );
     expect(superHeader.failing.map((f) => f.ratio)).toEqual([1]);
 

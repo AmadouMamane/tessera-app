@@ -74,10 +74,10 @@ export function ComponentDrawer({
         <Badge tone={tone === "neutral" ? "neutral" : tone}>
           {tc(`state.${component.verdict}`)}
         </Badge>
-        <span className="text-[0.66rem] text-[var(--muted-foreground)]">
+        <span className="text-xs text-[var(--muted-foreground)]">
           {t(`group.${component.group}`)}
         </span>
-        <span className="ml-auto text-[0.66rem] text-[var(--muted-foreground)]">
+        <span className="ml-auto text-xs text-[var(--muted-foreground)]">
           {tc("checked", {
             when: format.relativeTime(observedAt(data.observed_at), relativeNow()),
           })}
@@ -90,11 +90,11 @@ export function ComponentDrawer({
 
       <DrawerSection label={t("answered")}>
         {/* Verbatim, monospace, wrapped — the evidence, never paraphrased here. */}
-        <p className="whitespace-pre-wrap break-words font-mono text-[0.7rem] leading-relaxed text-[var(--foreground)]">
+        <p className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--foreground)]">
           {component.detail || "—"}
         </p>
         {component.address ? (
-          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[0.66rem] text-[var(--muted-foreground)]">
+          <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-xs text-[var(--muted-foreground)]">
             <span className="font-mono">{component.address}</span>
             {component.outcome && tc.has(`outcome.${component.outcome}`) ? (
               <span>{tc(`outcome.${component.outcome}`)}</span>
@@ -117,12 +117,10 @@ export function ComponentDrawer({
               {tc(`state.${component.read.verdict}`)}
             </Badge>
             {component.read.verdict !== component.verdict ? (
-              <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
-                {t("readDiverges")}
-              </span>
+              <span className="text-xs text-[var(--tessera-fg-warning)]">{t("readDiverges")}</span>
             ) : null}
           </div>
-          <p className="mt-1.5 whitespace-pre-wrap break-words font-mono text-[0.7rem] leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-1.5 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-[var(--muted-foreground)]">
             {component.read.detail || "—"}
           </p>
         </DrawerSection>
@@ -133,7 +131,7 @@ export function ComponentDrawer({
           <ul className="flex flex-col gap-1">
             {dependents.map((row) => (
               <li key={row.key} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span className="flex items-center gap-1 text-[0.72rem] font-medium text-[var(--foreground)]">
+                <span className="flex items-center gap-1 text-xs font-medium text-[var(--foreground)]">
                   {row.gates_agents ? (
                     <ShieldAlert
                       className="h-3 w-3 shrink-0 text-[var(--tessera-fg-warning)]"
@@ -145,7 +143,7 @@ export function ComponentDrawer({
                 <Badge tone={stateTone(row.state)}>{tq(`state.${row.state}`)}</Badge>
                 {row.checked_by_read.includes(component.name) ? (
                   <span
-                    className="flex items-center gap-0.5 text-[0.62rem] text-[var(--muted-foreground)]"
+                    className="flex items-center gap-0.5 text-xs text-[var(--muted-foreground)]"
                     title={t("readBackedTitle")}
                   >
                     <SearchCheck className="h-3 w-3" />
@@ -162,7 +160,7 @@ export function ComponentDrawer({
         <DrawerSection label={t("edges")}>
           <ul className="flex flex-col gap-1.5">
             {edges.map((edge) => (
-              <li key={`${edge.source}-${edge.target}-${edge.signal}`} className="text-[0.7rem]">
+              <li key={`${edge.source}-${edge.target}-${edge.signal}`} className="text-xs">
                 <span className="text-[var(--foreground)]">
                   {edge.source} → {edge.target}
                 </span>
@@ -173,7 +171,7 @@ export function ComponentDrawer({
                 </span>
                 {/* The citation, in the open: the drawing is checkable from here. */}
                 <span
-                  className="block truncate font-mono text-[0.62rem] text-[var(--muted-foreground)]"
+                  className="block truncate font-mono text-xs text-[var(--muted-foreground)]"
                   title={edge.declared_in}
                 >
                   {edge.declared_in}
@@ -187,7 +185,7 @@ export function ComponentDrawer({
       {component.group === "stack" ? (
         <DrawerSection label={t("lastDay")}>
           {history.isPending ? (
-            <p className="text-[0.66rem] text-[var(--muted-foreground)]">{t("historyLoading")}</p>
+            <p className="text-xs text-[var(--muted-foreground)]">{t("historyLoading")}</p>
           ) : history.data ? (
             <>
               <ComponentTimeline
@@ -197,7 +195,7 @@ export function ComponentDrawer({
                 until={history.data.window.until}
                 days={1}
               />
-              <p className="mt-1.5 text-[0.66rem] text-[var(--muted-foreground)]">
+              <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
                 {availability
                   ? t("availabilityLine", {
                       ok:
@@ -210,9 +208,7 @@ export function ComponentDrawer({
               </p>
             </>
           ) : (
-            <p className="text-[0.66rem] text-[var(--muted-foreground)]">
-              {t("historyUnreadable")}
-            </p>
+            <p className="text-xs text-[var(--muted-foreground)]">{t("historyUnreadable")}</p>
           )}
         </DrawerSection>
       ) : null}
@@ -223,18 +219,16 @@ export function ComponentDrawer({
             href={link.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-[0.7rem] text-[var(--foreground)] transition-colors hover:border-[var(--tessera-green)]/50 hover:text-[var(--tessera-green)]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-xs text-[var(--foreground)] transition-colors hover:border-[var(--tessera-green)]/50 hover:text-[var(--tessera-green)]"
           >
-            <span className="font-mono text-[0.66rem]">{link.url}</span>
+            <span className="font-mono text-xs">{link.url}</span>
             {link.hostLocal ? (
               <Home className="h-2.5 w-2.5 shrink-0 text-[var(--muted-foreground)]" />
             ) : null}
             <ArrowUpRight className="h-3 w-3 shrink-0" />
           </a>
           {link.hostLocal ? (
-            <p className="mt-1 text-[0.62rem] text-[var(--muted-foreground)]">
-              {t("hostLocalNote")}
-            </p>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">{t("hostLocalNote")}</p>
           ) : null}
         </DrawerSection>
       ) : null}
@@ -245,7 +239,7 @@ export function ComponentDrawer({
 function DrawerSection({ label, children }: { label: string; children: ReactNode }) {
   return (
     <section>
-      <p className="mb-1 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
         {label}
       </p>
       {children}

@@ -251,7 +251,7 @@ function AgentConnaissancesInner() {
       {mutError ? (
         <div
           role="alert"
-          className="flex items-center justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[0.74rem] text-[var(--tessera-fg-danger)]"
+          className="flex items-center justify-between gap-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-[var(--tessera-fg-danger)]"
         >
           <span>{mutError}</span>
           <button
@@ -357,9 +357,7 @@ function AttachMenu({
           className="absolute right-0 z-20 mt-1 w-72 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-1 shadow-lg"
         >
           {items.length === 0 ? (
-            <p className="px-2 py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">
-              {t("allAttached")}
-            </p>
+            <p className="px-2 py-2 text-xs text-[var(--tessera-text-muted)]">{t("allAttached")}</p>
           ) : (
             items.map((it) => (
               <button
@@ -371,12 +369,10 @@ function AttachMenu({
                   onAttach(it.key);
                   setOpen(false);
                 }}
-                className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[0.72rem] text-[var(--tessera-text)] hover:bg-[var(--tessera-bg)] disabled:opacity-60"
+                className="flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-xs text-[var(--tessera-text)] hover:bg-[var(--tessera-bg)] disabled:opacity-60"
               >
                 <Truncate full={it.name}>{it.name}</Truncate>
-                <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
-                  {it.type}
-                </span>
+                <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">{it.type}</span>
               </button>
             ))
           )}
@@ -399,7 +395,7 @@ function ActiveFilterChips({
       {chips.map((c) => (
         <span
           key={c.key}
-          className="flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] py-1 pl-2.5 pr-1 text-[0.66rem] text-[var(--tessera-text)]"
+          className="flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] py-1 pl-2.5 pr-1 text-xs text-[var(--tessera-text)]"
         >
           {c.label}
           <button
@@ -415,7 +411,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClear}
-        className="ml-1 text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+        className="ml-1 text-xs font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {t("clearAll")}
       </button>
@@ -451,7 +447,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#e0a23a]/30 bg-[#e0a23a]/10 text-[var(--tessera-fg-warning)]">
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <Truncate full={kpi.label} className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-xs text-[var(--tessera-text-muted)]">
           {kpi.label}
         </Truncate>
         <CardInfo ns="agentConnaissances" k={kpi.key} title={kpi.label} />
@@ -490,7 +486,7 @@ function FilterDropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] hover:border-[var(--tessera-text-muted)]"
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs hover:border-[var(--tessera-text-muted)]"
       >
         <span className="text-[var(--tessera-text-muted)]">{label}</span>
         <span className="font-medium text-[var(--tessera-text)]">{current}</span>
@@ -511,7 +507,7 @@ function FilterDropdown({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[0.72rem] hover:bg-[var(--tessera-bg)]",
+                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs hover:bg-[var(--tessera-bg)]",
                 o.value === value
                   ? "text-[var(--tessera-text)]"
                   : "text-[var(--tessera-text-muted)]",
@@ -599,7 +595,7 @@ function Filters({
           onChange={(e) => setSearch(e.target.value)}
           placeholder={f.search}
           aria-label={f.search}
-          className="min-w-0 flex-1 bg-transparent text-[0.74rem] text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)] focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-xs text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)] focus:outline-none"
         />
       </div>
       <FilterDropdown
@@ -680,7 +676,7 @@ function AdvancedFilters({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-[0.74rem]",
+          "flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-xs",
           activeCount > 0
             ? "border-[#5fd0c6]/50 bg-[#5fd0c6]/10 text-[var(--tessera-text)]"
             : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -688,7 +684,7 @@ function AdvancedFilters({
       >
         <SlidersHorizontal className="h-3.5 w-3.5" /> {label}
         {activeCount > 0 ? (
-          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5fd0c6] px-1 text-[0.6rem] font-semibold text-[#04201d]">
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#5fd0c6] px-1 text-xs font-semibold text-[#04201d]">
             {activeCount}
           </span>
         ) : null}
@@ -697,7 +693,7 @@ function AdvancedFilters({
         <div className="absolute right-0 z-20 mt-1 w-64 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3 shadow-lg">
           {allLangs.length > 0 ? (
             <div className="mb-3">
-              <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {t("langLabel")}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -710,7 +706,7 @@ function AdvancedFilters({
                       aria-pressed={on}
                       onClick={() => toggleLang(l)}
                       className={cn(
-                        "rounded-md border px-2 py-1 text-[0.66rem] font-medium uppercase",
+                        "rounded-md border px-2 py-1 text-xs font-medium uppercase",
                         on
                           ? "border-[#5fd0c6]/50 bg-[#5fd0c6]/15 text-[var(--tessera-text)]"
                           : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -725,7 +721,7 @@ function AdvancedFilters({
           ) : null}
 
           <div className="mb-3">
-            <p className="mb-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {t("volumeMin")}
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -738,7 +734,7 @@ function AdvancedFilters({
                     aria-pressed={on}
                     onClick={() => setMinCov(c)}
                     className={cn(
-                      "rounded-md border px-2 py-1 text-[0.66rem] font-medium tabular-nums",
+                      "rounded-md border px-2 py-1 text-xs font-medium tabular-nums",
                       on
                         ? "border-[#5fd0c6]/50 bg-[#5fd0c6]/15 text-[var(--tessera-text)]"
                         : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -755,7 +751,7 @@ function AdvancedFilters({
             type="button"
             aria-pressed={groundedOnly}
             onClick={() => setGroundedOnly(!groundedOnly)}
-            className="flex w-full items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.7rem] text-[var(--tessera-text)]"
+            className="flex w-full items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-xs text-[var(--tessera-text)]"
           >
             <span>{t("grounded")}</span>
             <span
@@ -772,7 +768,7 @@ function AdvancedFilters({
             <button
               type="button"
               onClick={onReset}
-              className="mt-3 w-full text-center text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+              className="mt-3 w-full text-center text-xs font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {t("reset")}
             </button>
@@ -868,7 +864,7 @@ function SourcesTable({
           className="w-full min-w-[640px] table-fixed border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
                 <th
                   key={c}
@@ -938,22 +934,19 @@ function SourcesTable({
                       >
                         {r.name}
                       </Truncate>
-                      <Truncate
-                        full={r.path}
-                        className="text-[0.62rem] text-[var(--tessera-text-muted)]"
-                      >
+                      <Truncate full={r.path} className="text-xs text-[var(--tessera-text-muted)]">
                         {r.path}
                       </Truncate>
                     </span>
                   </div>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+                <td className="whitespace-nowrap px-3 py-2.5 text-xs text-[var(--tessera-text-muted)]">
                   {r.type}
                 </td>
                 <td className="px-3 py-2.5">
                   <span
                     className={cn(
-                      "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+                      "rounded-full border px-2 py-0.5 text-xs font-medium",
                       STATUS_TONE[r.status_tone] ?? STATUS_TONE.good,
                     )}
                   >
@@ -962,10 +955,10 @@ function SourcesTable({
                 </td>
                 <td className="px-3 py-2.5">
                   {r.coverage === null ? (
-                    <span className="text-[0.72rem] text-[var(--tessera-text-muted)]">-</span>
+                    <span className="text-xs text-[var(--tessera-text-muted)]">-</span>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span className="w-9 shrink-0 text-[0.72rem] tabular-nums text-[var(--tessera-text)]">
+                      <span className="w-9 shrink-0 text-xs tabular-nums text-[var(--tessera-text)]">
                         {r.coverage}%
                       </span>
                       <span className="hidden h-[4px] w-16 overflow-hidden rounded-full bg-[var(--tessera-border)] sm:block">
@@ -977,10 +970,10 @@ function SourcesTable({
                     </div>
                   )}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+                <td className="whitespace-nowrap px-3 py-2.5 text-xs text-[var(--tessera-text-muted)]">
                   {r.freshness}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 text-[0.72rem] tabular-nums text-[var(--tessera-text)]">
+                <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-[var(--tessera-text)]">
                   {r.citation}
                 </td>
               </tr>
@@ -989,7 +982,7 @@ function SourcesTable({
               <tr>
                 <td
                   colSpan={tbl.columns.length}
-                  className="px-3 py-6 text-center text-[0.72rem] text-[var(--tessera-text-muted)]"
+                  className="px-3 py-6 text-center text-xs text-[var(--tessera-text-muted)]"
                 >
                   {t("noResults")}
                 </td>
@@ -1044,7 +1037,7 @@ function Pagination({
 }) {
   const t = useTranslations("agentConnaissances");
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {t("paginationSummary", { start, end, total })}
       </span>
@@ -1057,7 +1050,7 @@ function Pagination({
             aria-current={n === page ? "page" : undefined}
             onClick={() => onPage(n)}
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -1077,7 +1070,7 @@ function Pagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {ROWS_PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>
@@ -1146,13 +1139,11 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
     <li className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2.5">
       <div className="flex items-start gap-2">
         <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-teal)]" />
-        <span className="min-w-0 flex-1 text-[0.72rem] font-medium text-[var(--tessera-text)]">
+        <span className="min-w-0 flex-1 text-xs font-medium text-[var(--tessera-text)]">
           {ans.text}
         </span>
         {ans.time ? (
-          <span className="shrink-0 text-[0.6rem] text-[var(--tessera-text-muted)]">
-            {ans.time}
-          </span>
+          <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">{ans.time}</span>
         ) : null}
       </div>
       {answer ? (
@@ -1160,7 +1151,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
           <p
             title={answer}
             className={cn(
-              "mt-1 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]",
+              "mt-1 text-xs leading-relaxed text-[var(--tessera-text-muted)]",
               clampable && !open && "line-clamp-2",
             )}
           >
@@ -1170,7 +1161,7 @@ function AnswerItem({ ans }: { ans: AnswerT }) {
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
-              className="mt-1 text-[0.64rem] font-medium text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-fg-teal)]"
+              className="mt-1 text-xs font-medium text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-fg-teal)]"
             >
               {open ? t("showLess") : t("showMore")}
             </button>
@@ -1228,7 +1219,7 @@ function DetailPanel({
       <div className="flex items-center justify-between gap-2 pb-1">
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+            "rounded-full border px-2 py-0.5 text-xs font-medium",
             STATUS_TONE[d.status_tone] ?? STATUS_TONE.good,
           )}
         >
@@ -1246,7 +1237,7 @@ function DetailPanel({
               type="button"
               onClick={() => setTab(tb)}
               className={cn(
-                "-mb-px border-b-2 py-2.5 text-[0.72rem] transition-colors",
+                "-mb-px border-b-2 py-2.5 text-xs transition-colors",
                 on
                   ? "border-[#5fd0c6] font-medium text-[var(--tessera-text)]"
                   : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -1262,18 +1253,18 @@ function DetailPanel({
         {tab === d.tabs[0] ? (
           <>
             <div>
-              <h3 className="mb-1 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              <h3 className="mb-1 text-xs font-semibold text-[var(--tessera-text)]">
                 {d.summary_title}
               </h3>
-              <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+              <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
                 {d.summary}
               </p>
             </div>
             <div>
-              <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+              <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
                 {d.usage_title}
               </h3>
-              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              <ul className="flex flex-col gap-1.5 text-xs">
                 {d.usage.map((u) => (
                   <li key={u.label} className="flex items-center justify-between gap-2">
                     <span className="text-[var(--tessera-text-muted)]">{u.label}</span>
@@ -1289,13 +1280,11 @@ function DetailPanel({
 
         {tab === d.tabs[1] ? (
           <div>
-            <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+            <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
               {d.answers_title}
             </h3>
             {d.answers.length === 0 ? (
-              <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
-                {t("noGroundedAnswers")}
-              </p>
+              <p className="text-xs text-[var(--tessera-text-muted)]">{t("noGroundedAnswers")}</p>
             ) : (
               <ul className="flex flex-col gap-2.5">
                 {d.answers.map((ans) => (
@@ -1308,10 +1297,10 @@ function DetailPanel({
 
         {tab === d.tabs[2] ? (
           <div>
-            <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+            <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
               {d.params_title ?? t("paramsFallback")}
             </h3>
-            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+            <ul className="flex flex-col gap-1.5 text-xs">
               {(d.params ?? []).map((p) => (
                 <li key={p.label} className="flex items-center justify-between gap-2">
                   <span className="text-[var(--tessera-text-muted)]">{p.label}</span>
@@ -1324,10 +1313,10 @@ function DetailPanel({
 
         {d.attachment ? (
           <div>
-            <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+            <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
               {d.attachment.title}
             </h3>
-            <ul className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.72rem]">
+            <ul className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-xs">
               {d.attachment.rows.map((r) => (
                 <li key={r.label} className="flex items-center justify-between gap-2">
                   <span className="text-[var(--tessera-text-muted)]">{r.label}</span>
@@ -1337,12 +1326,12 @@ function DetailPanel({
             </ul>
             {d.attachment.journal_title ? (
               <div data-testid="source-journal" className="mt-2">
-                <h4 className="mb-1 text-[0.68rem] font-semibold text-[var(--tessera-text-muted)]">
+                <h4 className="mb-1 text-xs font-semibold text-[var(--tessera-text-muted)]">
                   {d.attachment.journal_title}
                 </h4>
                 {Array.isArray(d.attachment.journal) ? (
                   d.attachment.journal.length > 0 ? (
-                    <ul className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-[0.68rem]">
+                    <ul className="flex flex-col gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-xs">
                       {d.attachment.journal.map((ev) => (
                         <li
                           key={`${ev.at}-${ev.action}`}
@@ -1358,12 +1347,12 @@ function DetailPanel({
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-[0.68rem] text-[var(--tessera-text-muted)]">
+                    <p className="text-xs text-[var(--tessera-text-muted)]">
                       {d.attachment.journal_empty}
                     </p>
                   )
                 ) : (
-                  <p className="text-[0.68rem] text-[var(--tessera-fg-warning)]">
+                  <p className="text-xs text-[var(--tessera-fg-warning)]">
                     {d.attachment.journal_unavailable}
                   </p>
                 )}
@@ -1373,11 +1362,11 @@ function DetailPanel({
         ) : null}
 
         <div>
-          <h3 className="mb-2 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+          <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
             {d.actions_title}
           </h3>
           <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2">
-            <span className="text-[0.72rem] text-[var(--tessera-text)]">{d.toggle_label}</span>
+            <span className="text-xs text-[var(--tessera-text)]">{d.toggle_label}</span>
             <button
               type="button"
               disabled={pending || !key}
@@ -1395,13 +1384,13 @@ function DetailPanel({
             type="button"
             disabled={pending || !key}
             onClick={() => key && onDetach(key)}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-[0.72rem] font-medium text-[var(--tessera-fg-danger)] hover:bg-red-500/10 disabled:opacity-60"
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-red-500/40 bg-red-500/5 px-3 py-2 text-xs font-medium text-[var(--tessera-fg-danger)] hover:bg-red-500/10 disabled:opacity-60"
           >
             {d.detach}
           </button>
           <Link
             href={{ pathname: MEMORY_HREF, query: { source: d.key } }}
-            className="mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+            className="mt-2.5 flex items-center gap-1 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
           >
             {d.full_sheet}
             <ChevronRight className="h-3.5 w-3.5" />

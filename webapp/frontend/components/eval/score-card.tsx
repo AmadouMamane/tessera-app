@@ -41,7 +41,7 @@ export async function ScoreCard({
         {card.model ?? t("score.unnamedModel")}
       </span>
       {runAt ? (
-        <span className="font-mono text-[11px] text-[var(--muted-foreground)]">{runAt}</span>
+        <span className="font-mono text-xs text-[var(--muted-foreground)]">{runAt}</span>
       ) : null}
     </div>
   );
@@ -110,7 +110,7 @@ export async function ScoreCard({
           <span className="font-serif font-semibold text-2xl tabular-nums">
             {card.absolute.passed}/{card.absolute.total}
           </span>
-          <span className="text-[11px] text-[var(--muted-foreground)] uppercase tracking-wide">
+          <span className="text-xs text-[var(--muted-foreground)] uppercase tracking-wide">
             {t("score.absoluteIsNotTheGrade")}
           </span>
         </div>
@@ -154,11 +154,11 @@ export async function ScoreCard({
 
         {/* The bar is a reasoned choice, not a measurement, and it says so wherever it appears. */}
         {card.minContribution !== null ? (
-          <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+          <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
             {t("score.uncalibrated", { min: card.minContribution })}
           </p>
         ) : (
-          <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+          <p className="text-xs text-[var(--muted-foreground)] leading-relaxed">
             {t("score.rule2NotGated")}
           </p>
         )}
@@ -193,7 +193,7 @@ function Term({
       {detail?.length ? (
         <ul className="flex flex-col gap-0.5">
           {detail.map((key) => (
-            <li key={key} className="font-mono text-[11px] text-danger-700 dark:text-danger-300">
+            <li key={key} className="font-mono text-xs text-danger-700 dark:text-danger-300">
               {key}
             </li>
           ))}

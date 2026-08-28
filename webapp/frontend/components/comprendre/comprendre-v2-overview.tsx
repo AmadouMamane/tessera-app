@@ -194,7 +194,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
             <p
               id="comprendre-orbit-label"
               data-contrast-label="questions"
-              className="translate-y-[7px] text-center font-mono text-[0.64rem] font-medium tracking-[0.14em] text-[var(--tessera-text-muted)] uppercase"
+              className="translate-y-[7px] text-center font-mono text-xs font-medium tracking-[0.14em] text-[var(--tessera-text-muted)] uppercase"
             >
               {t("hero.questionsLabel")}
             </p>
@@ -263,7 +263,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                   className="border-[var(--tessera-border)] border-b p-5 last:border-b-0 lg:border-r lg:border-b-0 lg:last:border-r-0"
                 >
                   <Icon className="size-5 text-[var(--tessera-green)]" aria-hidden />
-                  <p className="mt-5 font-mono text-[0.62rem] tracking-[0.12em] text-[var(--tessera-text-subtle)] uppercase">
+                  <p className="mt-5 font-mono text-xs tracking-[0.12em] text-[var(--tessera-text-subtle)] uppercase">
                     {step.label}
                   </p>
                   {step.body ? (
@@ -310,7 +310,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
 
           <div className="grid gap-6 border-[var(--tessera-border)] border-t bg-[linear-gradient(135deg,rgba(139,183,255,0.07),transparent_58%)] p-5 sm:p-7 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
-              <p className="font-mono text-[0.62rem] font-semibold tracking-[0.14em] text-[var(--tessera-fg-info)] uppercase">
+              <p className="font-mono text-xs font-semibold tracking-[0.14em] text-[var(--tessera-fg-info)] uppercase">
                 {journey.illustrative.label}
               </p>
               <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-[rgba(229,147,8,0.28)] bg-[rgba(229,147,8,0.1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-warning-500)]">
@@ -406,7 +406,7 @@ export function ComprendreV2Overview({ initialFacts }: { initialFacts: Comprendr
                     </h3>
                     <span
                       data-contrast-label="moment"
-                      className="rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg-soft)] px-2.5 py-1 font-mono text-[0.6rem] font-semibold tracking-[0.1em] text-[var(--tessera-text-muted)] uppercase"
+                      className="rounded-full border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg-soft)] px-2.5 py-1 font-mono text-xs font-semibold tracking-[0.1em] text-[var(--tessera-text-muted)] uppercase"
                     >
                       {detail.moment}
                     </span>

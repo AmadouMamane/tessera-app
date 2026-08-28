@@ -111,7 +111,11 @@ function importedElsewhere(base: string, self: string, sources: readonly string[
   return sources.some((file) => file !== self && pattern.test(readFileSync(file, "utf8")));
 }
 
-const sources = walk(ROOT).filter((f) => !f.includes(`${path.sep}.next${path.sep}`));
+// Stories are mounted by Storybook's own loader, not by the product import graph. Excluding them
+// from both sides prevents a story from either becoming a false orphan or hiding a real one.
+const sources = walk(ROOT).filter(
+  (f) => !f.includes(`${path.sep}.next${path.sep}`) && !f.includes(".stories."),
+);
 const components = sources.filter(
   (f) =>
     f.includes(`${path.sep}components${path.sep}`) && f.endsWith(".tsx") && !f.includes(".test."),

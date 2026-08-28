@@ -119,7 +119,7 @@ export default async function SpacesDirectoryPage({ params }: PageProps) {
 
           <SpacesDirectory groups={groups} />
 
-          <p className="mt-10 w-full max-w-[1040px] text-[11px] leading-[1.5] text-[var(--text-secondary)]">
+          <p className="mt-10 w-full max-w-[1040px] text-xs leading-[1.5] text-[var(--text-secondary)]">
             {t("accessLegend")}
           </p>
         </main>

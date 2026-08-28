@@ -176,6 +176,13 @@
       "home": "Zurück zur Startseite",
       "collapse": "Menü einklappen",
       "expand": "Menü ausklappen"
+    },
+    "mobile": {
+      "primary": "Hauptnavigation",
+      "more": "Mehr",
+      "menu": "Alle Ziele",
+      "overview": "Übersicht",
+      "incidents": "Incidents"
     }
   },
   "common": {
@@ -620,8 +627,8 @@
       "auditUnknown": "Audit-Kette: unbekannt",
       "source": "Quelle der Wahrheit: Live-Backend",
       "confidence": "Signalvertrauen",
-      "systemsOk": "Alle Systeme betriebsbereit",
-      "systemsDegraded": "Systeme eingeschränkt",
+      "systemsOk": "Lokale Infrastruktur erreichbar",
+      "systemsDegraded": "Lokale Infrastruktur eingeschränkt",
       "auditAsOfTip": "Anzahl der Einträge zum gewählten Zeitpunkt; Integrität der Kette wird im Jetzt geprüft.",
       "viewHealth": "Health-Komponenten ansehen"
     },

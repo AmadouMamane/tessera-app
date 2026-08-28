@@ -131,7 +131,7 @@ export function ComprendreV2Diagram() {
             <Orbit className="size-6" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="font-mono text-[0.66rem] tracking-[0.17em] text-[var(--tessera-fg-teal)] uppercase">
+            <p className="font-mono text-xs tracking-[0.17em] text-[var(--tessera-fg-teal)] uppercase">
               {app("title")}
             </p>
             <p className="mt-1 max-w-[48rem] text-sm font-medium leading-6 text-[var(--tessera-text)]">
@@ -188,7 +188,7 @@ export function ComprendreV2Diagram() {
                       <strong className="text-xs font-semibold text-[var(--tessera-text)]">
                         {flow.label}
                       </strong>
-                      <p className="mt-1 text-[0.68rem] leading-5 text-[var(--tessera-text-muted)]">
+                      <p className="mt-1 text-xs leading-5 text-[var(--tessera-text-muted)]">
                         {flow.detail}
                       </p>
                     </div>
@@ -196,7 +196,7 @@ export function ComprendreV2Diagram() {
                   {isAccessFlow ? (
                     <p
                       data-contrast-label="door"
-                      className="mt-3 border-white/[0.06] border-t pt-2.5 text-[0.6rem] leading-4 font-medium text-[var(--tessera-text-muted)]"
+                      className="mt-3 border-white/[0.06] border-t pt-2.5 text-xs leading-4 font-medium text-[var(--tessera-text-muted)]"
                     >
                       {t("door")}
                     </p>
@@ -236,7 +236,7 @@ function BusinessPanel({ column }: { column: DiagramColumn }) {
         })}
       </ul>
       {column.caption ? (
-        <p className="relative border-sky-300/10 border-t px-4 py-3 text-center text-[0.66rem] leading-5 text-[var(--tessera-fg-info)]/55">
+        <p className="relative border-sky-300/10 border-t px-4 py-3 text-center text-xs leading-5 text-[var(--tessera-fg-info)]/55">
           {column.caption}
         </p>
       ) : null}
@@ -291,7 +291,7 @@ function AgentPanel({ column, foundations }: { column: DiagramColumn; foundation
               <li
                 key={foundation}
                 data-agent-foundation="true"
-                className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.055] px-3 py-2 text-center text-[0.68rem] font-medium text-[var(--tessera-fg-success)]/85"
+                className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300/20 bg-emerald-400/[0.055] px-3 py-2 text-center text-xs font-medium text-[var(--tessera-fg-success)]/85"
               >
                 <FoundationIcon
                   className="size-4 shrink-0 text-[var(--tessera-fg-success)]"
@@ -332,7 +332,7 @@ function CockpitPanel({ column }: { column: DiagramColumn }) {
         })}
       </ul>
       {column.caption ? (
-        <p className="relative border-violet-300/10 border-t px-4 py-3 text-center text-[0.66rem] leading-5 text-[var(--tessera-fg-accent)]/55">
+        <p className="relative border-violet-300/10 border-t px-4 py-3 text-center text-xs leading-5 text-[var(--tessera-fg-accent)]/55">
           {column.caption}
         </p>
       ) : null}
@@ -399,7 +399,7 @@ function GuardBridge({ label }: { label: string }) {
       </div>
       <p
         data-diagram-guard-label="true"
-        className="mt-2 max-w-[7.5rem] text-center text-[0.6rem] leading-4 text-[var(--tessera-fg-success)]/80"
+        className="mt-2 max-w-[7.5rem] text-center text-xs leading-4 text-[var(--tessera-fg-success)]/80"
       >
         {label}
       </p>
@@ -436,9 +436,7 @@ function FlowRail({
 
   return (
     <div>
-      <p className={`mb-1.5 text-center text-[0.62rem] font-medium leading-4 ${tone}`}>
-        {flow.label}
-      </p>
+      <p className={`mb-1.5 text-center text-xs font-medium leading-4 ${tone}`}>{flow.label}</p>
       <div className={`flex items-center gap-1 ${direction === "left" ? "flex-row-reverse" : ""}`}>
         <span aria-hidden="true" className={`h-px flex-1 ${line}`} />
         <Icon className={`size-4 shrink-0 ${tone}`} aria-hidden="true" />
@@ -460,7 +458,7 @@ function AuditLedger({ title, body }: { title: string; body: string }) {
         </span>
         <div>
           <h3 className="text-xs font-semibold text-[var(--tessera-fg-warning)]">{title}</h3>
-          <p className="mt-1 text-[0.66rem] leading-5 text-[var(--tessera-text-muted)]">{body}</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--tessera-text-muted)]">{body}</p>
         </div>
       </div>
     </section>

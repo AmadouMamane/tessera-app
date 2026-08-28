@@ -174,7 +174,7 @@ export function ProofsOverview() {
       action={
         <Link
           href="/configurer/integrations"
-          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs text-[var(--tessera-green)] hover:underline"
         >
           {t("viewAll.exporters")}
           <ChevronRight className="h-3 w-3" />
@@ -192,7 +192,7 @@ export function ProofsOverview() {
       action={
         <Link
           href="/prouver/audit-logs"
-          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs text-[var(--tessera-green)] hover:underline"
         >
           {t("drill.chain")}
           <ChevronRight className="h-3 w-3" />
@@ -372,7 +372,7 @@ function AlertsPanel({ t, data, className }: { t: T; data: Data; className?: str
     >
       <ul className="flex flex-col gap-1.5">
         {data.alerts.map((a) => (
-          <li key={a.label} className="flex items-center gap-2 text-[0.7rem]">
+          <li key={a.label} className="flex items-center gap-2 text-xs">
             <span
               className={cn(
                 "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -404,7 +404,7 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
             <li key={step.key} className="flex min-w-0 flex-1 items-center gap-1">
               <div className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-2 text-center">
                 <PackageCheck className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" />
-                <span className="truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <span className="truncate text-xs text-[var(--tessera-text-muted)]">
                   {t(`pipeline.${step.key}`)}
                 </span>
                 <span className="text-[0.9rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
@@ -416,7 +416,7 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
                     pointed the other way. */}
                 <span
                   className={cn(
-                    "inline-flex items-center gap-0.5 text-[0.58rem]",
+                    "inline-flex items-center gap-0.5 text-xs",
                     step.status === "ok"
                       ? "text-[var(--tessera-fg-success)]"
                       : step.status === "unknown"
@@ -436,7 +436,7 @@ function Pipeline({ t, data, className }: { t: T; data: Data; className?: string
         </ol>
         <p
           className={cn(
-            "inline-flex items-center gap-1.5 text-[0.7rem]",
+            "inline-flex items-center gap-1.5 text-xs",
             data.chain_verified ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]",
           )}
         >
@@ -482,13 +482,13 @@ function CurrentPack({
         className={className}
       >
         <div className="flex flex-col items-start gap-2 py-3">
-          <p className="text-[0.7rem] text-[var(--tessera-text-muted)]">{t("pack.none")}</p>
+          <p className="text-xs text-[var(--tessera-text-muted)]">{t("pack.none")}</p>
           <Button
             size="sm"
             disabled={creating || frozen}
             title={frozen ? t("pack.frozenAsof") : undefined}
             onClick={onCreate}
-            className="h-8 gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-[0.7rem] text-[#d8eaff] hover:bg-[#22609f]"
+            className="h-8 gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] px-3 text-xs text-[#d8eaff] hover:bg-[#22609f]"
           >
             <PackageCheck className="h-3.5 w-3.5" /> {t("pack.create")}
           </Button>
@@ -502,7 +502,7 @@ function CurrentPack({
       info={<ExplainInfo k="zone.currentPack" title={t("zone.currentPack")} />}
       className={className}
     >
-      <div className="flex flex-col gap-2 text-[0.72rem]">
+      <div className="flex flex-col gap-2 text-xs">
         <div className="flex items-center justify-between gap-2">
           <span className="font-mono text-[var(--tessera-fg-info)]">{p.id}</span>
           <span className="text-[var(--tessera-text-muted)]">{p.period}</span>
@@ -511,10 +511,10 @@ function CurrentPack({
         <KV label={t("pack.hash")} value={p.hash} mono />
         <KV label={t("pack.signer")} value={p.signer} />
         <div>
-          <p className="mb-1 text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="mb-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("pack.contents")}
           </p>
-          <p className="text-[0.68rem] leading-relaxed text-[var(--tessera-text)]">
+          <p className="text-xs leading-relaxed text-[var(--tessera-text)]">
             {p.contents.map((c) => `${c.n} ${t(`content.${c.key}`)}`).join(", ")}
           </p>
         </div>
@@ -522,7 +522,7 @@ function CurrentPack({
           <Button
             size="sm"
             onClick={() => onDownload(p.id)}
-            className="h-8 flex-1 justify-center gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] text-[0.7rem] text-[#d8eaff] hover:bg-[#22609f]"
+            className="h-8 flex-1 justify-center gap-1.5 border border-[#2e72d2] bg-[#1b4f8a] text-xs text-[#d8eaff] hover:bg-[#22609f]"
           >
             <Download className="h-3.5 w-3.5" /> {t("pack.download")}
           </Button>
@@ -531,13 +531,13 @@ function CurrentPack({
             variant="outline"
             disabled={verifying}
             onClick={() => onVerify(p.id)}
-            className="h-8 flex-1 justify-center gap-1.5 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[0.7rem]"
+            className="h-8 flex-1 justify-center gap-1.5 border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs"
           >
             <ShieldCheck className="h-3.5 w-3.5" /> {t("pack.verify")}
           </Button>
         </div>
         {verdict && verdict.pack_id === p.id ? (
-          <output className="flex flex-col gap-0.5 text-[0.64rem]">
+          <output className="flex flex-col gap-0.5 text-xs">
             <span
               className={
                 verdict.manifest_ok
@@ -573,9 +573,9 @@ function RecentPacks({ t, data, className }: { t: T; data: Data; className?: str
     >
       {/* Real durable packs since lot 7 — no synthetic notice. */}
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {(
                 [
                   "id",
@@ -597,7 +597,7 @@ function RecentPacks({ t, data, className }: { t: T; data: Data; className?: str
           <tbody>
             {data.recent_packs.map((p) => (
               <tr key={p.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-fg-info)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-fg-info)]">
                   {p.id}
                 </td>
                 <td className="max-w-[150px] truncate px-1.5 py-1 text-[var(--tessera-text-muted)]">
@@ -635,9 +635,9 @@ function Exporters({ t, data }: { t: T; data: Data }) {
       action={<ViewAll label={t("viewAll.exporters")} href="/configurer/integrations" />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {(["destination", "format", "status", "lastPush", "queue", "retention"] as const).map(
                 (c) => (
                   <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
@@ -686,11 +686,11 @@ function Crypto({ t, data }: { t: T; data: Data }) {
           <span className="mt-1 text-lg font-semibold text-[var(--tessera-text-strong)]">
             {c.valid_signatures}
           </span>
-          <span className="text-[0.58rem] text-[var(--tessera-text-muted)]">
+          <span className="text-xs text-[var(--tessera-text-muted)]">
             {t("crypto.validSignatures")}
           </span>
         </div>
-        <dl className="flex min-w-0 flex-1 flex-col gap-1.5 text-[0.7rem]">
+        <dl className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs">
           <KV label={t("crypto.algorithm")} value={c.algorithm} mono />
           <KV label={t("crypto.chainLength")} value={c.chain_length} />
           <KV
@@ -712,9 +712,9 @@ function ControlCases({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title="">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {(["caseId", "subject", "linked", "owner", "status"] as const).map((c) => (
                 <th key={c} className="px-1.5 py-1 font-medium">
                   {t(`ccCol.${c}`)}
@@ -728,7 +728,7 @@ function ControlCases({ t, data }: { t: T; data: Data }) {
                 key={c.case_id}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
-                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-green)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-green)]">
                   {c.case_id}
                 </td>
                 <td className="max-w-[150px] truncate px-1.5 py-1 text-[var(--tessera-text)]">
@@ -762,9 +762,9 @@ function Retention({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title="">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {(
                 [
                   "destination",
@@ -858,7 +858,7 @@ function ProofsRail({
             >
               {data.chain_verified ? t("integrity.intact") : t("integrity.broken")}
             </p>
-            <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <p className="text-xs text-[var(--tessera-text-muted)]">
               {data.chain_verified ? t("integrity.noAnomaly") : t("integrity.hasAnomaly")}
             </p>
           </div>
@@ -896,7 +896,7 @@ function ProofsRail({
             }[]
           ).map((q) => {
             const cls =
-              "flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)] disabled:opacity-60";
+              "flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--tessera-muted)] disabled:opacity-60";
             const body = (
               <>
                 <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
@@ -938,7 +938,7 @@ function ProofsRail({
       >
         <ul className="flex flex-col gap-1.5">
           {data.export_journal.map((j, i) => (
-            <li key={`${j.time}-${j.label}-${i}`} className="flex items-center gap-2 text-[0.7rem]">
+            <li key={`${j.time}-${j.label}-${i}`} className="flex items-center gap-2 text-xs">
               <span
                 className={cn(
                   "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -965,7 +965,7 @@ function ProofsRail({
         info={<ExplainInfo k="zone.queue" title={t("zone.queue")} />}
         action={<ViewAll label={t("queue.viewQueue")} href="/configurer/integrations" />}
       >
-        <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        <dl className="flex flex-col gap-1.5 text-xs">
           <KV label={t("queue.pendingSignature")} value={String(data.queue.pending_signature)} />
           <KV label={t("queue.pendingExport")} value={String(data.queue.pending_export)} />
           <KV label={t("queue.verifications")} value={String(data.queue.verifications)} />
@@ -978,7 +978,7 @@ function ProofsRail({
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <Chip
         icon={ShieldCheck}
         tone="text-[var(--tessera-green)]"
@@ -1009,7 +1009,7 @@ function Zone({
       className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+        <h2 className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
           {label}
           {info}
         </h2>
@@ -1070,7 +1070,7 @@ function KpiTile({
       data-slot="card"
       className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
@@ -1084,7 +1084,7 @@ function KpiTile({
           tone={kpi.good_is_up ? "success" : "danger"}
         />
       </div>
-      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-xs font-medium">
         <span
           className={
             neutral
@@ -1155,12 +1155,12 @@ function Donut({
           <span className="max-w-[52px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
-          <span className="line-clamp-2 max-w-[52px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+          <span className="line-clamp-2 max-w-[52px] break-words text-center text-xs uppercase leading-tight text-[var(--tessera-text-muted)]">
             {caption}
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
@@ -1182,7 +1182,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -1204,7 +1204,7 @@ function KV({
         full={value}
         className={cn(
           "min-w-0 text-right text-[var(--tessera-text)]",
-          mono && "font-mono text-[0.64rem]",
+          mono && "font-mono text-xs",
           tone,
         )}
       >
@@ -1218,7 +1218,7 @@ function ViewAll({ label, href }: { label: string; href: Route }) {
   return (
     <Link
       href={href}
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
+      className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
     >
       {label} <ChevronRight className="h-3 w-3" />
     </Link>

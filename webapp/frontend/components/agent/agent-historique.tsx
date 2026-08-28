@@ -384,7 +384,7 @@ function LiveConversations({ data, locale }: { data: Data; locale: string }) {
       <div className="flex items-center gap-2">
         <MessagesSquare className="h-4 w-4 text-[var(--tessera-text-muted)]" />
         <h3 className="font-semibold text-sm text-[var(--tessera-text)]">{t("live.title")}</h3>
-        <span className="ml-1 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <span className="ml-1 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-xs text-[var(--tessera-text-muted)]">
           {convos.length}
         </span>
       </div>
@@ -408,12 +408,12 @@ function LiveConversations({ data, locale }: { data: Data; locale: string }) {
                       {c.title || t("live.untitled")}
                     </Truncate>
                     {i === 0 ? (
-                      <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-px text-[0.6rem] text-[var(--tessera-fg-success)]">
+                      <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-px text-xs text-[var(--tessera-fg-success)]">
                         {t("live.latest")}
                       </span>
                     ) : null}
                   </span>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
                     <Clock className="h-3 w-3" />
                     {new Date(c.last_at).toLocaleString(locale, {
                       day: "2-digit",
@@ -423,10 +423,10 @@ function LiveConversations({ data, locale }: { data: Data; locale: string }) {
                     })}
                   </div>
                 </div>
-                <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-xs text-[var(--tessera-text-muted)]">
                   {t("live.messages", { n: c.message_count })}
                 </span>
-                <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                <span className="shrink-0 rounded-full bg-[var(--tessera-surface)] px-2 py-0.5 text-xs text-[var(--tessera-text-muted)]">
                   {t("live.turns", { n: c.turn_count })}
                 </span>
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] group-hover:text-[var(--tessera-text)]" />
@@ -444,7 +444,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
     <div className="flex h-[96px] flex-col justify-between rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />
-        <Truncate full={kpi.label} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={kpi.label} className="text-xs text-[var(--tessera-text-muted)]">
           {kpi.label}
         </Truncate>
         <CardInfo ns="agentHistorique" k={kpi.key} title={kpi.label} />
@@ -453,12 +453,7 @@ function Kpi({ kpi, Icon }: { kpi: NonNullable<Data["kpis"]>[number]; Icon: Luci
         {kpi.value}
       </p>
       <div className="flex items-end justify-between gap-2">
-        <span
-          className={cn(
-            "text-[0.58rem] tabular-nums",
-            TONE_TEXT[kpi.delta_tone] ?? TONE_TEXT.muted,
-          )}
-        >
+        <span className={cn("text-xs tabular-nums", TONE_TEXT[kpi.delta_tone] ?? TONE_TEXT.muted)}>
           {kpi.delta}
         </span>
         <Spark values={kpi.series} color={SPARK_TONE[kpi.tone] ?? "#8b7cf0"} />
@@ -524,7 +519,7 @@ function FilterDropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] hover:border-[var(--tessera-text-muted)]"
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs hover:border-[var(--tessera-text-muted)]"
       >
         <span className="text-[var(--tessera-text-muted)]">{label}</span>
         <span className="font-medium text-[var(--tessera-text)]">{current}</span>
@@ -545,7 +540,7 @@ function FilterDropdown({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[0.72rem] hover:bg-[var(--tessera-bg)]",
+                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs hover:bg-[var(--tessera-bg)]",
                 o.value === value
                   ? "text-[var(--tessera-text)]"
                   : "text-[var(--tessera-text-muted)]",
@@ -603,7 +598,7 @@ function Filters(p: FiltersProps) {
           onChange={(e) => p.setSearch(e.target.value)}
           placeholder={f.search}
           aria-label={f.search}
-          className="h-full min-w-0 flex-1 bg-transparent text-[0.74rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+          className="h-full min-w-0 flex-1 bg-transparent text-xs text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
         />
       </div>
       <FilterDropdown
@@ -634,7 +629,7 @@ function Filters(p: FiltersProps) {
         <button
           type="button"
           onClick={p.onReset}
-          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+          className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
         >
           <X className="h-3.5 w-3.5" /> Réinitialiser
         </button>
@@ -672,7 +667,7 @@ function SessionsTable(p: TableProps) {
           className="w-full min-w-[840px] border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {tbl.columns.map((c, i) => (
                 <th
                   key={c}
@@ -724,30 +719,30 @@ function SessionsTable(p: TableProps) {
                     on ? "bg-[#6d4aed]/10" : "hover:bg-[var(--tessera-bg)]/40",
                   )}
                 >
-                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-[0.66rem] text-[var(--tessera-fg-accent)]">
+                  <td className="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-[var(--tessera-fg-accent)]">
                     {r.sid}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--tessera-text)]">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-[0.52rem] font-medium text-[var(--tessera-fg-accent)]">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-[var(--tessera-text)]">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#6d4aed]/20 text-xs font-medium text-[var(--tessera-fg-accent)]">
                         {initials(r.user)}
                       </span>
                       {r.user}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs text-[var(--tessera-text-muted)]">
                     {r.agent}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-[var(--tessera-text-muted)]">
                     {r.start}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text)]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-[var(--tessera-text)]">
                     {r.messages}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
                     <span
                       className={cn(
-                        "text-[0.7rem] font-medium tabular-nums",
+                        "text-xs font-medium tabular-nums",
                         SCORE_TEXT[r.score_tone] ?? "",
                       )}
                     >
@@ -757,17 +752,17 @@ function SessionsTable(p: TableProps) {
                   <td className="px-3 py-2.5">
                     <span
                       className={cn(
-                        "rounded-full border px-2 py-0.5 text-[0.58rem] font-medium",
+                        "rounded-full border px-2 py-0.5 text-xs font-medium",
                         STATUS_BADGE[r.status_tone] ?? STATUS_BADGE.good,
                       )}
                     >
                       {r.status}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-[var(--tessera-text-muted)]">
                     {r.latency}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5 text-[0.68rem] tabular-nums text-[var(--tessera-text-muted)]">
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-[var(--tessera-text-muted)]">
                     {r.tokens}
                   </td>
                 </tr>
@@ -777,7 +772,7 @@ function SessionsTable(p: TableProps) {
               <tr>
                 <td
                   colSpan={tbl.columns.length}
-                  className="px-3 py-8 text-center text-[0.72rem] text-[var(--tessera-text-muted)]"
+                  className="px-3 py-8 text-center text-xs text-[var(--tessera-text-muted)]"
                 >
                   Aucune session ne correspond aux filtres.
                 </td>
@@ -827,7 +822,7 @@ function Pagination({
   onPerPage: (n: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {start}-{end} sur {total} sessions
       </span>
@@ -840,7 +835,7 @@ function Pagination({
             aria-current={n === page ? "page" : undefined}
             onClick={() => onPage(n)}
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -860,7 +855,7 @@ function Pagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>
@@ -923,12 +918,12 @@ function PanelCard({
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+        <h3 className="flex items-center gap-1 text-xs font-semibold text-[var(--tessera-text)]">
           {title}
           {info}
         </h3>
         {control ? (
-          <span className="inline-flex items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.6rem] text-[var(--tessera-text-muted)]">
+          <span className="inline-flex items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-xs text-[var(--tessera-text-muted)]">
             {control}
           </span>
         ) : null}
@@ -937,7 +932,7 @@ function PanelCard({
       {cta && ctaHref ? (
         <Link
           href={ctaHref as Route}
-          className="mt-2.5 flex items-center gap-1 self-start text-[0.64rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+          className="mt-2.5 flex items-center gap-1 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           {cta} <ChevronRight className="h-3 w-3" />
         </Link>
@@ -956,7 +951,7 @@ function TrendCard({ data }: { data: Data }) {
       control={tr.control}
     >
       <LineChart a={tr.series} b={tr.prev} />
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[var(--tessera-text-muted)]">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-[#8b7cf0]" /> {tr.legend}
         </span>
@@ -1023,12 +1018,12 @@ function ByAgent({ data }: { data: Data }) {
       <ul className="flex flex-col gap-2">
         {b.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2 text-[0.66rem]">
+            <div className="flex items-center justify-between gap-2 text-xs">
               <Truncate full={it.label} className="min-w-0 text-[var(--tessera-text)]">
                 {it.label}
               </Truncate>
               <span className="shrink-0 tabular-nums text-[var(--tessera-text-muted)]">
-                {it.value} <span className="text-[0.58rem]">({it.share})</span>
+                {it.value} <span className="text-xs">({it.share})</span>
               </span>
             </div>
             <div className="h-[4px] overflow-hidden rounded-full bg-[var(--tessera-border)]">
@@ -1080,19 +1075,19 @@ function ScoreDonut({ data }: { data: Data }) {
             })}
           </svg>
           <span className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-            <span className="max-w-[48px] truncate text-[0.7rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
+            <span className="max-w-[48px] truncate text-xs font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
               {s.center}
             </span>
             <Truncate
               full={s.center_label}
               lines={2}
-              className="max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--tessera-text-muted)]"
+              className="max-w-[48px] break-words text-center text-xs leading-tight text-[var(--tessera-text-muted)]"
             >
               {s.center_label}
             </Truncate>
           </span>
         </span>
-        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.62rem]">
+        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
           {s.segments.map((seg) => (
             <li key={seg.label} className="flex flex-col gap-0.5">
               <span className="inline-flex min-w-0 items-center gap-1">
@@ -1155,7 +1150,7 @@ function SuccessCard({ data }: { data: Data }) {
             {s.value}
           </span>
         </span>
-        <span className="text-[0.66rem] text-[var(--tessera-fg-success)]">{s.note}</span>
+        <span className="text-xs text-[var(--tessera-fg-success)]">{s.note}</span>
       </div>
     </PanelCard>
   );
@@ -1181,13 +1176,10 @@ function Watch({ data }: { data: Data }) {
               )}
             />
             <span className="min-w-0">
-              <Truncate full={it.title} className="text-[0.72rem] text-[var(--tessera-text)]">
+              <Truncate full={it.title} className="text-xs text-[var(--tessera-text)]">
                 {it.title}
               </Truncate>
-              <Truncate
-                full={it.detail}
-                className="text-[0.62rem] text-[var(--tessera-text-muted)]"
-              >
+              <Truncate full={it.detail} className="text-xs text-[var(--tessera-text-muted)]">
                 {it.detail}
               </Truncate>
             </span>
@@ -1212,7 +1204,7 @@ function Quick({
   if (!q) return null;
   const icons = [BarChart3, Target, Download, Play];
   const cls =
-    "flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-[0.68rem] text-[var(--tessera-text)] hover:border-[#7c5cf5]/50";
+    "flex items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2 text-left text-xs text-[var(--tessera-text)] hover:border-[#7c5cf5]/50";
   const HREF: Record<string, string> = {
     scores: agentPath(agentId, "evaluations"),
     evaluate: agentPath(agentId, "console"),
@@ -1320,7 +1312,7 @@ function Detail({
     >
       {!embedded ? (
         <div className="border-b border-[var(--tessera-border)] px-3.5 py-3">
-          <p className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {labels.eyebrow}
           </p>
           <div className="mt-1 flex items-center gap-2">
@@ -1344,7 +1336,7 @@ function Detail({
               type="button"
               onClick={() => setTab(tb)}
               className={cn(
-                "-mb-px border-b-2 py-2.5 text-[0.7rem] transition-colors",
+                "-mb-px border-b-2 py-2.5 text-xs transition-colors",
                 on
                   ? "border-[#8b7cf0] font-medium text-[var(--tessera-text)]"
                   : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -1359,7 +1351,7 @@ function Detail({
       <div className="flex flex-col gap-4 p-3.5">
         {tab === tabs[0] ? (
           <>
-            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+            <ul className="flex flex-col gap-1.5 text-xs">
               {fields.map((f) => (
                 <li key={f.label} className="flex items-center justify-between gap-2">
                   <span className="text-[var(--tessera-text-muted)]">{f.label}</span>
@@ -1380,22 +1372,22 @@ function Detail({
             </ul>
 
             <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-              <h3 className="mb-1.5 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+              <h3 className="mb-1.5 text-xs font-semibold text-[var(--tessera-text)]">
                 {labels.config_title}
               </h3>
-              <div className="flex items-center justify-between gap-2 text-[0.72rem]">
+              <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-[var(--tessera-text)]">{row.agent}</span>
-                <span className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]">
+                <span className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-xs text-[var(--tessera-text-muted)]">
                   {meta.catalogue_version}
                 </span>
               </div>
             </div>
 
             <div>
-              <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+              <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
                 {labels.info_title}
               </h3>
-              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              <ul className="flex flex-col gap-1.5 text-xs">
                 {info.map((it) => (
                   <li key={it.label} className="flex items-center justify-between gap-2">
                     <span className="text-[var(--tessera-text-muted)]">{it.label}</span>
@@ -1414,22 +1406,22 @@ function Detail({
 
         {tab === tabs[1] ? (
           <div className="flex flex-col gap-3">
-            <h3 className="text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+            <h3 className="text-xs font-semibold text-[var(--tessera-text)]">
               {labels.messages_title}
             </h3>
             <div className="flex flex-col items-end gap-1">
-              <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+              <span className="text-xs text-[var(--tessera-text-muted)]">
                 {labels.question_label}
               </span>
-              <p className="max-w-[92%] rounded-xl rounded-tr-sm border border-cyan-400/25 bg-cyan-400/[0.08] px-3 py-2 text-[0.74rem] leading-relaxed text-[var(--tessera-text)]">
+              <p className="max-w-[92%] rounded-xl rounded-tr-sm border border-cyan-400/25 bg-cyan-400/[0.08] px-3 py-2 text-xs leading-relaxed text-[var(--tessera-text)]">
                 {row.question}
               </p>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+              <span className="text-xs text-[var(--tessera-text-muted)]">
                 {labels.response_label}
               </span>
-              <p className="rounded-xl rounded-tl-sm border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 py-2 text-[0.74rem] leading-relaxed text-[var(--tessera-text)]">
+              <p className="rounded-xl rounded-tl-sm border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 py-2 text-xs leading-relaxed text-[var(--tessera-text)]">
                 {row.response}
               </p>
             </div>
@@ -1438,10 +1430,10 @@ function Detail({
 
         {tab === tabs[2] ? (
           <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-            <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+            <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
               {labels.eval_title}
             </h3>
-            <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+            <ul className="flex flex-col gap-1.5 text-xs">
               {evals.map((e) => (
                 <li key={e.label} className="flex items-center justify-between gap-2">
                   <span className="text-[var(--tessera-text-muted)]">{e.label}</span>
@@ -1456,16 +1448,14 @@ function Detail({
                     >
                       {e.value}
                     </span>
-                    <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">
-                      {e.scale}
-                    </span>
+                    <span className="text-xs text-[var(--tessera-text-muted)]">{e.scale}</span>
                   </span>
                 </li>
               ))}
             </ul>
             <Link
               href={agentPath(agentId, "evaluations") as Route}
-              className="mt-2 flex items-center gap-1 self-start text-[0.64rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+              className="mt-2 flex items-center gap-1 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {labels.eval_cta} <ChevronRight className="h-3 w-3" />
             </Link>
@@ -1474,10 +1464,10 @@ function Detail({
 
         {tab === tabs[3] ? (
           <div>
-            <h3 className="mb-2 text-[0.7rem] font-semibold text-[var(--tessera-text)]">
+            <h3 className="mb-2 text-xs font-semibold text-[var(--tessera-text)]">
               {labels.activity_title}
             </h3>
-            <ul className="flex flex-col gap-2 text-[0.72rem]">
+            <ul className="flex flex-col gap-2 text-xs">
               {activity.map((it) => (
                 <li key={it.label} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />

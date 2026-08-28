@@ -89,7 +89,7 @@ export function AgirRail({
 
       {/* Contextual micro-line — describes ONLY the active reading, and carries
           the single "Revenir au direct" (outline, discreet — SR-01 grammar). */}
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-xs text-[var(--tessera-text-muted)]">
         {asof ? (
           <span className="min-w-0">
             <span className="font-medium text-[var(--tessera-text)]">

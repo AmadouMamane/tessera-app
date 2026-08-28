@@ -48,7 +48,7 @@ const NAV_CLASS =
   "flex flex-wrap items-center gap-1 rounded-xl border border-white/[0.05] bg-[var(--tessera-surface)]/40 px-1.5 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
 
 const BTN_BASE =
-  "group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[0.7rem] font-medium transition-colors duration-150";
+  "group relative flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors duration-150";
 
 const INACTIVE =
   "border-white/[0.06] bg-white/[0.02] text-[var(--tessera-text-muted)] hover:border-white/[0.12] hover:bg-white/[0.05] hover:text-[var(--tessera-text)]";

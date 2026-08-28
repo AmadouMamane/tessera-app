@@ -176,6 +176,13 @@
       "home": "Retour à l’accueil",
       "collapse": "Réduire le menu",
       "expand": "Déployer le menu"
+    },
+    "mobile": {
+      "primary": "Navigation principale",
+      "more": "Plus",
+      "menu": "Toutes les destinations",
+      "overview": "Vue",
+      "incidents": "Incidents"
     }
   },
   "common": {
@@ -620,8 +627,8 @@
       "auditUnknown": "Chaîne d’audit : état inconnu",
       "source": "Source de vérité : backend live",
       "confidence": "Confiance des signaux",
-      "systemsOk": "Tous les systèmes opérationnels",
-      "systemsDegraded": "Systèmes dégradés",
+      "systemsOk": "Infrastructure locale joignable",
+      "systemsDegraded": "Infrastructure locale dégradée",
       "auditAsOfTip": "Nombre d’entrées à l’instant choisi ; intégrité de la chaîne vérifiée au présent.",
       "viewHealth": "Voir les composants santé"
     },

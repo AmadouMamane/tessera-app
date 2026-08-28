@@ -98,7 +98,7 @@ export function ToolLinks() {
   );
 }
 
-const DOOR = "flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-[0.7rem]";
+const DOOR = "flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs";
 
 /** One door: the tool's name, its port, its live verdict — and whether it opens from here. */
 function ToolDoor({
@@ -134,9 +134,7 @@ function ToolDoor({
     <>
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
       <span className="truncate">{name}</span>
-      <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
-        {port}
-      </span>
+      <span className="shrink-0 font-mono text-xs text-[var(--muted-foreground)]">{port}</span>
       {hostLocal ? (
         // Visible, not a tooltip. The previous version put this in `title=` and rendered the
         // chip inert; an operator sitting AT the host saw five buttons that did nothing and no

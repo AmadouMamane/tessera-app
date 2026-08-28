@@ -29,7 +29,7 @@ export function ZoneBand({
       data-slot="card"
       className="min-w-0 rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5"
     >
-      <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClassName}`} />
         {label}
         {info}

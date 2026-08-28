@@ -97,7 +97,7 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="h-full min-w-0 flex-1 bg-transparent text-[0.74rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+        className="h-full min-w-0 flex-1 bg-transparent text-xs text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
       />
     </div>
   );
@@ -127,7 +127,7 @@ export function FilterDropdown({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] hover:border-[var(--tessera-text-muted)]"
+        className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs hover:border-[var(--tessera-text-muted)]"
       >
         <span className="text-[var(--tessera-text-muted)]">{label}</span>
         <span className="font-medium text-[var(--tessera-text)]">{current}</span>
@@ -148,7 +148,7 @@ export function FilterDropdown({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-[0.72rem] hover:bg-[var(--tessera-bg)]",
+                "flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs hover:bg-[var(--tessera-bg)]",
                 o.value === value
                   ? "text-[var(--tessera-text)]"
                   : "text-[var(--tessera-text-muted)]",
@@ -172,7 +172,7 @@ export function ResetButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+      className="flex h-9 items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
     >
       <X className="h-3.5 w-3.5" /> {pick(locale, "Réinitialiser", "Zurücksetzen", "Reset")}
     </button>
@@ -186,7 +186,7 @@ export function LangBadges({ langs }: { langs: string[] }) {
       {langs.map((l) => (
         <span
           key={l}
-          className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1 py-0.5 text-[0.54rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]"
+          className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]"
         >
           {l}
         </span>
@@ -302,7 +302,7 @@ export function DataTable<T>({
       <div className="overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable]">
         <table className="w-full table-fixed border-collapse text-left" style={{ minWidth }}>
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.65rem] uppercase tracking-[0.06em] text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-[0.06em] text-[var(--tessera-text-muted)]">
               {columns.map((c, i) => {
                 const sortable = c.sortable !== false && Boolean(c.sortValue);
                 return (
@@ -397,7 +397,7 @@ export function DataTable<T>({
                   ))}
                   {clickable ? (
                     <td className="px-3 py-2.5">
-                      <span className="flex items-center justify-end gap-1 whitespace-nowrap text-[0.7rem] text-[var(--tessera-fg-info)]">
+                      <span className="flex items-center justify-end gap-1 whitespace-nowrap text-xs text-[var(--tessera-fg-info)]">
                         <span className="opacity-0 transition-opacity motion-reduce:transition-none group-hover:opacity-100 group-focus-visible:opacity-100">
                           {tableT("rowOpen")}
                         </span>
@@ -412,7 +412,7 @@ export function DataTable<T>({
               <tr>
                 <td
                   colSpan={columns.length + (onRowClick ? 1 : 0)}
-                  className="px-3 py-8 text-center text-[0.72rem] text-[var(--tessera-text-muted)]"
+                  className="px-3 py-8 text-center text-xs text-[var(--tessera-text-muted)]"
                 >
                   {emptyLabel}
                 </td>
@@ -466,7 +466,7 @@ function Pagination({
 }) {
   const locale = useLocale();
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {start}-{end} {pick(locale, "sur", "von", "of")} {total} {noun}
       </span>
@@ -479,7 +479,7 @@ function Pagination({
             aria-current={n === page ? "page" : undefined}
             onClick={() => onPage(n)}
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "border-[#b9a6ff]/60 bg-[#b9a6ff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -499,7 +499,7 @@ function Pagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>

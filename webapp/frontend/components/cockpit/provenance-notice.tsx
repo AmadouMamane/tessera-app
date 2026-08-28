@@ -53,7 +53,7 @@ export function ProvenanceNotice({
       role="note"
       data-provenance={provenance}
       className={`${TONES[provenance]} flex shrink-0 items-center rounded-md border ${
-        compact ? "mb-2 gap-1.5 px-2.5 py-1.5 text-[0.68rem]" : "gap-2 px-3 py-2.5 text-xs"
+        compact ? "mb-2 gap-1.5 px-2.5 py-1.5 text-xs" : "gap-2 px-3 py-2.5 text-xs"
       }`}
     >
       <Icon className={compact ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} />

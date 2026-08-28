@@ -253,7 +253,7 @@ function TrendHint({ trend }: { trend: BusinessTrend }) {
   if (!trend.available) {
     return (
       <span
-        className="inline-flex h-5 min-w-5 items-center justify-center text-[0.68rem] text-[var(--tessera-text-muted)]"
+        className="inline-flex h-5 min-w-5 items-center justify-center text-xs text-[var(--tessera-text-muted)]"
         title={trendLabel(trend, t)}
       >
         —
@@ -262,7 +262,7 @@ function TrendHint({ trend }: { trend: BusinessTrend }) {
   }
   const TrendIcon = trendIcon(trend.direction);
   return (
-    <span className="inline-flex min-w-0 items-center gap-1 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <span className="inline-flex min-w-0 items-center gap-1 text-xs text-[var(--tessera-text-muted)]">
       <TrendIcon className="h-3 w-3 shrink-0" />
       <Truncate full={trendLabel(trend, t)}>{trendLabel(trend, t)}</Truncate>
     </span>
@@ -443,7 +443,7 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
       <CardContent className="flex h-full min-h-[108px] flex-col justify-between p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="mb-1 flex items-center gap-1.5 text-[0.64rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
+            <div className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
               <Target className="h-3.5 w-3.5" />
               {t("signals.northStar")}
               <CardInfo ns="agentMetier" k="northStar" title={label} />
@@ -470,11 +470,11 @@ function NorthStarSignal({ signal, label }: { signal: BusinessSignalValue; label
           <TrendHint trend={signal.trend} />
         </div>
         {provenance.length > 0 ? (
-          <p className="text-[0.64rem] leading-snug text-[var(--tessera-fg-info)]">
+          <p className="text-xs leading-snug text-[var(--tessera-fg-info)]">
             {provenance.join(" · ")}
           </p>
         ) : null}
-        <p className="text-[0.64rem] leading-snug text-[var(--tessera-text-muted)]">
+        <p className="text-xs leading-snug text-[var(--tessera-text-muted)]">
           {signal.reason.replaceAll("_", " ")}
         </p>
       </CardContent>
@@ -496,7 +496,7 @@ function SignalGroup({
   const pseudoSignal = signals[0];
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex items-center justify-between gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <div className="flex items-center justify-between gap-2 text-xs text-[var(--tessera-text-muted)]">
         <span className="flex items-center gap-1 font-medium">
           {pseudoSignal ? signalLevelLabel(pseudoSignal, t) : level}
           <CardInfo
@@ -594,13 +594,13 @@ function CapabilitiesTable({
         </CardTitle>
       </CardHeader>
       <CardContent className="min-w-0 overflow-hidden p-0">
-        <Table className="w-full table-fixed text-[0.72rem]">
+        <Table className="w-full table-fixed text-xs">
           <TableHeader>
             <TableRow>
-              <TableHead className="h-8 w-[32%] px-3 text-[0.6rem]">
+              <TableHead className="h-8 w-[32%] px-3 text-xs">
                 {t("capabilities.columns.capability")}
               </TableHead>
-              <TableHead className="h-8 w-[10%] px-3 text-right text-[0.6rem]">
+              <TableHead className="h-8 w-[10%] px-3 text-right text-xs">
                 <span className="inline-flex items-center justify-end gap-1">
                   {t("capabilities.columns.volume")}
                   <CardInfo
@@ -610,7 +610,7 @@ function CapabilitiesTable({
                   />
                 </span>
               </TableHead>
-              <TableHead className="h-8 w-[12%] px-3 text-right text-[0.6rem]">
+              <TableHead className="h-8 w-[12%] px-3 text-right text-xs">
                 <span className="inline-flex items-center justify-end gap-1">
                   {t("capabilities.columns.conformity")}
                   <CardInfo
@@ -620,7 +620,7 @@ function CapabilitiesTable({
                   />
                 </span>
               </TableHead>
-              <TableHead className="hidden h-8 w-[12%] px-3 text-right text-[0.6rem] md:table-cell">
+              <TableHead className="hidden h-8 w-[12%] px-3 text-right text-xs md:table-cell">
                 <span className="inline-flex items-center justify-end gap-1">
                   {t("capabilities.columns.validation")}
                   <CardInfo
@@ -630,7 +630,7 @@ function CapabilitiesTable({
                   />
                 </span>
               </TableHead>
-              <TableHead className="hidden h-8 w-[10%] px-3 text-right text-[0.6rem] lg:table-cell">
+              <TableHead className="hidden h-8 w-[10%] px-3 text-right text-xs lg:table-cell">
                 <span className="inline-flex items-center justify-end gap-1">
                   {t("capabilities.columns.blocked")}
                   <CardInfo
@@ -640,7 +640,7 @@ function CapabilitiesTable({
                   />
                 </span>
               </TableHead>
-              <TableHead className="hidden h-8 w-[12%] px-3 text-right text-[0.6rem] md:table-cell">
+              <TableHead className="hidden h-8 w-[12%] px-3 text-right text-xs md:table-cell">
                 <span className="inline-flex items-center justify-end gap-1">
                   {t("capabilities.columns.prevented")}
                   <CardInfo
@@ -650,7 +650,7 @@ function CapabilitiesTable({
                   />
                 </span>
               </TableHead>
-              <TableHead className="h-8 w-[12%] px-3 text-[0.6rem]">
+              <TableHead className="h-8 w-[12%] px-3 text-xs">
                 {t("capabilities.columns.trend")}
               </TableHead>
             </TableRow>

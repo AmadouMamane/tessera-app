@@ -176,6 +176,13 @@
       "home": "Back to home",
       "collapse": "Collapse menu",
       "expand": "Expand menu"
+    },
+    "mobile": {
+      "primary": "Primary navigation",
+      "more": "More",
+      "menu": "All destinations",
+      "overview": "Overview",
+      "incidents": "Incidents"
     }
   },
   "common": {
@@ -620,8 +627,8 @@
       "auditUnknown": "Audit chain: unknown",
       "source": "Source of truth: live backend",
       "confidence": "Signal confidence",
-      "systemsOk": "All systems operational",
-      "systemsDegraded": "Systems degraded",
+      "systemsOk": "Local infrastructure reachable",
+      "systemsDegraded": "Local infrastructure degraded",
       "auditAsOfTip": "Entry count as of the chosen instant; chain integrity verified in the present.",
       "viewHealth": "View health components"
     },

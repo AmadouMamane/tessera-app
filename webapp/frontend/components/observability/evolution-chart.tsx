@@ -65,7 +65,7 @@ export function MetricKpi({
         />
       ) : null}
       <div
-        className={`flex items-center gap-1 text-[0.7rem] leading-tight text-[var(--muted-foreground)] ${
+        className={`flex items-center gap-1 text-xs leading-tight text-[var(--muted-foreground)] ${
           onDrill ? "pointer-events-none relative z-20" : ""
         }`}
       >
@@ -91,9 +91,7 @@ export function MetricKpi({
               guard scans quoted text and a French label in a comment reads to it exactly like a
               hardcoded one. It is right to — a comment is a poor place to prove intent.) */}
           {mean != null ? (
-            <span className="text-[0.66rem] text-[var(--muted-foreground)]">
-              {tq("kpi.meanTag")}
-            </span>
+            <span className="text-xs text-[var(--muted-foreground)]">{tq("kpi.meanTag")}</span>
           ) : null}
         </span>
         {delta != null ? (

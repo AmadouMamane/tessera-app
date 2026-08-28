@@ -479,7 +479,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[0.7rem] font-medium text-slate-500">{assistantName}</span>
+                  <span className="text-xs font-medium text-slate-500">{assistantName}</span>
                   <TypingDots />
                 </div>
               </div>
@@ -511,7 +511,7 @@ export function ChatRoom({ externalPrompt, onExternalPromptHandled, surface }: C
                   <button
                     type="button"
                     onClick={handleRegenerate}
-                    className="flex items-center gap-1.5 text-[0.65rem] text-slate-600 transition-colors hover:text-slate-800"
+                    className="flex items-center gap-1.5 text-xs text-slate-600 transition-colors hover:text-slate-800"
                   >
                     <RefreshCw className="h-3 w-3" />
                     {t("regenerate")}
@@ -592,7 +592,7 @@ function EmptyWithSuggestions({
           {(["RGPD", "DORA", "BaFin", "CNIL"] as const).map((label) => (
             <span
               key={label}
-              className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#D6B36A]/35 bg-white/70 px-2.5 text-[0.62rem] font-semibold tracking-[0.12em] text-slate-600 shadow-[0_1px_0_rgba(255,255,255,0.8),0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm"
+              className="inline-flex h-6 items-center gap-1.5 rounded-full border border-[#D6B36A]/35 bg-white/70 px-2.5 text-xs font-semibold tracking-[0.12em] text-slate-600 shadow-[0_1px_0_rgba(255,255,255,0.8),0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur-sm"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-[#D6B36A] shadow-[0_0_8px_rgba(214,179,106,0.55)]" />
               {label}
@@ -642,7 +642,7 @@ function EmptyWithSuggestions({
           ].map(({ icon: Icon, label }) => (
             <span
               key={label}
-              className="flex items-center gap-1.5 text-[0.62rem] font-medium text-slate-600"
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-600"
             >
               <Icon className="h-3 w-3" />
               {label}

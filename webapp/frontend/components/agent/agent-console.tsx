@@ -386,7 +386,7 @@ export function AgentConsole() {
           otherwise it stays on the customer surface. No secret is shown. */}
       <p
         className={cn(
-          "rounded-md border px-2.5 py-1 text-[0.7rem]",
+          "rounded-md border px-2.5 py-1 text-xs",
           role
             ? "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text)]"
             : "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)]",
@@ -524,11 +524,11 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
       <header className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-base font-semibold">{data.title}</h1>
-          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
             <Cpu className="h-3 w-3" aria-hidden /> HTTP
           </span>
           {endpoint ? (
-            <code className="rounded bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+            <code className="rounded bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-xs text-[var(--tessera-text-muted)]">
               {endpoint}
             </code>
           ) : null}
@@ -540,7 +540,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
 
       <div className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
         {cap?.free_text_label ? (
-          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {cap.free_text_label}
           </p>
         ) : null}
@@ -571,7 +571,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
         <section className="flex flex-col gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
           <div className="flex flex-col gap-0.5">
             <h2 className="text-[0.8rem] font-semibold">{cap.section_label}</h2>
-            <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{cap.hint}</p>
+            <p className="text-xs text-[var(--tessera-text-muted)]">{cap.hint}</p>
           </div>
           {capabilities.map((capability) => (
             <div
@@ -604,7 +604,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
           <div className="flex items-center gap-2 text-[0.8rem]">
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.7rem] font-medium",
+                "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium",
                 green ? BADGE_TONE.good : BADGE_TONE.crit,
               )}
             >
@@ -623,7 +623,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
 
           {reply ? (
             <div>
-              <p className="mb-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <p className="mb-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {http?.reply_label}
               </p>
               <p className="whitespace-pre-wrap text-sm">{reply}</p>
@@ -646,7 +646,7 @@ function HttpConsole({ data, agentId }: { data: Data; agentId: string }) {
               <summary className="cursor-pointer text-[var(--tessera-text-muted)]">
                 {http?.result_label}
               </summary>
-              <pre className="mt-1 max-h-72 overflow-auto rounded-md bg-[var(--tessera-bg)] p-2 text-[0.7rem]">
+              <pre className="mt-1 max-h-72 overflow-auto rounded-md bg-[var(--tessera-bg)] p-2 text-xs">
                 {JSON.stringify(outcome.result, null, 2)}
               </pre>
             </details>
@@ -703,9 +703,9 @@ function SandboxControls({
 
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-2.5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.7rem]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
         <span className="inline-flex items-center gap-1">
-          <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-warning)]">
+          <span className="inline-flex items-center rounded-md border border-[#d98b1f]/40 bg-[#3a2a14]/40 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-fg-warning)]">
             env Sandbox
           </span>
           <CardInfo ns="agentConsole" k="sandbox" title="env Sandbox" />
@@ -717,7 +717,7 @@ function SandboxControls({
           <select
             value={model}
             onChange={(e) => onModel(e.target.value)}
-            className="rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[0.7rem] text-[var(--tessera-text)]"
+            className="rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-2 py-1 text-xs text-[var(--tessera-text)]"
           >
             {CHAT_MODELS.map((m) => {
               const allowed = isModelAllowedForRole(m.id, role);
@@ -739,7 +739,7 @@ function SandboxControls({
               setEditing((e) => !e);
             }}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[0.7rem] transition-colors hover:bg-[var(--tessera-muted)]",
+              "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors hover:bg-[var(--tessera-muted)]",
               promptDirty
                 ? "border-[#d98b1f]/55 bg-[#3a2a14]/40 text-[var(--tessera-fg-warning)]"
                 : "border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text)]",
@@ -755,7 +755,7 @@ function SandboxControls({
                 onPromptOverride(null);
                 setEditing(false);
               }}
-              className="text-[0.66rem] text-[var(--tessera-text-muted)] underline hover:text-[var(--tessera-text)]"
+              className="text-xs text-[var(--tessera-text-muted)] underline hover:text-[var(--tessera-text)]"
             >
               réinitialiser
             </button>
@@ -774,7 +774,7 @@ function SandboxControls({
                 onClick={() => toggleGuard(c.key)}
                 title={`${c.detail} (${c.count} motifs)`}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[0.66rem] transition-colors",
+                  "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs transition-colors",
                   on
                     ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
                     : "border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] text-[var(--tessera-text-muted)] line-through",
@@ -790,7 +790,7 @@ function SandboxControls({
         <button
           type="button"
           onClick={onNewSession}
-          className="ml-auto flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-[0.72rem] font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
+          className="ml-auto flex h-8 items-center gap-1.5 rounded-md border border-[#d98b1f]/55 bg-[linear-gradient(180deg,#3a2a14,#21180d)] px-3 text-xs font-medium text-[#f4c76a] hover:border-[#f4c76a]/65"
         >
           <Plus className="h-3.5 w-3.5" /> {newSessionLabel}
         </button>
@@ -803,9 +803,9 @@ function SandboxControls({
             onChange={(e) => onPromptOverride(e.target.value)}
             rows={8}
             spellCheck={false}
-            className="w-full resize-y rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] px-3 py-2 font-mono text-[0.68rem] leading-relaxed text-[var(--tessera-text)]"
+            className="w-full resize-y rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-bg)] px-3 py-2 font-mono text-xs leading-relaxed text-[var(--tessera-text)]"
           />
-          <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <p className="text-xs text-[var(--tessera-text-muted)]">
             Override appliqué aux prochains messages de cette session — non persisté.
           </p>
         </div>
@@ -861,7 +861,7 @@ function ChatCard({
         </span>
         <div className="min-w-0">
           <h2 className="text-[0.95rem] font-semibold text-[var(--tessera-text)]">{data.title}</h2>
-          <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{data.subtitle}</p>
+          <p className="text-xs text-[var(--tessera-text-muted)]">{data.subtitle}</p>
         </div>
       </div>
 
@@ -916,7 +916,7 @@ function ChatCard({
             <button
               type="button"
               onClick={onAbort}
-              className="h-8 rounded-md border border-red-500/35 px-3 text-[0.7rem] text-[var(--tessera-fg-danger)]"
+              className="h-8 rounded-md border border-red-500/35 px-3 text-xs text-[var(--tessera-fg-danger)]"
             >
               {t("stop")}
             </button>
@@ -934,14 +934,14 @@ function ChatCard({
           <button
             type="button"
             onClick={onReset}
-            className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+            className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
           >
             <RotateCcw className="mr-1 inline h-3.5 w-3.5" />
             {t("newSession")}
           </button>
           {(a?.footer_actions ?? []).map((action) => {
             const cls =
-              "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]";
+              "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]";
             if (action.key === "compare") {
               return (
                 <Link key={action.key} href="/prouver/etat-a-date" className={cls}>
@@ -965,7 +965,7 @@ function ChatCard({
       </div>
 
       {f ? (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--tessera-border)] px-3.5 py-2 text-xs text-[var(--tessera-text-muted)]">
           <span>{f.started}</span>
           <span className="inline-flex items-center gap-1.5 text-[var(--tessera-fg-success)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Live
@@ -983,7 +983,7 @@ function ChatCard({
 function UserMsg({ time, text }: { time: string; text: string }) {
   return (
     <div className="flex flex-col items-end gap-1">
-      <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <span className="text-xs text-[var(--tessera-text-muted)]">
         <span className="font-medium text-[var(--tessera-text)]">Vous</span> {time}
       </span>
       <p className="max-w-[85%] rounded-xl rounded-tr-sm border border-cyan-400/25 bg-cyan-400/[0.08] px-3 py-2 text-[0.78rem] leading-relaxed text-[var(--tessera-text)]">
@@ -1002,7 +1002,7 @@ function EmptyConversation({ t }: { t: T }) {
         <MessageSquare className="h-5 w-5" />
       </span>
       <p className="text-[0.8rem] font-medium text-[var(--tessera-text)]">{t("emptyTitle")}</p>
-      <p className="max-w-[36ch] text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+      <p className="max-w-[36ch] text-xs leading-relaxed text-[var(--tessera-text-muted)]">
         {t("emptyBody")}
       </p>
     </div>
@@ -1017,7 +1017,7 @@ function FeedbackButtons({
   onRate: (rating: Rating) => void;
 }) {
   return (
-    <div className="flex items-center gap-3 text-[0.66rem] text-[var(--tessera-text-muted)]">
+    <div className="flex items-center gap-3 text-xs text-[var(--tessera-text-muted)]">
       <button
         type="button"
         aria-pressed={rating === "up"}
@@ -1059,7 +1059,7 @@ function LiveAssistantMsg({
   const guardrails = message.debug?.guardrails?.rows.length ?? 0;
   return (
     <div className="flex flex-col gap-2">
-      <span className="inline-flex items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <span className="inline-flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
         <span
           className={cn(
             "flex h-4 w-4 items-center justify-center rounded-full",
@@ -1085,17 +1085,17 @@ function LiveAssistantMsg({
         {message.content || t("generating")}
         {!message.error && message.content ? (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+            <span className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs text-[var(--tessera-text-muted)]">
               Sources ({sources})
             </span>
-            <span className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+            <span className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs text-[var(--tessera-text-muted)]">
               Outils ({tools})
             </span>
-            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[0.64rem] text-[var(--tessera-fg-warning)]">
+            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-[var(--tessera-fg-warning)]">
               Garde-fous ({guardrails})
             </span>
             {typeof message.debug?.tokens === "number" ? (
-              <span className="ml-auto text-[0.64rem] text-[var(--tessera-text-muted)]">
+              <span className="ml-auto text-xs text-[var(--tessera-text-muted)]">
                 {message.debug.tokens} tokens
               </span>
             ) : null}
@@ -1158,7 +1158,7 @@ function TraceColumn({
   return (
     <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] h-[460px] overflow-y-auto">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)] px-3.5 py-2.5">
-        <span className="inline-flex items-center gap-2 text-[0.72rem] font-medium text-[var(--tessera-fg-warning)]">
+        <span className="inline-flex items-center gap-2 text-xs font-medium text-[var(--tessera-fg-warning)]">
           <Activity className="h-4 w-4" /> {t("traceTitle")}
           <CardInfo ns="agentConsole" k="trace" title={t("traceTitle")} />
         </span>
@@ -1171,7 +1171,7 @@ function TraceColumn({
               <TraceSpan key={span.key} span={span} total={trace.total_ms} />
             ))}
           </div>
-          <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--tessera-border)] px-3.5 py-2 text-xs text-[var(--tessera-text-muted)]">
             <span>
               {t("traceTotal")} <span className="tabular-nums">{fmtMs(trace.total_ms)}</span> ·{" "}
               <span className="tabular-nums">{trace.count}</span> {t("traceSpans")}
@@ -1185,13 +1185,13 @@ function TraceColumn({
             </button>
           </div>
           {sessionId ? (
-            <div className="border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.62rem] text-[var(--tessera-text-muted)]">
+            <div className="border-t border-[var(--tessera-border)] px-3.5 py-2 text-xs text-[var(--tessera-text-muted)]">
               {t("idSession")}: <span className="tabular-nums">{sessionId}</span>
             </div>
           ) : null}
         </>
       ) : (
-        <p className="px-3.5 py-10 text-center text-[0.72rem] text-[var(--tessera-text-muted)]">
+        <p className="px-3.5 py-10 text-center text-xs text-[var(--tessera-text-muted)]">
           {t("traceEmpty")}
         </p>
       )}
@@ -1213,7 +1213,7 @@ function TraceSpan({
   const width = subMs ? 0.8 : Math.max((span.duration_ms / denom) * 100, 1);
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2 text-[0.7rem]">
+      <div className="flex items-center justify-between gap-2 text-xs">
         <span className="inline-flex min-w-0 items-center gap-1.5">
           <span className={cn("shrink-0", SPAN_STATUS_TONE[span.status] ?? SPAN_STATUS_TONE.ok)}>
             {span.status === "ok" ? (
@@ -1250,7 +1250,7 @@ function TraceSpan({
  *  status bar). Real config: env Sandbox · model · prompt/sources/guard stamps. */
 function ContextStrip({ ctx }: { ctx: NonNullable<Data["context"]> }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-[var(--tessera-border)] px-3.5 py-2.5 text-[0.68rem]">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-[var(--tessera-border)] px-3.5 py-2.5 text-xs">
       {ctx.fields.map((f, i) => {
         const Icon: LucideIcon = FIELD_ICONS[i % FIELD_ICONS.length] ?? Cpu;
         return (
@@ -1318,7 +1318,7 @@ function ResponseSummary({
               type="button"
               onClick={() => setActive(tab)}
               className={cn(
-                "-mb-px border-b-2 py-2.5 text-[0.72rem] transition-colors",
+                "-mb-px border-b-2 py-2.5 text-xs transition-colors",
                 on
                   ? "border-[#e0a23a] font-medium text-[var(--tessera-fg-warning)]"
                   : "border-transparent text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -1345,7 +1345,7 @@ function ResponseSummary({
       </div>
 
       {sessionId ? (
-        <div className="mt-auto border-t border-[var(--tessera-border)] px-3.5 py-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+        <div className="mt-auto border-t border-[var(--tessera-border)] px-3.5 py-2 text-xs text-[var(--tessera-text-muted)]">
           {t("idSession")}: <span className="tabular-nums">{sessionId}</span>
         </div>
       ) : null}
@@ -1357,10 +1357,7 @@ function ResponseSummary({
 function Awaiting({ text, className }: { text: string; className?: string }) {
   return (
     <p
-      className={cn(
-        "px-3.5 py-5 text-center text-[0.7rem] text-[var(--tessera-text-muted)]",
-        className,
-      )}
+      className={cn("px-3.5 py-5 text-center text-xs text-[var(--tessera-text-muted)]", className)}
     >
       {text}
     </p>
@@ -1379,10 +1376,10 @@ function PanelHead({
   href?: string;
 }) {
   const cls =
-    "inline-flex items-center gap-0.5 text-[0.64rem] text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-text-strong)]";
+    "inline-flex items-center gap-0.5 text-xs text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-text-strong)]";
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
-      <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+      <h3 className="flex items-center gap-1 text-xs font-semibold text-[var(--tessera-text)]">
         {title}
         {info}
       </h3>
@@ -1399,13 +1396,13 @@ function Quality({ q }: { q: NonNullable<ChatDebug["quality"]> }) {
   return (
     <div className="p-3.5">
       <div className="mb-2.5 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1 text-[0.74rem] font-semibold text-[var(--tessera-text)]">
+        <h3 className="flex items-center gap-1 text-xs font-semibold text-[var(--tessera-text)]">
           {q.title}
           <CardInfo ns="agentConsole" k="quality" title={q.title} />
         </h3>
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+            "rounded-full border px-2 py-0.5 text-xs font-medium",
             BADGE_TONE[q.badge_tone] ?? BADGE_TONE.good,
           )}
         >
@@ -1418,12 +1415,12 @@ function Quality({ q }: { q: NonNullable<ChatDebug["quality"]> }) {
             key={r.label}
             className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
           >
-            <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{r.label}</p>
+            <p className="text-xs text-[var(--tessera-text-muted)]">{r.label}</p>
             <p className="mt-1 tabular-nums">
               <span className={cn("text-[1.05rem] font-semibold", SCORE_TONE[r.tone])}>
                 {r.value}
               </span>
-              <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{r.scale}</span>
+              <span className="text-xs text-[var(--tessera-text-muted)]">{r.scale}</span>
             </p>
           </div>
         ))}
@@ -1442,15 +1439,13 @@ function SourcesPanel({ s }: { s: NonNullable<ChatDebug["sources"]> }) {
         cta={s.cta}
         href={agentPath(agentId, "connaissances")}
       />
-      <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+      <ul className="flex flex-col gap-1.5 text-xs">
         {s.rows.map((r, i) => (
           <li key={`${r.label}-${i}`} className="flex items-center justify-between gap-2">
             <Truncate full={r.label} className="min-w-0 text-[var(--tessera-text)]">
               {r.label}
             </Truncate>
-            <span className="shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">
-              {r.scope}
-            </span>
+            <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">{r.scope}</span>
           </li>
         ))}
       </ul>
@@ -1465,19 +1460,17 @@ function ToolsPanel({ tl }: { tl: NonNullable<Data["tools"]> }) {
         title={tl.title}
         info={<CardInfo ns="agentConsole" k="tools" title={tl.title} />}
       />
-      <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+      <ul className="flex flex-col gap-1.5 text-xs">
         {tl.rows.map((r) => (
           <li key={r.name} className="flex items-center justify-between gap-2">
             <Truncate
               full={r.name}
-              className="min-w-0 font-mono text-[0.68rem] text-[var(--tessera-text)]"
+              className="min-w-0 font-mono text-xs text-[var(--tessera-text)]"
             >
               {r.name}
             </Truncate>
             <span className="flex shrink-0 items-center gap-3">
-              <span className={cn("text-[0.66rem] font-medium", STATUS_TONE[r.tone])}>
-                {r.status}
-              </span>
+              <span className={cn("text-xs font-medium", STATUS_TONE[r.tone])}>{r.status}</span>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">{r.latency}</span>
             </span>
           </li>
@@ -1497,18 +1490,18 @@ function GuardrailsPanel({ g }: { g: NonNullable<Data["guardrails"]> }) {
       <ul className="flex flex-col gap-2">
         {g.rows.map((r) => (
           <li key={r.name} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between gap-2 text-[0.72rem]">
+            <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-medium text-[var(--tessera-text)]">{r.name}</span>
               <span
                 className={cn(
-                  "rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+                  "rounded-full border px-2 py-0.5 text-xs font-medium",
                   BADGE_TONE[r.tone] ?? BADGE_TONE.warn,
                 )}
               >
                 {r.status}
               </span>
             </div>
-            <p className="text-[0.64rem] text-[var(--tessera-text-muted)]">{r.detail}</p>
+            <p className="text-xs text-[var(--tessera-text-muted)]">{r.detail}</p>
           </li>
         ))}
       </ul>
@@ -1529,10 +1522,8 @@ function EvaluationPanel({ ev }: { ev: Data["evaluation"] }) {
         cta={ev.cta}
         href={agentPath(agentId, "evaluations")}
       />
-      <p className="mb-2 text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
-        {ev.note}
-      </p>
-      <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+      <p className="mb-2 text-xs leading-relaxed text-[var(--tessera-text-muted)]">{ev.note}</p>
+      <ul className="flex flex-col gap-1.5 text-xs">
         {ev.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
             <Truncate full={r.label} className="min-w-0 text-[var(--tessera-text)]">
@@ -1567,13 +1558,11 @@ function DebugSection({
       open={defaultOpen}
       className="group rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1.5 text-[0.68rem] font-semibold text-[var(--tessera-text)] [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1.5 text-xs font-semibold text-[var(--tessera-text)] [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)] transition-transform group-open:rotate-90" />
       </summary>
-      <div className="border-t border-[var(--tessera-border)] px-2.5 py-2 text-[0.7rem]">
-        {children}
-      </div>
+      <div className="border-t border-[var(--tessera-border)] px-2.5 py-2 text-xs">{children}</div>
     </details>
   );
 }
@@ -1582,11 +1571,11 @@ function DebugSection({
 function DebugKV({ k, v, mono }: { k: string; v: ReactNode; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-0.5">
-      <span className="shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">{k}</span>
+      <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">{k}</span>
       <span
         className={cn(
           "min-w-0 truncate text-right text-[var(--tessera-text)]",
-          mono && "font-mono text-[0.66rem]",
+          mono && "font-mono text-xs",
         )}
       >
         {v}
@@ -1601,7 +1590,7 @@ function ScoreRow({ label, score }: { label: string; score: number | null }) {
   const tone = pct === null ? "warn" : pct >= 80 ? "good" : pct >= 50 ? "warn" : "crit";
   return (
     <div className="flex items-center gap-2 py-0.5">
-      <span className="w-20 shrink-0 text-[0.64rem] text-[var(--tessera-text-muted)]">{label}</span>
+      <span className="w-20 shrink-0 text-xs text-[var(--tessera-text-muted)]">{label}</span>
       <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
         {pct !== null ? (
           <div
@@ -1610,7 +1599,7 @@ function ScoreRow({ label, score }: { label: string; score: number | null }) {
           />
         ) : null}
       </div>
-      <span className={cn("w-8 shrink-0 text-right tabular-nums text-[0.66rem]", SCORE_TONE[tone])}>
+      <span className={cn("w-8 shrink-0 text-right tabular-nums text-xs", SCORE_TONE[tone])}>
         {pct === null ? "—" : `${pct}%`}
       </span>
     </div>
@@ -1629,7 +1618,7 @@ function Chip({ children, tone }: { children: ReactNode; tone?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[0.6rem] font-medium",
+        "inline-flex items-center rounded-full border px-1.5 py-0.5 text-xs font-medium",
         tone ??
           "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text)]",
       )}
@@ -1668,10 +1657,10 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
               ))}
             </div>
           ) : (
-            <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">Plan vide.</p>
+            <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">Plan vide.</p>
           )}
           {routing.plan_rationale ? (
-            <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+            <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">
               {routing.plan_rationale}
             </p>
           ) : null}
@@ -1681,7 +1670,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
       {/* #1 Exact LLM prompt */}
       {prompt ? (
         <DebugSection title={prompt.title}>
-          <p className="mb-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <p className="mb-1.5 text-xs text-[var(--tessera-text-muted)]">
             {prompt.message_count} messages · {fmtInt(prompt.char_count)} caractères
           </p>
           <div className="flex flex-col gap-1.5">
@@ -1690,7 +1679,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
                 key={`${m.role}-${i}`}
                 className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)]"
               >
-                <summary className="flex cursor-pointer items-center gap-2 px-2 py-1 text-[0.64rem]">
+                <summary className="flex cursor-pointer items-center gap-2 px-2 py-1 text-xs">
                   <Chip tone={ROLE_TONE[m.role] ?? undefined}>{m.role}</Chip>
                   <span
                     title={m.content.slice(0, 80)}
@@ -1699,7 +1688,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
                     {m.content.slice(0, 80)}
                   </span>
                 </summary>
-                <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text)]">
+                <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-xs leading-relaxed text-[var(--tessera-text)]">
                   {m.content}
                 </pre>
               </details>
@@ -1716,9 +1705,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
           <DebugKV k="Résumé" v={memory.summary ? memory.summary : "—"} />
           {memory.entities.length > 0 ? (
             <div className="mt-1.5">
-              <p className="mb-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
-                Entités préservées
-              </p>
+              <p className="mb-1 text-xs text-[var(--tessera-text-muted)]">Entités préservées</p>
               <div className="flex flex-wrap gap-1">
                 {memory.entities.map((e) => (
                   <Chip key={e}>{e}</Chip>
@@ -1729,7 +1716,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
           {memory.long_term.length > 0 ? (
             <ul className="mt-1.5 flex flex-col gap-1">
               {memory.long_term.map((x) => (
-                <li key={x} className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+                <li key={x} className="text-xs text-[var(--tessera-text-muted)]">
                   • {x}
                 </li>
               ))}
@@ -1759,9 +1746,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
               }
             />
             {reviewer.reason ? (
-              <p className="mt-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
-                {reviewer.reason}
-              </p>
+              <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{reviewer.reason}</p>
             ) : null}
           </div>
         </DebugSection>
@@ -1814,7 +1799,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
               <span className="inline-flex items-center gap-1.5">
                 <Chip tone={ROLE_TONE.user}>{language.detected.toUpperCase()}</Chip>
                 {language.pinned ? (
-                  <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">(imposée)</span>
+                  <span className="text-xs text-[var(--tessera-text-muted)]">(imposée)</span>
                 ) : null}
               </span>
             }
@@ -1841,10 +1826,10 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
           <DebugKV k="Réponse finale" v={`${draft.final_chars} car.`} />
           {draft.draft ? (
             <details className="mt-1.5 rounded border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-              <summary className="cursor-pointer px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+              <summary className="cursor-pointer px-2 py-1 text-xs text-[var(--tessera-text-muted)]">
                 Voir : {draft.draft_label}
               </summary>
-              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text)]">
+              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words border-t border-[var(--tessera-border)] px-2 py-1.5 text-xs leading-relaxed text-[var(--tessera-text)]">
                 {draft.draft}
               </pre>
             </details>
@@ -1865,9 +1850,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
             }
           />
           <div className="mt-1 flex items-center justify-between gap-2">
-            <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
-              Garde-fous désactivés
-            </span>
+            <span className="text-xs text-[var(--tessera-text-muted)]">Garde-fous désactivés</span>
             {config.guard_overrides.length > 0 ? (
               <div className="flex flex-wrap justify-end gap-1">
                 {config.guard_overrides.map((g) => (
@@ -1877,7 +1860,7 @@ function DebugPanel({ debug, t }: { debug: ChatDebug | null; t: T }) {
                 ))}
               </div>
             ) : (
-              <span className="text-[0.66rem] text-[var(--tessera-text)]">aucun</span>
+              <span className="text-xs text-[var(--tessera-text)]">aucun</span>
             )}
           </div>
         </DebugSection>

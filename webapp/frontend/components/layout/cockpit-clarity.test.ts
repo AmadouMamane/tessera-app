@@ -680,10 +680,11 @@ describe("alert-to-rail spacing stays compact", () => {
   });
 
   it("pins the overview rail against the header instead of exposing scrolling content", () => {
-    expect(overviewDashboard).toContain('className="sticky -top-5 z-40');
+    expect(overviewDashboard).toContain('className="sticky -top-4 z-40');
+    expect(overviewDashboard).toContain("sm:-top-5");
     expect(overviewDashboard).not.toContain('className="sticky top-0 z-40');
 
-    const transparentGapMutation = overviewDashboard.replace("sticky -top-5", "sticky top-0");
+    const transparentGapMutation = overviewDashboard.replace("sticky -top-4", "sticky top-0");
     expect(transparentGapMutation).toContain('className="sticky top-0 z-40');
   });
 

@@ -66,7 +66,7 @@ export function CommandSearch({
       />
       <span className={compact ? "sr-only" : "min-w-0 flex-1 truncate"}>{t("placeholder")}</span>
       {compact ? null : (
-        <kbd className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+        <kbd className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-xs text-[var(--tessera-text-muted)]">
           {t("shortcut")}
         </kbd>
       )}

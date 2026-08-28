@@ -83,7 +83,7 @@ function Initials({ name }: { name: string }) {
     .join("")
     .toUpperCase();
   return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-muted)] text-[0.55rem] font-semibold text-[var(--muted-foreground)]">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--tessera-muted)] text-xs font-semibold text-[var(--muted-foreground)]">
       {ini}
     </span>
   );
@@ -96,7 +96,7 @@ function KpiTile({ k }: { k: TabKpi }) {
   const good = k.delta_good ?? true;
   return (
     <Card className="flex h-[92px] flex-col gap-0.5 p-3">
-      <div className="flex items-center gap-1 text-[0.7rem] text-[var(--muted-foreground)]">
+      <div className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
         <Truncate full={k.label}>{k.label}</Truncate>
         <ExplainInfo title={k.label} explain={k.explain} className="ml-auto" />
       </div>
@@ -108,13 +108,13 @@ function KpiTile({ k }: { k: TabKpi }) {
       </div>
       {k.delta ? (
         <div
-          className={`mt-auto flex items-center gap-1 text-[0.65rem] tabular-nums ${good ? GOOD : BAD}`}
+          className={`mt-auto flex items-center gap-1 text-xs tabular-nums ${good ? GOOD : BAD}`}
         >
           <span>{up ? "▲" : "▼"}</span>
           <span className="whitespace-nowrap">{k.delta.replace(/^[+-]/, "")}</span>
         </div>
       ) : k.sub ? (
-        <Truncate full={k.sub} className="mt-auto text-[0.65rem] text-[var(--muted-foreground)]">
+        <Truncate full={k.sub} className="mt-auto text-xs text-[var(--muted-foreground)]">
           {k.sub}
         </Truncate>
       ) : null}
@@ -138,11 +138,11 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
         <span className="flex items-center gap-1.5">
           <Initials name={c.name} />
           <span className="min-w-0">
-            <Truncate full={c.name} className="text-[0.72rem]">
+            <Truncate full={c.name} className="text-xs">
               {c.name}
             </Truncate>
             {c.role ? (
-              <Truncate full={c.role} className="text-[0.58rem] text-[var(--muted-foreground)]">
+              <Truncate full={c.role} className="text-xs text-[var(--muted-foreground)]">
                 {c.role}
               </Truncate>
             ) : null}
@@ -156,7 +156,7 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
       return (
         <span className="flex items-center justify-end gap-1.5">
           <span className="tabular-nums">{c.value}</span>
-          <span className={`text-[0.6rem] tabular-nums ${c.good ? GOOD : BAD}`}>
+          <span className={`text-xs tabular-nums ${c.good ? GOOD : BAD}`}>
             {up ? "▲" : "▼"} {c.delta.replace(/^[+-]/, "")}
           </span>
         </span>
@@ -176,9 +176,7 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
                 style={{ width: `${c.pct}%` }}
               />
             </span>
-            <span className="w-7 text-right text-[0.6rem] text-[var(--muted-foreground)]">
-              {c.pct}%
-            </span>
+            <span className="w-7 text-right text-xs text-[var(--muted-foreground)]">{c.pct}%</span>
           </span>
         </span>
       );
@@ -196,9 +194,7 @@ function Cell({ col, cells }: { col: TabColumn; cells: Record<string, unknown> }
       );
     }
     case "mono":
-      return (
-        <span className="font-mono text-[0.65rem] text-[var(--tessera-green)]">{String(v)}</span>
-      );
+      return <span className="font-mono text-xs text-[var(--tessera-green)]">{String(v)}</span>;
     case "num":
       return <span className="tabular-nums">{String(v)}</span>;
     default:
@@ -284,7 +280,7 @@ function DetailPanel({ detail }: { detail: TabDetail }) {
   return (
     <Card className="flex flex-col xl:sticky xl:top-4">
       <CardHeader className="gap-1 pb-2">
-        <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
           {detail.eyebrow}
         </div>
         <div className="flex items-center justify-between gap-2">
@@ -297,13 +293,11 @@ function DetailPanel({ detail }: { detail: TabDetail }) {
           ) : null}
         </div>
         {detail.summary ? (
-          <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">
-            {detail.summary}
-          </p>
+          <p className="text-xs leading-snug text-[var(--muted-foreground)]">{detail.summary}</p>
         ) : null}
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <dl className="flex flex-col gap-1 text-[0.7rem]">
+        <dl className="flex flex-col gap-1 text-xs">
           {detail.fields.map((f) => (
             <div key={f.label} className="flex items-center justify-between gap-2">
               <dt className="shrink-0 text-[var(--muted-foreground)]">{f.label}</dt>
@@ -320,10 +314,10 @@ function DetailPanel({ detail }: { detail: TabDetail }) {
 
         {detail.lists.map((l) => (
           <div key={l.title} className="flex flex-col gap-1">
-            <div className="text-[0.6rem] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+            <div className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
               {l.title}
             </div>
-            <ul className="flex flex-col gap-1 text-[0.7rem]">
+            <ul className="flex flex-col gap-1 text-xs">
               {l.items.map((it, i) => {
                 const item = it as { label: string; sub?: string; badge?: string; tone?: string };
                 return (
@@ -331,7 +325,7 @@ function DetailPanel({ detail }: { detail: TabDetail }) {
                     <span className="min-w-0 truncate">
                       {item.label}
                       {item.sub ? (
-                        <span className="ml-1 text-[0.58rem] text-[var(--muted-foreground)]">
+                        <span className="ml-1 text-xs text-[var(--muted-foreground)]">
                           {item.sub}
                         </span>
                       ) : null}
@@ -350,7 +344,7 @@ function DetailPanel({ detail }: { detail: TabDetail }) {
           {detail.actions.map((a) => (
             <span
               key={a}
-              className="flex items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border)] px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-text-muted)]"
+              className="flex items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border)] px-1.5 py-1 text-left text-xs text-[var(--tessera-text-muted)]"
             >
               {a}
             </span>
@@ -435,7 +429,7 @@ function Donut({ value, label }: { value: number; label?: string | null }) {
           <Truncate
             full={label}
             lines={2}
-            className="max-w-[48px] break-words text-center text-[0.5rem] leading-tight text-[var(--muted-foreground)]"
+            className="max-w-[48px] break-words text-center text-xs leading-tight text-[var(--muted-foreground)]"
           >
             {label}
           </Truncate>
@@ -457,11 +451,11 @@ const BAR_BG: Record<BadgeTone, string> = {
 
 function ItemRow({ it }: { it: SectionItem }) {
   return (
-    <li className="flex items-center justify-between gap-2 text-[0.7rem]">
+    <li className="flex items-center justify-between gap-2 text-xs">
       <span className="min-w-0">
         <Truncate full={it.label}>{it.label}</Truncate>
         {it.sub ? (
-          <Truncate full={it.sub} className="text-[0.58rem] text-[var(--muted-foreground)]">
+          <Truncate full={it.sub} className="text-xs text-[var(--muted-foreground)]">
             {it.sub}
           </Truncate>
         ) : null}
@@ -500,7 +494,7 @@ function Section({ s }: { s: TabSection }) {
           {s.bars.map((b) => {
             const bar = b as { label: string; value: number; tone?: string };
             return (
-              <li key={bar.label} className="flex items-center gap-2 text-[0.68rem]">
+              <li key={bar.label} className="flex items-center gap-2 text-xs">
                 <Truncate full={bar.label} className="w-24 shrink-0">
                   {bar.label}
                 </Truncate>
@@ -526,7 +520,7 @@ function Section({ s }: { s: TabSection }) {
             {(s.series as { label: string; color: string }[]).map((se) => (
               <li
                 key={se.label}
-                className="flex items-center gap-1 text-[0.58rem] text-[var(--muted-foreground)]"
+                className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]"
               >
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: se.color }} />
                 {se.label}
@@ -542,7 +536,7 @@ function Section({ s }: { s: TabSection }) {
           {s.actions.map((a) => (
             <span
               key={a}
-              className="flex items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border)] px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-text-muted)]"
+              className="flex items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border)] px-1.5 py-1 text-left text-xs text-[var(--tessera-text-muted)]"
             >
               {a}
             </span>
@@ -570,9 +564,7 @@ function Section({ s }: { s: TabSection }) {
       <CardContent className="flex flex-1 flex-col justify-between gap-2">
         {body}
         {s.cta ? (
-          <span className="mt-1 self-start text-[0.62rem] text-[var(--tessera-text-muted)]">
-            {s.cta}
-          </span>
+          <span className="mt-1 self-start text-xs text-[var(--tessera-text-muted)]">{s.cta}</span>
         ) : null}
       </CardContent>
     </Card>

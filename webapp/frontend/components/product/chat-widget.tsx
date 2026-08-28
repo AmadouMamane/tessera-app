@@ -217,7 +217,7 @@ export function ChatWidget({ hideLauncher = false }: ChatWidgetProps) {
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-sm font-semibold">{t("title")}</span>
-              <span className="truncate text-[0.68rem] text-white/55">{t("subtitle")}</span>
+              <span className="truncate text-xs text-white/55">{t("subtitle")}</span>
             </div>
 
             <button

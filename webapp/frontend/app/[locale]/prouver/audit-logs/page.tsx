@@ -111,9 +111,7 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
         <HydrationBoundary state={dehydrate(queryClient)}>
           <div className="flex flex-wrap items-center gap-3">
             <AgentScopeFilter />
-            <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {t("agentFilterHint")}
-            </span>
+            <span className="text-xs text-[var(--tessera-text-muted)]">{t("agentFilterHint")}</span>
           </div>
           {/* The temporal window rail renders FIRST (inside AuditTable, instrument
               chrome), then the per-agent proof card slots beneath it — the rail is

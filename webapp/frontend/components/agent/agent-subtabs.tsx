@@ -31,7 +31,7 @@ export function AgentSubtabs({
             onClick={() => onSelect(tb)}
             aria-pressed={on}
             className={cn(
-              "rounded-md px-3 py-1.5 text-[0.74rem] transition-colors",
+              "rounded-md px-3 py-1.5 text-xs transition-colors",
               on
                 ? "bg-[var(--tessera-surface-elevated)] font-medium text-[var(--tessera-text)]"
                 : "text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",

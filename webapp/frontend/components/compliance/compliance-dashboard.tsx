@@ -101,7 +101,7 @@ const TAB_ICONS: Record<TabKey, LucideIcon> = {
 
 function Sec({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+    <h2 className="mt-1 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
       {children}
     </h2>
   );
@@ -261,14 +261,14 @@ function Kpi({
         ) : null}
       </div>
       {showDelta ? (
-        <div className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${z}`}>
+        <div className={`flex items-center gap-1 text-xs tabular-nums ${z}`}>
           <span className={`whitespace-nowrap ${deltaGood ? GOOD : BAD}`}>
             {up ? "↗" : "↘"} {dec0(Math.abs((delta as number) * 100))} {tc("kpi.pts")}
           </span>
           <span className="truncate text-[var(--muted-foreground)]">{tc("kpi.vsPrev")}</span>
         </div>
       ) : sub ? (
-        <div className={`truncate text-[0.65rem] text-[var(--muted-foreground)] ${z}`}>{sub}</div>
+        <div className={`truncate text-xs text-[var(--muted-foreground)] ${z}`}>{sub}</div>
       ) : null}
       {series && series.length > 1 ? <Spark values={series} /> : null}
       {onDrill ? (
@@ -485,7 +485,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                 <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1.3fr)_minmax(0,1fr)]">
                   <Panel title={tc("panel.mapping")} infoKey="mapping">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-[0.72rem]">
+                      <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
                             <th className="py-1 pr-2 font-medium">{tc("col.framework")}</th>
@@ -507,7 +507,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     infoKey="obligTable"
                   >
                     <div className="overflow-x-auto">
-                      <table className="w-full text-[0.72rem]">
+                      <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
                             <th className="py-1 pr-2 font-medium">{tc("col.obligation")}</th>
@@ -528,7 +528,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                   <Panel title={tc("panel.evidence")} infoKey="evidence">
                     <div className="flex items-center gap-3">
                       <EvidenceDonut completeness={d.evidence_completeness ?? 0} />
-                      <ul className="flex flex-col gap-1 text-[0.7rem]">
+                      <ul className="flex flex-col gap-1 text-xs">
                         <EvRow
                           color="var(--tessera-fg-success)"
                           label={tc("evidence.valid")}
@@ -568,7 +568,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                           ),
                         )
                       }
-                      className="mt-2 h-7 w-full justify-center text-[0.7rem]"
+                      className="mt-2 h-7 w-full justify-center text-xs"
                     >
                       {tc("evidence.export")}
                     </Button>
@@ -585,7 +585,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                     title={tc("panel.controls", { n: d.controls?.length ?? 0 })}
                     infoKey="controls"
                   >
-                    <ul className="flex flex-col gap-1 text-[0.72rem]">
+                    <ul className="flex flex-col gap-1 text-xs">
                       {(d.controls ?? []).slice(0, 6).map((c) => (
                         <li key={c.id} className="flex items-center gap-2">
                           <Truncate full={c.name} className="min-w-0 flex-1">
@@ -600,7 +600,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                   </Panel>
 
                   <Panel title={tc("panel.missing")} infoKey="missing">
-                    <ul className="flex flex-col gap-1 text-[0.72rem]">
+                    <ul className="flex flex-col gap-1 text-xs">
                       {(d.controls ?? [])
                         .filter((c) => c.status !== "conformant")
                         .slice(0, 7)
@@ -608,7 +608,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
                           <li key={c.id} className="flex items-center justify-between gap-2">
                             <Truncate
                               full={c.evidence_id}
-                              className="min-w-0 flex-1 font-mono text-[0.65rem]"
+                              className="min-w-0 flex-1 font-mono text-xs"
                             >
                               {c.evidence_id}
                             </Truncate>
@@ -622,7 +622,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
 
                   <Panel title={tc("panel.incidents")} infoKey="incidents">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-[0.7rem]">
+                      <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
                             <th className="py-1 pr-2 font-medium">{tc("col.nc")}</th>
@@ -669,7 +669,7 @@ export function ComplianceDashboard({ agentScope }: { agentScope?: ReactNode }) 
           </div>
 
           {/* footer */}
-          <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+          <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--muted-foreground)]">
             <Chip
               icon={ShieldCheck}
               label={tc("status.chain")}
@@ -708,7 +708,7 @@ function ObligationRow({
         <Truncate full={o.name} className="max-w-[12rem]">
           {o.name}
         </Truncate>
-        <span className="text-[0.6rem] text-[var(--muted-foreground)]">{fwLabel(o.framework)}</span>
+        <span className="text-xs text-[var(--muted-foreground)]">{fwLabel(o.framework)}</span>
       </td>
       <td className="py-1 pr-2">
         <Badge tone={STATUS_BADGE[o.status] ?? "neutral"}>{tc(`status.${o.status}`)}</Badge>
@@ -736,7 +736,7 @@ function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
     <Zone label={tc("sec.businessLegal")}>
       <Panel title={tc("panel.businessLegal", { n: rows.length })} infoKey="businessLegal">
         {rows.length === 0 ? (
-          <p className="py-6 text-center text-[0.72rem] text-[var(--muted-foreground)]">
+          <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">
             {tc("businessSignals.empty")}
           </p>
         ) : (
@@ -793,7 +793,7 @@ function BusinessLegalSignalsPanel({ rows }: { rows: BusinessLegalSignal[] }) {
 /** Shared footer for the catalogue tabs (référentiel · revue · preuves · source). */
 function TabFooter({ tc }: { tc: ReturnType<typeof useTranslations<"compliance">> }) {
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+    <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--muted-foreground)]">
       <Chip icon={ScrollText} label={tc("footer.reference")} />
       <Chip icon={CalendarClock} label={tc("footer.lastReview")} />
       <Chip icon={FileCheck2} label={tc("footer.validProofs")} />
@@ -833,7 +833,7 @@ function ComplianceRail({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{tc("rail.lastEval")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex items-center justify-between gap-2 text-[0.72rem]">
+          <CardContent className="flex items-center justify-between gap-2 text-xs">
             {/* The compliance payload carries no evaluation date yet — say so, never
                 invent one (the previous hardcoded "11/06/2026" was a lie). */}
             <span className="text-[var(--muted-foreground)]">{tc("rail.lastEvalMissing")}</span>
@@ -846,7 +846,7 @@ function ComplianceRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {obligations.slice(0, 4).map((o) => (
-              <div key={o.name} className="flex items-center gap-2 text-[0.72rem]">
+              <div key={o.name} className="flex items-center gap-2 text-xs">
                 <Truncate full={o.name} className="min-w-0 flex-1">
                   {o.name}
                 </Truncate>
@@ -864,10 +864,10 @@ function ComplianceRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {criticalNc.length === 0 ? (
-              <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tc("rail.noNc")}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">{tc("rail.noNc")}</p>
             ) : (
               criticalNc.slice(0, 4).map((n) => (
-                <div key={n.id} className="flex items-center gap-2 text-[0.72rem]">
+                <div key={n.id} className="flex items-center gap-2 text-xs">
                   <span className="font-mono text-[var(--tessera-green)]">{n.id}</span>
                   <Truncate
                     full={n.title}
@@ -890,7 +890,7 @@ function ComplianceRail({
             {actions.map((o) => (
               <div
                 key={o.name}
-                className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-[0.72rem]"
+                className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1 text-xs"
               >
                 <CalendarClock className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
                 <Truncate full={o.name} className="min-w-0 flex-1">
@@ -918,7 +918,7 @@ function ComplianceRail({
               ] as { key: string; icon: LucideIcon; href?: Route; onClick?: () => void }[]
             ).map((a) => {
               const cls =
-                "flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]";
+                "flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]";
               if (a.href) {
                 return (
                   <Link key={a.key} href={a.href} className={cls}>
@@ -942,7 +942,7 @@ function ComplianceRail({
                   type="button"
                   disabled
                   title={tc("rail.notWired")}
-                  className="flex cursor-not-allowed items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--muted-foreground)] opacity-60"
+                  className="flex cursor-not-allowed items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs text-[var(--muted-foreground)] opacity-60"
                 >
                   <a.icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{tc(`rail.${a.key}`)}</span>

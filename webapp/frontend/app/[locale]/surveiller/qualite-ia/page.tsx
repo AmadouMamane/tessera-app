@@ -63,7 +63,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
           <summary className="cursor-pointer text-[0.8rem] font-semibold">
             {tEval("explainer.title")}
           </summary>
-          <div className="mt-2 space-y-2 text-[0.74rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          <div className="mt-2 space-y-2 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
             <p>{tEval("explainer.p1")}</p>
             <p>{tEval("explainer.p2")}</p>
             <p>{tEval("explainer.p3")}</p>
@@ -101,7 +101,7 @@ export default async function ObservabilityPage({ params, searchParams }: Observ
             "0 judged" from reading as "nothing else is measured"; the full method cards live
             in the « Méthodes de notation » zone of the dashboard below (ADR 0017 §A4 —
             moved into the house mould, operator feedback 2026-08-25). */}
-        <p className="mt-1 text-[0.66rem] text-[var(--tessera-text-muted)]">{t("methodsNote")}</p>
+        <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{t("methodsNote")}</p>
       </div>
       <ObservabilityDashboard
         agentScope={

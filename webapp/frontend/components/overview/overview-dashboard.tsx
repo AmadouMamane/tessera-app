@@ -442,7 +442,7 @@ export function OverviewDashboard({
       {/* The main scroller owns 1.25rem of top padding. The matching negative sticky
           offset consumes that padding only once the rail pins, so its opaque fill meets
           the header and scrolling content cannot remain visible in a strip above it. */}
-      <div className="sticky -top-5 z-40 -mx-4 bg-[var(--tessera-bg)] px-4 pb-1 shadow-[0_-4px_0_0_var(--tessera-bg)] sm:-mx-6 sm:px-6">
+      <div className="sticky -top-4 z-40 bg-[var(--tessera-bg)] pb-1 shadow-[0_-4px_0_0_var(--tessera-bg)] sm:-top-5 sm:-mx-6 sm:px-6">
         <SignalCommandBar
           temporal={temporal}
           timeline={timeline.data}
@@ -820,7 +820,7 @@ function TimeTagChip({ kind, className }: { kind: TimeTagKind; className?: strin
     <span
       title={config.title}
       className={cn(
-        "inline-flex cursor-help items-center gap-1 rounded px-1.5 py-0.5 text-[0.66rem] font-medium uppercase leading-none tracking-wide",
+        "inline-flex cursor-help items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium uppercase leading-none tracking-wide",
         config.tone,
         className,
       )}
@@ -891,24 +891,13 @@ function KpiCard({
       )}
     >
       <div className={cn("absolute inset-x-0 top-0 h-0.5", dotBg[tone])} />
-      {/* Whole-card drill-down to the real source. The clickable layer is an overlay
-          <Link> that is a SIBLING of the content (never an ancestor), so the ⓘ
-          popover trigger inside can't trigger navigation; the content is
-          pointer-transparent except the ⓘ, which re-enables its own clicks. */}
-      {href ? (
-        <Link
-          href={href}
-          aria-label={tk("openSource", { label })}
-          className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40"
-        />
-      ) : null}
-      <CardContent className={cn("p-4", href && "pointer-events-none relative z-20")}>
+      <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
               {label}
               {infoKey ? (
-                <span className={href ? "pointer-events-auto" : undefined}>
+                <span>
                   <MetricInfo
                     title={label}
                     what={te(`${infoKey}.what`)}
@@ -934,7 +923,7 @@ function KpiCard({
             <Icon className="h-4 w-4" />
           </span>
         </div>
-        {delta ? <p className={cn("mt-1 text-[0.7rem]", toneText[tone])}>{delta}</p> : null}
+        {delta ? <p className={cn("mt-1 text-xs", toneText[tone])}>{delta}</p> : null}
         {/* The card always reserves the chart slot when it tracks a trend, and
             keeps a permanent horizontal axis: a real curve when there are enough
             points, otherwise the bare axis + an "aucune donnée" label — so
@@ -946,17 +935,23 @@ function KpiCard({
                 drawable trend yet; when there's no data at all the delta line
                 already says "Aucune donnée à T", so don't repeat it here. */}
             {trend.length <= 1 && value !== "—" ? (
-              <span className="absolute inset-0 flex items-center justify-center text-[0.66rem] text-[var(--muted-foreground)]">
+              <span className="absolute inset-0 flex items-center justify-center text-xs text-[var(--muted-foreground)]">
                 {trendEmptyLabel}
               </span>
             ) : null}
           </div>
         ) : null}
       </CardContent>
-      {/* Persistent-but-discreet drill affordance: a faint corner arrow that
-          brightens on hover, signalling the whole card opens its real source. */}
+      {/* Explicit source link: it no longer sits underneath the info button as a
+          full-card overlay, which created two overlapping WCAG touch targets. */}
       {href ? (
-        <ArrowUpRight className="pointer-events-none absolute bottom-2.5 right-2.5 z-20 h-3.5 w-3.5 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-80" />
+        <Link
+          href={href}
+          aria-label={tk("openSource", { label })}
+          className="absolute bottom-2 right-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--muted-foreground)] outline-none transition-colors hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)] focus-visible:ring-2 focus-visible:ring-blue-400/40"
+        >
+          <ArrowUpRight className="h-4 w-4" aria-hidden />
+        </Link>
       ) : null}
     </Card>
   );
@@ -1037,11 +1032,15 @@ function CriticalControlsTable({
             {t("empty")}
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-sm:overflow-visible">
             {/* Named so `e2e/table-rhythm.spec.ts` can measure THIS table ink-to-ink. Without
               the handle it fell under the file's gutter rule, which measures ink to the next
               column's BOX — 16 px of padding everywhere, and green over a 69 px hole. */}
-            <table data-rhythm="critical-controls" className="w-full text-sm">
+            <table
+              data-rhythm="critical-controls"
+              data-mobile-table="cards"
+              className="w-full text-sm"
+            >
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted-foreground)]">
                   {/* `docs/table-rhythm-playbook.md`, adapted — and the adaptation is measured,
@@ -1091,7 +1090,7 @@ function CriticalControlsTable({
                   const sig = signalById.get(c.id);
                   return (
                     <tr key={c.id} className="border-b border-[var(--border)]/50">
-                      <td className="px-4 py-2">
+                      <td data-label={t("signal")} className="px-4 py-2">
                         {/* Real signal identity (normative): the human label + its REAL
                           catalogue id/technical name; the two live policy probes
                           (toxicity, refusal) are honestly marked "hors catalogue". */}
@@ -1114,7 +1113,7 @@ function CriticalControlsTable({
                           {agentScoped && isOrgWide(registryIdFor(c.id)) ? (
                             <span
                               title={tas("orgWideHint")}
-                              className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-[0.66rem] font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
+                              className="inline-flex cursor-help items-center rounded border border-[var(--border)] bg-[var(--muted)]/40 px-1 py-0.5 text-xs font-medium uppercase leading-none tracking-wide text-[var(--muted-foreground)]"
                             >
                               {tas("orgWide")}
                             </span>
@@ -1131,7 +1130,7 @@ function CriticalControlsTable({
                           !signalSupports(registryIdFor(c.id), "time") ? (
                             <span
                               title={t("currentPolicyHint")}
-                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.66rem] font-medium uppercase leading-none tracking-wide text-[var(--tessera-fg-warning)]/90"
+                              className="inline-flex cursor-help items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-xs font-medium uppercase leading-none tracking-wide text-[var(--tessera-fg-warning)]/90"
                             >
                               <Activity className="h-2.5 w-2.5" />
                               {t("currentPolicy")}
@@ -1139,19 +1138,19 @@ function CriticalControlsTable({
                           ) : null}
                         </div>
                         {sig?.catalogued && sig.signal_name ? (
-                          <div className="font-mono text-[0.66rem] text-[var(--muted-foreground)]">
+                          <div className="font-mono text-xs text-[var(--muted-foreground)]">
                             {sig.signal_id} · {sig.signal_name}
                           </div>
                         ) : sig ? (
                           <div
-                            className="text-[0.66rem] text-[var(--muted-foreground)]"
+                            className="text-xs text-[var(--muted-foreground)]"
                             title={tt("liveTooltip")}
                           >
                             {t("liveProbe")}
                           </div>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-4 text-center">
+                      <td data-label={t("state")} className="py-2 pr-4 text-center">
                         <span
                           className={cn(
                             "inline-flex rounded-full border px-2 py-0.5 text-xs",
@@ -1167,6 +1166,7 @@ function CriticalControlsTable({
                         historically (a live current-policy probe) keeps an honest
                         tooltip instead of a second visible badge. */}
                       <td
+                        data-label={t("current")}
                         className="py-2 pr-4 text-center whitespace-nowrap tabular-nums"
                         title={
                           historyMode && !c.noData && !c.asOfCapable ? tt("liveTooltip") : undefined
@@ -1179,15 +1179,18 @@ function CriticalControlsTable({
                           the same label. One of the two had to stop being the headline; neither
                           had to disappear. */}
                         {c.detail ? (
-                          <div className="text-[0.66rem] font-normal text-[var(--muted-foreground)]">
+                          <div className="text-xs font-normal text-[var(--muted-foreground)]">
                             {tcd(c.detail.key, c.detail.values)}
                           </div>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-4 text-center whitespace-nowrap text-[var(--muted-foreground)]">
+                      <td
+                        data-label={t("target")}
+                        className="py-2 pr-4 text-center whitespace-nowrap text-[var(--muted-foreground)]"
+                      >
                         {c.target}
                       </td>
-                      <td className="w-28 py-2 pr-4 text-center">
+                      <td data-label={t("trend")} className="w-28 py-2 pr-4 text-center">
                         {/* Permanent axis on every row → constant cell height. Three distinct
                           states, and they are three different things to tell the operator: a
                           drawable curve; a control the window CANNOT reach, which says which
@@ -1196,7 +1199,7 @@ function CriticalControlsTable({
                           fixable gap gets read as a permanent one. */}
                         {c.noCurve ? (
                           <span
-                            className="text-[0.66rem] text-[var(--muted-foreground)]"
+                            className="text-xs text-[var(--muted-foreground)]"
                             title={tnc(`why.${c.noCurve}`)}
                           >
                             {tnc(c.noCurve)}
@@ -1218,17 +1221,20 @@ function CriticalControlsTable({
                           <NoHistoryLabel
                             values={c.trend ?? []}
                             bucketHours={bucketHours}
-                            className="text-[0.66rem] text-[var(--muted-foreground)]"
+                            className="text-xs text-[var(--muted-foreground)]"
                           />
                         )}
                       </td>
-                      <td className="py-2 pr-4 text-[var(--muted-foreground)]">
+                      <td
+                        data-label={t("impact")}
+                        className="py-2 pr-4 text-[var(--muted-foreground)]"
+                      >
                         {ti(c.impactKey)}
                       </td>
                       {/* Drill-down to the control's REAL investigation surface — the
                         normative "Action recommandée / Case" intent, as honest
                         navigation (every control has a real SURVEILLER route). */}
-                      <td className="py-2 pr-4">
+                      <td data-label={t("action")} className="py-2 pr-4">
                         {sig ? (
                           <Link
                             href={sig.route}
@@ -1532,7 +1538,7 @@ function GovernedActivityCard({
                     </Truncate>
                     <Truncate
                       full={meta}
-                      className="font-mono text-[0.66rem] text-[var(--muted-foreground)]"
+                      className="font-mono text-xs text-[var(--muted-foreground)]"
                     >
                       {meta}
                     </Truncate>
@@ -1563,7 +1569,7 @@ function TraceLink({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-[0.7rem] text-[var(--tessera-fg-info)] transition-colors hover:bg-[var(--muted)]/40"
+      className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2 py-1 text-xs text-[var(--tessera-fg-info)] transition-colors hover:bg-[var(--muted)]/40"
     >
       <ExternalLink className="h-3 w-3" />
       {label}
@@ -1600,7 +1606,7 @@ function ObservabilityTracesCard({
           <SectionInfo title={t("title")} explainKey="traces" />
           {provTag ? <TimeTagChip kind={provTag} /> : null}
         </CardTitle>
-        <span className="text-[0.7rem] text-[var(--muted-foreground)]">Langfuse</span>
+        <span className="text-xs text-[var(--muted-foreground)]">Langfuse</span>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {loading && !data ? (
@@ -1621,13 +1627,13 @@ function ObservabilityTracesCard({
               <div className="flex items-center gap-3 text-right">
                 <Gauge className="h-4 w-4 text-[var(--muted-foreground)]" />
                 <div>
-                  <p className="text-[0.66rem] uppercase text-[var(--muted-foreground)]">p50</p>
+                  <p className="text-xs uppercase text-[var(--muted-foreground)]">p50</p>
                   <p className="font-mono text-sm tabular-nums">
                     {fmtLatency(data.latency_p50_s, fmtDec2)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[0.66rem] uppercase text-[var(--muted-foreground)]">p95</p>
+                  <p className="text-xs uppercase text-[var(--muted-foreground)]">p95</p>
                   <p className="font-mono text-sm tabular-nums">
                     {fmtLatency(data.latency_p95_s, fmtDec2)}
                   </p>
@@ -1637,10 +1643,7 @@ function ObservabilityTracesCard({
             {data.top_ops.length > 0 ? (
               <ul className="flex flex-col gap-1">
                 {data.top_ops.slice(0, 4).map((o) => (
-                  <li
-                    key={o.name}
-                    className="grid grid-cols-[1fr_auto] items-center gap-2 text-[0.68rem]"
-                  >
+                  <li key={o.name} className="grid grid-cols-[1fr_auto] items-center gap-2 text-xs">
                     <Truncate full={o.name} className="font-mono text-[var(--muted-foreground)]">
                       {o.name}
                     </Truncate>
@@ -1743,7 +1746,7 @@ function PushAlertsCard({ data, loading }: { data?: PushAlerts; loading: boolean
                   .map((ev, i) => (
                     <div
                       key={`${ev.at}-${i}`}
-                      className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-[0.66rem]"
+                      className="grid grid-cols-[auto_1fr_auto] items-center gap-2 text-xs"
                       title={ev.delivery.delivered ? t("delivered") : t("notDelivered")}
                     >
                       <span
@@ -1763,9 +1766,7 @@ function PushAlertsCard({ data, loading }: { data?: PushAlerts; loading: boolean
               </div>
             ) : null}
             {!data.configured ? (
-              <p className="text-[0.66rem] text-[var(--muted-foreground)]">
-                {t("notConfiguredHint")}
-              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">{t("notConfiguredHint")}</p>
             ) : null}
           </>
         )}
@@ -2114,7 +2115,7 @@ function QuickActionsCard({
                   </Badge>
                 ) : null}
                 {histDisabled ? (
-                  <span className="ml-auto text-[0.66rem] uppercase text-[var(--muted-foreground)]">
+                  <span className="ml-auto text-xs uppercase text-[var(--muted-foreground)]">
                     {t("histTag")}
                   </span>
                 ) : null}
@@ -2123,7 +2124,7 @@ function QuickActionsCard({
           );
         })}
         {status ? (
-          <p className="px-1 pt-1 text-[0.7rem] text-[var(--muted-foreground)]">{status}</p>
+          <p className="px-1 pt-1 text-xs text-[var(--muted-foreground)]">{status}</p>
         ) : null}
       </CardContent>
     </Card>
@@ -2223,7 +2224,7 @@ function AnalyticsSection({
                 className="h-16"
                 height={64}
               />
-              <div className="mt-2 flex items-center justify-between text-[0.66rem] text-[var(--muted-foreground)]">
+              <div className="mt-2 flex items-center justify-between text-xs text-[var(--muted-foreground)]">
                 <span>{t(`direction.${trend.direction}`)}</span>
                 <span className="tabular-nums">
                   {fmtDec2(trend.first_half_mean)} → {fmtDec2(trend.second_half_mean)}
@@ -2357,7 +2358,7 @@ function GovernanceSection({
                   {item.severity}
                 </Badge>
               </div>
-              <p className="mt-1 text-[0.7rem] text-[var(--muted-foreground)]">{item.suggestion}</p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">{item.suggestion}</p>
             </div>
           ))
         )}

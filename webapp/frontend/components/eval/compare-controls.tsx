@@ -78,7 +78,7 @@ function CompareControlsInner({ runs, a, b, version, labels }: CompareControlsPr
       </div>
       <Picker label={labels.modelA} value={a} runs={runs} onChange={(v) => navigate("a", v)} />
       <Picker label={labels.modelB} value={b} runs={runs} onChange={(v) => navigate("b", v)} />
-      <p className="max-w-md text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+      <p className="max-w-md text-xs text-[var(--muted-foreground)] leading-relaxed">
         {labels.locked}
       </p>
     </div>

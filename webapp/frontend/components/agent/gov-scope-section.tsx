@@ -65,7 +65,7 @@ export async function GovScopeSection({
       {signalHero ? <SignalBreachHero orgWide={!perAgent} /> : null}
       <div className="flex flex-wrap items-center gap-3">
         <AgentScopeFilter />
-        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{t("hint")}</span>
+        <span className="text-xs text-[var(--tessera-text-muted)]">{t("hint")}</span>
       </div>
       <StreamedAgentBreakdown
         route={route}
@@ -78,7 +78,7 @@ export async function GovScopeSection({
           which is misleading on the default "Tous les agents" (no filter) view. The
           text matches the page: per-agent cards vs an org-posture aggregate. */}
       {signalsNote && isScopedToAgent(scope) ? (
-        <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <p className="text-xs text-[var(--tessera-text-muted)]">
           {perAgent ? t("orgSignalsNote") : t("orgPostureNote")}
         </p>
       ) : null}

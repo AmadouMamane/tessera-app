@@ -56,11 +56,11 @@ function CatalogueConsumersInner({ kind }: { kind: string }) {
   const items = data?.items ?? [];
 
   if (isLoading) {
-    return <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("loading")}</p>;
+    return <p className="text-xs text-[var(--tessera-text-muted)]">{t("loading")}</p>;
   }
   if (isError || !data?.available || items.length === 0) {
     return (
-      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-xs text-[var(--tessera-text-muted)]">
         {t("empty")}
       </p>
     );
@@ -75,7 +75,7 @@ function CatalogueConsumersInner({ kind }: { kind: string }) {
         >
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="font-mono text-[0.82rem] font-semibold">{it.item}</span>
-            <span className="flex items-center gap-3 text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <span className="flex items-center gap-3 text-xs text-[var(--tessera-text-muted)]">
               <span className="inline-flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
                 {t("consumers", { count: it.consumer_count })}
@@ -92,7 +92,7 @@ function CatalogueConsumersInner({ kind }: { kind: string }) {
             {it.consumers.map((c) => (
               <li
                 key={c.agent_id}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[0.68rem]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-xs"
                 title={c.release.verdict_label}
               >
                 <span
@@ -106,7 +106,7 @@ function CatalogueConsumersInner({ kind }: { kind: string }) {
           </ul>
         </section>
       ))}
-      <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("note")}</p>
+      <p className="text-xs text-[var(--tessera-text-muted)]">{t("note")}</p>
     </div>
   );
 }

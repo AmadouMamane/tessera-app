@@ -220,7 +220,7 @@ export function SignalBreachHero({
   const remediate = (
     <Link
       href={"/agir/incidents-playbooks" as Route}
-      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[#e0566f]/55 bg-[#e0566f]/15 px-3 text-[11px] font-medium text-[var(--tessera-fg-danger)] transition-colors hover:bg-[#e0566f]/25 hover:text-[var(--tessera-text-strong)]"
+      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-[#e0566f]/55 bg-[#e0566f]/15 px-3 text-xs font-medium text-[var(--tessera-fg-danger)] transition-colors hover:bg-[#e0566f]/25 hover:text-[var(--tessera-text-strong)]"
     >
       {t("remediate")} →
     </Link>

@@ -294,10 +294,10 @@ async function DisagreementRow({
       <details className="group">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 p-3">
           <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)] transition-transform group-open:rotate-90" />
-          <span className="font-mono text-[11px] text-[var(--muted-foreground)]">
+          <span className="font-mono text-xs text-[var(--muted-foreground)]">
             {disagreement.caseId}
           </span>
-          <span className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-[10px] uppercase">
+          <span className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs uppercase">
             {disagreement.language}
           </span>
           <span className="flex-1 truncate text-[var(--muted-foreground)] text-xs">
@@ -366,13 +366,13 @@ async function Side({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-mono font-medium text-[11px]">{model}</span>
-      <p className="whitespace-pre-wrap rounded border border-[var(--border)] bg-[var(--muted)]/30 p-2.5 text-[11px] text-[var(--foreground)] leading-relaxed">
+      <span className="font-mono font-medium text-xs">{model}</span>
+      <p className="whitespace-pre-wrap rounded border border-[var(--border)] bg-[var(--muted)]/30 p-2.5 text-xs text-[var(--foreground)] leading-relaxed">
         {result.final_response || <span className="italic">{emptyLabel}</span>}
       </p>
       {violated.length > 0 ? (
         <div className="flex flex-col gap-1 rounded border border-danger-500/30 bg-danger-50 p-2 dark:bg-danger-700/10">
-          <span className="font-medium text-[10px] text-danger-800 uppercase tracking-wide dark:text-danger-200">
+          <span className="font-medium text-xs text-danger-800 uppercase tracking-wide dark:text-danger-200">
             {brokeLabel}
           </span>
           <ul className="flex flex-col gap-1">

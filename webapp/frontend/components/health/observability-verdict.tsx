@@ -119,7 +119,7 @@ export function ObservabilityVerdict() {
           ) : null}
           {/* The observation instant, not the render instant: the probe is cached, and a verdict
               that cannot say when it last looked invites the reader to assume "now". */}
-          <span className="flex items-center gap-1 text-[0.66rem] text-[var(--muted-foreground)]">
+          <span className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
             <Eye className="h-3 w-3" />
             {t("checked", { when: format.relativeTime(observedAt(observed_at), relativeNow()) })}
           </span>

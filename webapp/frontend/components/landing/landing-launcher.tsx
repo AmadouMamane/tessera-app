@@ -263,7 +263,7 @@ function PillarColumn({
         <span
           aria-hidden="true"
           className={cn(
-            "flex items-center justify-center gap-[7px] font-semibold text-[10.5px] uppercase leading-[1.25] tracking-[0.11em]",
+            "flex items-center justify-center gap-[7px] font-semibold text-xs uppercase leading-[1.25] tracking-[0.11em]",
             dimmed && "opacity-60",
           )}
           style={{ color: titleColor }}
@@ -293,7 +293,7 @@ function PillarColumn({
         {freshness ? (
           <span
             className={cn(
-              "text-[11px] text-[var(--text-secondary)] tracking-[0.01em]",
+              "text-xs text-[var(--text-secondary)] tracking-[0.01em]",
               dimmed ? "opacity-60" : "opacity-75",
             )}
           >
@@ -450,7 +450,7 @@ function PlaneHeader({
       {authNote ? (
         <span
           className={cn(
-            "mt-[12px] inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-[11px] font-medium",
+            "mt-[12px] inline-flex items-center gap-[6px] rounded-full border px-[10px] py-[4px] text-xs font-medium",
             a.border,
             a.soft,
           )}

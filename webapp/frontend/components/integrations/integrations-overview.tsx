@@ -194,7 +194,7 @@ export function IntegrationsOverview() {
 function CommandBar({ t, onExport }: { t: T; onExport: () => void }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs text-[var(--tessera-text-muted)]">
         <ShieldCheck className="h-3.5 w-3.5" /> {t("readonlyNote")}
       </span>
       <div className="flex flex-wrap items-center gap-2">
@@ -237,14 +237,14 @@ function CompactKpi({
 }: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="flex items-center gap-1 text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
       <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
         {kpi.value}
       </p>
-      <Truncate as="p" className="mt-0.5 text-[0.56rem] text-[var(--tessera-text-muted)]">
+      <Truncate as="p" className="mt-0.5 text-xs text-[var(--tessera-text-muted)]">
         {kpi.sub}
       </Truncate>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
@@ -302,7 +302,7 @@ function FilterStrip({
         </select>
         <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--tessera-fg-info)]" />
       </label>
-      <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+      <span className="shrink-0 text-xs tabular-nums text-[var(--tessera-text-muted)]">
         {count}/{total}
       </span>
     </section>
@@ -363,7 +363,7 @@ function IntegrationTable({
           className="w-full min-w-[900px] table-fixed border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, idx) => (
                 <th
                   key={c.key}
@@ -453,12 +453,12 @@ function IntegrationTable({
                   <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
                     {i.response_time}
                   </td>
-                  <td className="px-2 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  <td className="px-2 py-1.5 font-mono text-xs text-[var(--tessera-text-muted)]">
                     <span className="block truncate">{i.last_sync}</span>
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-xs text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {tt("rowOpen")}
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
@@ -471,7 +471,7 @@ function IntegrationTable({
               <tr>
                 <td
                   colSpan={COLS.length + 1}
-                  className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
+                  className="px-2 py-6 text-center text-xs text-[var(--tessera-text-muted)]"
                 >
                   {t("empty.rows")}
                 </td>
@@ -528,7 +528,7 @@ function TablePagination({
   accent: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {tt("summary", { start, end, total })}
       </span>
@@ -552,7 +552,7 @@ function TablePagination({
               n === page ? { borderColor: `${accent}99`, background: `${accent}26` } : undefined
             }
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -576,7 +576,7 @@ function TablePagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {ROWS_PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>
@@ -604,7 +604,7 @@ function ByEnv({ t, data }: { t: T; data: Data }) {
     <Panel title={t("zone.byEnv")}>
       <ul className="flex flex-col gap-2">
         {data.by_env.map((e) => (
-          <li key={e.key} className="flex flex-col gap-0.5 text-[0.66rem]">
+          <li key={e.key} className="flex flex-col gap-0.5 text-xs">
             <div className="flex items-center justify-between gap-1.5">
               <Truncate className="text-[var(--tessera-text)]">{e.label}</Truncate>
               <span className="tabular-nums text-[var(--tessera-text-muted)]">
@@ -630,7 +630,7 @@ function Top({ t, data }: { t: T; data: Data }) {
     <Panel title={t("zone.top")}>
       <ul className="flex flex-col gap-2">
         {data.top_integrations.map((i) => (
-          <li key={i.name} className="flex items-center gap-2 text-[0.66rem]">
+          <li key={i.name} className="flex items-center gap-2 text-xs">
             <Truncate className="w-28 shrink-0 text-[var(--tessera-text)]">{i.name}</Truncate>
             <div className="h-1.5 flex-1 rounded-full bg-[var(--tessera-bg)]">
               <div
@@ -684,7 +684,7 @@ function IntegrationsDrawer({
             type="button"
             onClick={() => onTab(dt)}
             className={cn(
-              "rounded px-2 py-1 text-[0.62rem] font-medium",
+              "rounded px-2 py-1 text-xs font-medium",
               dt === tab
                 ? "bg-[#0d3561] text-[#d8eaff]"
                 : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
@@ -709,10 +709,10 @@ function IntegrationsDrawer({
             </div>
           </Section>
           <Section title={t("detail.general")}>
-            <p className="mb-1.5 text-[0.7rem] leading-relaxed text-[var(--tessera-text)]">
+            <p className="mb-1.5 text-xs leading-relaxed text-[var(--tessera-text)]">
               {detail.description}
             </p>
-            <dl className="flex flex-col gap-1 text-[0.66rem]">
+            <dl className="flex flex-col gap-1 text-xs">
               <KV label={t("detail.owner")} value={detail.owner} />
               <KV label={t("detail.environment")} value={detail.environment} />
               <KV label={t("detail.region")} value={detail.region} />
@@ -731,7 +731,7 @@ function IntegrationsDrawer({
 
       {tab === "policy" ? (
         <Section title={t("detail.config")}>
-          <dl className="flex flex-col gap-1 text-[0.64rem]">
+          <dl className="flex flex-col gap-1 text-xs">
             {detail.config_rows.map((r) => (
               <KV key={r.label} label={r.label} value={r.value} mono />
             ))}
@@ -741,7 +741,7 @@ function IntegrationsDrawer({
 
       {tab === "security" ? (
         <Section title={t("detail.security")}>
-          <dl className="flex flex-col gap-1 text-[0.64rem]">
+          <dl className="flex flex-col gap-1 text-xs">
             {detail.security_rows.map((r) => (
               <KV key={r.label} label={r.label} value={r.value} mono />
             ))}
@@ -763,13 +763,13 @@ function IntegrationsDrawer({
                 key={k}
                 className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
               >
-                <p className="truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
+                <p className="truncate text-xs text-[var(--tessera-text-muted)]">
                   {t(`detail.${k}`)}
                 </p>
                 <p className="text-[0.82rem] font-semibold text-[var(--tessera-text-strong)]">
                   {m.value}
                 </p>
-                <p className="text-[0.56rem] text-[var(--tessera-text-muted)]">{m.delta}</p>
+                <p className="text-xs text-[var(--tessera-text-muted)]">{m.delta}</p>
               </div>
             ))}
           </div>
@@ -805,7 +805,7 @@ function Panel({
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-2.5">
-      <p className="mb-1.5 text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {title}
       </p>
       {children}
@@ -821,11 +821,11 @@ function Stat({
 }: { label: string; value: string; tone?: string; small?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-[0.54rem] text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="truncate text-xs text-[var(--tessera-text-muted)]">{label}</p>
       <p
         className={cn(
           "truncate font-semibold text-[var(--tessera-text-strong)]",
-          small ? "text-[0.62rem]" : "text-[0.82rem]",
+          small ? "text-xs" : "text-[0.82rem]",
           tone,
         )}
       >
@@ -885,7 +885,7 @@ function Donut({
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.62rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -906,7 +906,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -922,7 +922,7 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
       <dd
         className={cn(
           "min-w-0 truncate text-right text-[var(--tessera-text)]",
-          mono && "font-mono text-[0.62rem]",
+          mono && "font-mono text-xs",
         )}
       >
         {value}
@@ -933,7 +933,7 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
 
 function Footer({ t, data }: { t: T; data: Data }) {
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <span>{t("footer.total", { n: data.footer.total })}</span>
       <span>{t("footer.source", { src: data.footer.source })}</span>
     </footer>

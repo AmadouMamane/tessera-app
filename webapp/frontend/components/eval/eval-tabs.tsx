@@ -77,7 +77,7 @@ export function EvalTabs({
           // part of the control, not a legend somewhere else on the page.
           className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 px-1 pb-1 pt-0.5"
         >
-          <span className="px-2 text-[0.6rem] font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+          <span className="px-2 text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
             {groupLabels[group.key]}
           </span>
           <div className="flex">

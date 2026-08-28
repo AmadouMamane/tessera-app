@@ -89,6 +89,21 @@ Rapport détaillé : [`audit-360-2026-07-21.md`](./audit-360-2026-07-21.md).
 
 ## Log (newest first)
 
+- 2026-08-28 — **Cockpit premium local-first : responsive, accessibilité et preuves visuelles**
+  (branche `codex/ui-premium`). Le rail desktop devient un dock mobile à cinq entrées avec menu
+  complet ; les tableaux critiques ont une représentation carte sémantique à 390 px ; rubans,
+  titres, drawers, densité typographique et cibles tactiles ont été repris sans masquer les états
+  réellement dégradés. Le footer distingue désormais joignabilité de l'infrastructure et qualité
+  opérationnelle ; l'identité opératrice vient de la session ; le Tooltip Radix n'alterne plus
+  entre états contrôlé et non contrôlé. Storybook + addon a11y documentent les primitives, et
+  Playwright + axe-core figent cinq routes critiques, la géométrie mobile, les cibles de 44 px,
+  l'absence de débordement et trois références visuelles desktop/mobile. Preuves locales avant
+  landing : 927 tests frontend, build Next (256 variantes), build Storybook, TypeScript et Biome
+  verts ; Playwright sur la pile réelle locale, 5/5 routes sans violation axe sérieuse/critique,
+  5/5 routes mobiles conformes et snapshots sans skeleton. L'ADR 0056 grave que ces contrôles
+  restent exécutables sans cloud. Le landing et la bascule de `tessera.amadoumamane.fr` suivent
+  le protocole double-gate puis rebuild full-local + `served-check` sur le commit fusionné.
+
 - 2026-08-04 — **Provenance contextuelle des données non live** (branche
   `codex/contextual-provenance`). Le bandeau universel « Données de démonstration » est retiré :
   un vocabulaire fermé distingue désormais `reference`, `evaluation`, `simulation`, `preview`,

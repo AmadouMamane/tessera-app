@@ -80,7 +80,7 @@ export function ReplayCassettes({ asof }: { asof: string | null }) {
             above; a second beating dot in the same view would compete with it. */}
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[0.66rem] font-medium",
+            "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-medium",
             selectedId
               ? "border-gold-500/45 bg-gold-500/[0.12] text-gold-700 dark:text-gold-200"
               : "border-[rgba(96,194,242,0.26)] bg-[rgba(96,194,242,0.05)] text-[var(--tessera-text)]",
@@ -95,7 +95,7 @@ export function ReplayCassettes({ asof }: { asof: string | null }) {
           {selectedId ? t("cassette.modeReplay") : t("cassette.modeLive")}
         </span>
         {selected ? (
-          <span className="min-w-0 truncate text-[0.68rem] text-[var(--tessera-text)]">
+          <span className="min-w-0 truncate text-xs text-[var(--tessera-text)]">
             {new Date(selected.captured_at).toLocaleString()}
           </span>
         ) : null}
@@ -144,7 +144,7 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
       data-slot="card"
       className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <h3 className="text-[0.72rem] font-medium text-[var(--tessera-text)]">{title}</h3>
+      <h3 className="text-xs font-medium text-[var(--tessera-text)]">{title}</h3>
       {children}
     </section>
   );
@@ -172,11 +172,11 @@ function CassetteList({
         className,
       )}
     >
-      <div className="border-b border-[var(--tessera-border)] px-3 py-2 text-[0.72rem] font-medium text-[var(--tessera-text)]">
+      <div className="border-b border-[var(--tessera-border)] px-3 py-2 text-xs font-medium text-[var(--tessera-text)]">
         {t("cassette.listTitle", { count: bundles.length })}
       </div>
       {loaded && bundles.length === 0 ? (
-        <p className="px-3 py-8 text-center text-[0.7rem] text-[var(--tessera-text-muted)]">
+        <p className="px-3 py-8 text-center text-xs text-[var(--tessera-text-muted)]">
           {t("cassette.empty")}
         </p>
       ) : (
@@ -195,10 +195,10 @@ function CassetteList({
                 )}
               >
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <Truncate full={b.question} className="text-[0.7rem] text-[var(--tessera-text)]">
+                  <Truncate full={b.question} className="text-xs text-[var(--tessera-text)]">
                     {b.question}
                   </Truncate>
-                  <span className="flex flex-wrap items-center gap-x-2 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+                  <span className="flex flex-wrap items-center gap-x-2 text-xs tabular-nums text-[var(--tessera-text-muted)]">
                     <span>{new Date(b.captured_at).toLocaleString()}</span>
                     {b.agent_id ? <span>{b.agent_id}</span> : null}
                     <span>{b.original_model}</span>
@@ -220,7 +220,7 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
   return (
     <>
       <Panel title={t("cassette.turnTitle")}>
-        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[0.68rem] sm:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-3">
           <MetaRow label={t("cassette.metaModel")} value={bundle.original_model} />
           <MetaRow label={t("cassette.metaScore")} value={bundle.original_score.toFixed(2)} />
           <MetaRow label={t("cassette.metaLanguage")} value={bundle.language} />
@@ -244,7 +244,7 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
             }
           />
         </dl>
-        <div className="flex flex-col gap-1 text-[0.7rem]">
+        <div className="flex flex-col gap-1 text-xs">
           <span className="text-[var(--tessera-text-muted)]">{t("cassette.question")}</span>
           <p className="whitespace-pre-wrap text-[var(--tessera-text)]">{bundle.question}</p>
           <span className="mt-1 text-[var(--tessera-text-muted)]">{t("cassette.answer")}</span>
@@ -260,7 +260,7 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
         ) : (
           <>
             {!trace.positioned ? (
-              <p className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+              <p className="text-xs text-[var(--tessera-fg-warning)]">
                 {t("cassette.traceUnpositioned")}
               </p>
             ) : null}
@@ -271,7 +271,7 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
             </div>
             {trace.orphan_tools.length > 0 ? (
               <div className="flex flex-col gap-1 border-t border-[var(--tessera-border)] pt-2">
-                <span className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+                <span className="text-xs text-[var(--tessera-text-muted)]">
                   {t("cassette.orphanTools")}
                 </span>
                 {trace.orphan_tools.map((tool) => (
@@ -280,7 +280,7 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
               </div>
             ) : null}
             {trace.total_ms !== null ? (
-              <p className="text-[0.64rem] text-[var(--tessera-text-muted)]">
+              <p className="text-xs text-[var(--tessera-text-muted)]">
                 {t("cassette.traceTotal")}{" "}
                 <span className="tabular-nums">{fmtMs(trace.total_ms)}</span>
               </p>
@@ -297,10 +297,10 @@ function CassetteDetail({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof:
                 key={`${m.role}-${i}`}
                 className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2"
               >
-                <span className="text-[0.62rem] font-medium uppercase text-[var(--tessera-fg-accent)]">
+                <span className="text-xs font-medium uppercase text-[var(--tessera-fg-accent)]">
                   {m.role}
                 </span>
-                <p className="mt-1 whitespace-pre-wrap text-[0.68rem] leading-relaxed text-[var(--tessera-text)]">
+                <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-[var(--tessera-text)]">
                   {m.content}
                 </p>
               </div>
@@ -350,7 +350,7 @@ function CassetteSpanRow({
     : 100;
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2 text-[0.7rem]">
+      <div className="flex items-center justify-between gap-2 text-xs">
         <Truncate full={span.key} className="text-[var(--tessera-text)]">
           {span.key}
         </Truncate>
@@ -389,7 +389,7 @@ function ToolRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text)]",
+        "flex items-center gap-1.5 text-xs text-[var(--tessera-text)]",
         nested && "pl-4",
       )}
     >
@@ -424,12 +424,12 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
   return (
     <Panel title={t("cassette.replayTitle")}>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="inline-flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <label className="inline-flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
           {t("cassette.candidateModel")}
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.66rem] text-[var(--tessera-text)]"
+            className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)]"
           >
             {MODELS.map((m) => (
               <option key={m} value={m}>
@@ -442,24 +442,24 @@ function ReplayAction({ t, bundle, asof }: { t: T; bundle: ReplayBundle; asof: s
           type="button"
           disabled={frozen || mutation.isPending}
           onClick={() => mutation.mutate()}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[#7c5cf5]/60 bg-[#7c5cf5]/10 px-2.5 text-[0.68rem] font-medium text-[var(--tessera-fg-accent)] transition-colors hover:bg-[#7c5cf5]/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[#7c5cf5]/60 bg-[#7c5cf5]/10 px-2.5 text-xs font-medium text-[var(--tessera-fg-accent)] transition-colors hover:bg-[#7c5cf5]/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Play className="h-3 w-3" />
           {mutation.isPending ? t("cassette.replayRunning") : t("cassette.replayRun")}
         </button>
         {frozen ? (
-          <span className="text-[0.64rem] text-[var(--tessera-fg-warning)]">
+          <span className="text-xs text-[var(--tessera-fg-warning)]">
             {t("cassette.replayFrozen")}
           </span>
         ) : null}
         {mutation.isError ? (
-          <span className="text-[0.64rem] text-[var(--tessera-fg-danger)]">
+          <span className="text-xs text-[var(--tessera-fg-danger)]">
             {t("cassette.replayFailed")}
           </span>
         ) : null}
       </div>
       {result ? (
-        <div className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2 text-[0.68rem]">
+        <div className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2 text-xs">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
             <span className="text-[var(--tessera-text-muted)]">{result.candidate_model}</span>
             <span

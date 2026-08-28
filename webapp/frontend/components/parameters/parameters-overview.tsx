@@ -272,7 +272,7 @@ function ConfigVersionBar({ t, data }: { t: T; data: Data }) {
         {t("version.active")}{" "}
         <span className="font-mono font-semibold text-[var(--tessera-text)]">{c.version}</span>
       </span>
-      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/15 px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-fg-success)]">
+      <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/15 px-1.5 py-0.5 text-xs text-[var(--tessera-fg-success)]">
         {c.env}
       </span>
       <Sep />
@@ -298,18 +298,14 @@ function CompactKpi({
 }: { kpi: Data["kpis"][number]; label: string; info?: ReactNode }) {
   return (
     <div className="flex h-[96px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
       <p className="mt-0.5 text-[1.4rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
         {kpi.value}
       </p>
-      <Truncate
-        as="p"
-        full={kpi.sub}
-        className="mt-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]"
-      >
+      <Truncate as="p" full={kpi.sub} className="mt-0.5 text-xs text-[var(--tessera-text-muted)]">
         {kpi.sub}
       </Truncate>
       <MetricSparkline className="mt-auto h-4 w-full" values={kpi.series} tone="success" />
@@ -336,17 +332,17 @@ function QuickConfig({
             >
               <div className="flex items-center gap-1.5">
                 <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
-                <span className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]">
+                <span className="truncate text-xs font-medium text-[var(--tessera-text)]">
                   {t(`cat.${c.key}`)}
                 </span>
               </div>
-              <p className="line-clamp-2 text-[0.6rem] leading-tight text-[var(--tessera-text-muted)]">
+              <p className="line-clamp-2 text-xs leading-tight text-[var(--tessera-text-muted)]">
                 {c.desc}
               </p>
               <button
                 type="button"
                 onClick={() => onConfigure(CAT_TAB[c.key] ?? "general")}
-                className="mt-auto self-start text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
+                className="mt-auto self-start text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
               >
                 {t("quick.configure")} →
               </button>
@@ -375,9 +371,9 @@ function RecentParams({
       action={<ViewAll label={t("drill.audit")} href="/prouver/audit-logs" />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {cols.map((c) => (
                 <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
                   {t(`col.${c}`)}
@@ -401,13 +397,13 @@ function RecentParams({
                   key={p.name}
                   className="border-b border-[var(--tessera-border)]/60 last:border-0"
                 >
-                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text)]">
+                  <td className="px-2 py-1.5 font-mono text-xs text-[var(--tessera-text)]">
                     {p.name}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
                     {t(`tabs.${p.category}`)}
                   </td>
-                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">
+                  <td className="px-2 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]">
                     {p.value}
                   </td>
                   <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{p.modified_by}</td>
@@ -434,12 +430,12 @@ function UsagePolicies({ t, data }: { t: T; data: Data }) {
         {data.usage_policies.map((p) => (
           <li
             key={p.name}
-            className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.68rem]"
+            className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs"
           >
             <Truncate full={p.name} className="min-w-0 text-[var(--tessera-text)]">
               {p.name}
             </Truncate>
-            <span className="shrink-0 font-mono text-[0.62rem] text-[var(--tessera-fg-info)]">
+            <span className="shrink-0 font-mono text-xs text-[var(--tessera-fg-info)]">
               {p.value}
             </span>
           </li>
@@ -465,9 +461,9 @@ function ModelsConfigured({ t, data }: { t: T; data: Data }) {
       action={<ViewAll label={t("models.manage")} href="/configurer/modeles" />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {cols.map((c) => (
                 <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
                   {t(`models.${c}`)}
@@ -478,7 +474,7 @@ function ModelsConfigured({ t, data }: { t: T; data: Data }) {
           <tbody>
             {models.map((m) => (
               <tr key={m.name} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text)]">
+                <td className="px-2 py-1.5 font-mono text-xs text-[var(--tessera-text)]">
                   {m.name}
                 </td>
                 <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{m.provider}</td>
@@ -545,12 +541,12 @@ function ConfigState({ t, data, onViewDetail }: { t: T; data: Data; onViewDetail
             <span className="max-w-[54px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
               {cs.total}
             </span>
-            <span className="line-clamp-2 max-w-[54px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+            <span className="line-clamp-2 max-w-[54px] break-words text-center text-xs uppercase leading-tight text-[var(--tessera-text-muted)]">
               Total
             </span>
           </div>
         </div>
-        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.64rem]">
+        <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
           {cs.slices.map((s) => (
             <li key={s.key} className="flex flex-col gap-0.5">
               <span className="flex min-w-0 items-center gap-1">
@@ -582,7 +578,7 @@ function Compliance({ t, data }: { t: T; data: Data }) {
     >
       <ul className="flex flex-col gap-1.5">
         {data.compliance.map((c) => (
-          <li key={c.key} className="flex items-center gap-2 text-[0.7rem]">
+          <li key={c.key} className="flex items-center gap-2 text-xs">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-success)]" />
             <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
               {t(`compliance.${c.key}`)}
@@ -613,7 +609,7 @@ function Backup({ t, data }: { t: T; data: Data }) {
   ];
   return (
     <Panel title={t("backup.title")} info={<ExplainInfo k="backup" title={t("backup.title")} />}>
-      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+      <dl className="flex flex-col gap-1.5 text-xs">
         {rows.map(([k, v]) => (
           <KV key={k} label={k} value={v} />
         ))}
@@ -651,7 +647,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -687,7 +683,7 @@ function Sep() {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.64rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
+    "flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>
@@ -707,7 +703,7 @@ function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClic
 
 function Footer({ t, data }: { t: T; data: Data }) {
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <span>{t("footer.version", { v: data.footer.version })}</span>
       <span>{t("footer.source", { src: data.footer.source })}</span>
     </footer>

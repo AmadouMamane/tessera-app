@@ -67,7 +67,7 @@ function AgentScopeFilterInner({ contentClassName }: { contentClassName?: string
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex h-8 items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-2.5 text-[0.72rem] font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
+          className="flex h-8 items-center gap-2 rounded-md border border-dashed border-[var(--tessera-border-strong)] bg-[var(--tessera-surface-2)] px-2.5 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--tessera-muted)]"
           title={t("hint")}
         >
           <Filter className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]" />

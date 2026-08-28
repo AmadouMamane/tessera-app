@@ -451,7 +451,7 @@ export function QualityGauge({ summary }: { summary: ReturnType<typeof summarize
           <span className="max-w-[88px] truncate font-serif text-4xl font-semibold leading-none tabular-nums text-[var(--tessera-fg-success)]">
             {summary.ok}
           </span>
-          <span className="line-clamp-2 max-w-[88px] break-words text-center text-[0.7rem] leading-tight text-[var(--muted-foreground)]">
+          <span className="line-clamp-2 max-w-[88px] break-words text-center text-xs leading-tight text-[var(--muted-foreground)]">
             / {summary.total} {tq("signalsTable.status.ok").toLowerCase()}
           </span>
         </div>
@@ -571,7 +571,7 @@ export function SignalsTable({
         </div>
         {/* Entity filter chips */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[0.7rem] text-[var(--muted-foreground)]">
+          <span className="text-xs text-[var(--muted-foreground)]">
             {tq("signalsTable.cols.entity")} :
           </span>
           <Chip active={entity === "all"} onClick={() => setEntity("all")}>
@@ -602,7 +602,7 @@ export function SignalsTable({
               narrow viewport rather than crushing everything. */}
             <table data-premium-table="true" className="w-full min-w-[960px] text-xs">
               <thead>
-                <tr className="border-[var(--border)] border-b text-left text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                <tr className="border-[var(--border)] border-b text-left text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                   <th className="py-1.5 pr-2 pl-5 font-medium whitespace-nowrap">
                     {tq("signalsTable.cols.id")}
                   </th>
@@ -656,7 +656,7 @@ export function SignalsTable({
                           <button
                             type="button"
                             onClick={() => toggle(g.status)}
-                            className={`flex items-center gap-1 text-[0.7rem] font-semibold ${tone}`}
+                            className={`flex items-center gap-1 text-xs font-semibold ${tone}`}
                           >
                             {open ? (
                               <ChevronDown className="h-3 w-3" />
@@ -700,7 +700,7 @@ export function SignalsTable({
                                 </Truncate>
                                 <Truncate
                                   full={r.metric}
-                                  className="font-mono text-[0.66rem] text-[var(--muted-foreground)]"
+                                  className="font-mono text-xs text-[var(--muted-foreground)]"
                                 >
                                   {r.metric}
                                 </Truncate>
@@ -753,7 +753,7 @@ export function SignalsTable({
                                   (served 2026-08-25 — all three na rows read as unexplained
                                   holes while every source had answered). */}
                               {r.status === "na" && r.sample !== "—" ? (
-                                <span className="mt-0.5 block max-w-[13rem] text-[0.66rem] leading-snug text-[var(--muted-foreground)]">
+                                <span className="mt-0.5 block max-w-[13rem] text-xs leading-snug text-[var(--muted-foreground)]">
                                   {r.sample}
                                 </span>
                               ) : null}
@@ -764,7 +764,7 @@ export function SignalsTable({
                                 answers a different question ("which way, over what sample")
                                 and it is the only thing this column said until 2026-08-01. */}
                               {r.noCurve ? (
-                                <span className="text-[0.66rem]" title={tnc(`why.${r.noCurve}`)}>
+                                <span className="text-xs" title={tnc(`why.${r.noCurve}`)}>
                                   {tnc(r.noCurve)}
                                 </span>
                               ) : hasDrawableCurve(r.curve ?? []) ? (
@@ -778,10 +778,10 @@ export function SignalsTable({
                                 <NoHistoryLabel
                                   values={r.curve ?? []}
                                   bucketHours={r.bucketHours}
-                                  className="text-[0.66rem]"
+                                  className="text-xs"
                                 />
                               )}
-                              <span className="block text-[0.66rem]">
+                              <span className="block text-xs">
                                 {r.delta == null ? "—" : `${r.delta >= 0 ? "↑" : "↓"} ${r.sample}`}
                               </span>
                             </td>
@@ -798,7 +798,7 @@ export function SignalsTable({
                               </Badge>
                             </td>
                             <td className="py-2 pr-4 pl-2">
-                              <span className="flex items-center justify-end gap-1 text-[0.66rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
+                              <span className="flex items-center justify-end gap-1 text-xs text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
                                 <span className="opacity-0 transition-opacity group-hover:opacity-100">
                                   {tt("rowOpen")}
                                 </span>
@@ -926,12 +926,12 @@ export function ThemeDistribution({ rows }: { rows: SignalRow[] }) {
               <span className="max-w-[63px] truncate font-serif text-xl font-semibold leading-none tabular-nums">
                 {total}
               </span>
-              <span className="line-clamp-2 max-w-[63px] break-words text-center text-[0.66rem] leading-tight text-[var(--muted-foreground)]">
+              <span className="line-clamp-2 max-w-[63px] break-words text-center text-xs leading-tight text-[var(--muted-foreground)]">
                 {tq("signalsTable.signalsLabel")}
               </span>
             </div>
           </div>
-          <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.7rem]">
+          <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
             {counts.map((e) => (
               <li key={e.cat} className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-1.5">
@@ -977,7 +977,7 @@ export function SignalHeatmap({ rows }: { rows: SignalRow[] }) {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full text-[0.66rem]">
+          <table className="w-full text-xs">
             <thead>
               <tr className="text-[var(--muted-foreground)]">
                 <th className="pb-1 text-left font-medium">{tq("signalsTable.cols.entity")}</th>
@@ -1075,18 +1075,15 @@ function DeltaVsYesterday({
   goodUp: boolean;
 }) {
   const tq = useTranslations("quality");
-  if (delta == null)
-    return <span className="text-[0.66rem] text-[var(--muted-foreground)]">—</span>;
+  if (delta == null) return <span className="text-xs text-[var(--muted-foreground)]">—</span>;
   if (delta === 0)
     return (
-      <span className="text-[0.66rem] text-[var(--muted-foreground)]">
-        — {tq("signalsKpi.stable")}
-      </span>
+      <span className="text-xs text-[var(--muted-foreground)]">— {tq("signalsKpi.stable")}</span>
     );
   const up = delta > 0;
   const tone = up === goodUp ? "var(--tessera-fg-success)" : color;
   return (
-    <span className="flex items-center gap-1 text-[0.66rem] tabular-nums" style={{ color: tone }}>
+    <span className="flex items-center gap-1 text-xs tabular-nums" style={{ color: tone }}>
       {up ? "▲" : "▼"} {up ? "+" : ""}
       {delta} {tq("signalsKpi.vsYesterday")}
     </span>
@@ -1160,7 +1157,7 @@ export function SignalKpis({
     <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
       {tiles.map((t) => (
         <Card key={t.key} className="flex flex-col gap-1 p-2.5">
-          <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--muted-foreground)]">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
             <span
               className="h-1.5 w-1.5 rounded-full"
               style={{ background: STATUS_HEX[t.status] }}
@@ -1279,7 +1276,7 @@ export function SignalsRail({
               <QInfo title={tq("signalsRail.fiche")} k="sigRailFiche" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1.5 text-[0.7rem]">
+          <CardContent className="flex flex-col gap-1.5 text-xs">
             {fiche ? (
               <>
                 <div className="flex items-center justify-between gap-2">
@@ -1327,7 +1324,7 @@ export function SignalsRail({
               <p className="text-xs text-[var(--muted-foreground)]">{tq("failed.empty")}</p>
             ) : (
               cases.map((c) => (
-                <div key={c.case_id} className="flex items-center gap-2 text-[0.7rem]">
+                <div key={c.case_id} className="flex items-center gap-2 text-xs">
                   <span className="shrink-0 font-mono text-[var(--tessera-green)]">
                     {c.case_id}
                   </span>
@@ -1350,7 +1347,7 @@ export function SignalsRail({
                 <QInfo title={tq("signalsRail.release")} k="sigRailRelease" />
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-1.5 text-[0.7rem]">
+            <CardContent className="flex flex-col gap-1.5 text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-serif text-base font-semibold tabular-nums">
                   {current.version}
@@ -1390,8 +1387,8 @@ export function SignalsRail({
               activity.slice(0, 3).map((a) => (
                 <div key={a.key} className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--tessera-green)]" />
-                  <Truncate className="min-w-0 flex-1 text-[0.7rem]">{a.label}</Truncate>
-                  <span className="shrink-0 font-mono text-[0.66rem] text-[var(--muted-foreground)]">
+                  <Truncate className="min-w-0 flex-1 text-xs">{a.label}</Truncate>
+                  <span className="shrink-0 font-mono text-xs text-[var(--muted-foreground)]">
                     {a.detail}
                   </span>
                 </div>
@@ -1415,7 +1412,7 @@ export function SignalsRail({
             </RailAction>
             <RailAction onClick={() => onOpen("signals")}>{tq("reco.catalog")}</RailAction>
             <RailAction onClick={onEvidence}>{tq("reco.seeEvidence")}</RailAction>
-            <div className="mt-0.5 flex items-center justify-between gap-2 rounded-md border border-red-500/40 px-2 py-1 text-[0.7rem]">
+            <div className="mt-0.5 flex items-center justify-between gap-2 rounded-md border border-red-500/40 px-2 py-1 text-xs">
               <span className="text-[var(--tessera-fg-danger)]">{tq("reco.block")}</span>
               <Badge tone="warning">{tq("signalsRail.dualControl")}</Badge>
             </div>
@@ -1444,7 +1441,7 @@ function RailLink({ onClick, children }: { onClick: () => void; children: React.
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 text-[0.7rem] text-[var(--tessera-green)] hover:underline"
+      className="inline-flex items-center gap-1 text-xs text-[var(--tessera-green)] hover:underline"
     >
       {children}
       <ChevronRight className="h-3 w-3" />
@@ -1457,7 +1454,7 @@ function RailAction({ onClick, children }: { onClick: () => void; children: Reac
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-2 rounded-md px-1.5 py-0.5 text-left text-[0.7rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+      className="flex items-center gap-2 rounded-md px-1.5 py-0.5 text-left text-xs text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
     >
       <ChevronRight className="h-3 w-3 shrink-0" />
       <span className="truncate">{children}</span>

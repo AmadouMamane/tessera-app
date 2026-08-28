@@ -158,7 +158,7 @@ function Zone({
       data-slot="card"
       className="min-w-0 rounded-xl border border-[var(--tessera-border)]/50 bg-[var(--tessera-surface)]/25 p-2.5"
     >
-      <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mt-0.5 mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         <Icon className={`h-3.5 w-3.5 shrink-0 ${iconClassName}`} />
         {label}
         {info}
@@ -619,7 +619,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
           content simultaneously actionable. The main scroller owns 1.25rem of top padding;
           consuming it at the sticky threshold makes this opaque stack meet the header, so
           scrolling cards cannot remain visible in a strip above or between its bands. */}
-      <div className="-mx-3 flex flex-col gap-1.5 bg-[var(--tessera-bg)] px-3 pb-1.5 pt-1.5 shadow-[0_-4px_0_0_var(--tessera-bg)] md:sticky md:-top-5 md:z-40">
+      <div className="flex flex-col gap-1.5 bg-[var(--tessera-bg)] pb-1.5 pt-1.5 shadow-[0_-4px_0_0_var(--tessera-bg)] md:sticky md:-top-5 md:z-40 md:-mx-6 md:px-6">
         {/* The temporal rail LEADS the chrome — directly beneath the SLO alert the page
             renders above the dashboard (user feedback) — then the actions + tabs. */}
         <SignalCommandBar
@@ -633,7 +633,7 @@ export function ObservabilityDashboard({ agentScope }: { agentScope?: ReactNode 
             left-aligned coverage descriptor anchors the band so the buttons never
             float unmoored. */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="flex min-w-0 items-center gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
+          <span className="flex min-w-0 items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
             <Gauge className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
             <span className="truncate">
               {/* The declared share comes from the catalogue read. When that read FAILED, the
@@ -894,7 +894,7 @@ function StatusBar({
             dot: "bg-[var(--tessera-green)]",
           };
   return (
-    <div className="mt-auto -mx-3 flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="mt-auto flex h-9 items-center gap-4 overflow-hidden border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs text-[var(--tessera-text-muted)] md:-mx-6 md:px-6">
       {items.map((it) => (
         <span key={it.label} className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
           <it.icon className={`h-3.5 w-3.5 shrink-0 ${it.tone ?? ""}`} />

@@ -103,14 +103,14 @@ function ChainPopover({ trigger, children }: { trigger: ReactNode; children: Rea
 function EdgeLine({ edge }: { edge: ChainEdge }) {
   const t = useTranslations("health.chain");
   return (
-    <li className="text-[0.7rem] leading-snug text-[var(--tessera-tooltip-fg-muted)]">
+    <li className="text-xs leading-snug text-[var(--tessera-tooltip-fg-muted)]">
       <span className="text-[var(--tessera-tooltip-fg)]">
         {edge.source} → {edge.target}
       </span>
       {" · "}
       {t(`signal.${edge.signal}`)}
       {edge.profile ? ` (${t(`profile.${edge.profile}`)})` : ""}
-      <span className="block truncate font-mono text-[0.62rem]" title={edge.declared_in}>
+      <span className="block truncate font-mono text-xs" title={edge.declared_in}>
         {edge.declared_in}
       </span>
     </li>
@@ -205,7 +205,7 @@ function ChainGraph({ data }: { data: ComponentsResponse }) {
         {byStage.map((column, index) => (
           <div key={column.stage} className="flex min-w-0 flex-1 items-stretch gap-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <p className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                 {t(`stage.${column.stage}`)}
               </p>
               <div
@@ -274,7 +274,7 @@ function ChainNodeCard({
               className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
             >
               <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
-              <span className="min-w-0 flex-1 truncate text-[0.72rem] font-medium text-[var(--foreground)]">
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--foreground)]">
                 {node.key}
               </span>
               {/* The emitter cannot go red here and the reader is told why, rather than left
@@ -290,11 +290,11 @@ function ChainNodeCard({
         >
           <p className="flex items-center justify-between gap-2 font-semibold text-[var(--tessera-tooltip-fg)] text-xs">
             {node.key}
-            <span className="font-normal text-[0.62rem] uppercase tracking-wide text-[var(--tessera-tooltip-fg-muted)]">
+            <span className="font-normal text-xs uppercase tracking-wide text-[var(--tessera-tooltip-fg-muted)]">
               {t(`stage.${node.stage}`)}
             </span>
           </p>
-          <p className="mt-0.5 text-[0.7rem] text-[var(--tessera-tooltip-fg-muted)]">
+          <p className="mt-0.5 text-xs text-[var(--tessera-tooltip-fg-muted)]">
             {node.self_evident
               ? t("selfEvident")
               : `${t("verdictLine")} : ${t(`nodeState.${node.verdict}`)}`}
@@ -306,7 +306,7 @@ function ChainNodeCard({
           </p>
           {incoming.length + outgoing.length > 0 ? (
             <>
-              <p className="mt-2 border-t border-[var(--tessera-tooltip-border)] pt-2 font-medium text-[0.58rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
+              <p className="mt-2 border-t border-[var(--tessera-tooltip-border)] pt-2 font-medium text-xs text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("declaredEdges")}
               </p>
               <ul className="mt-1 flex max-h-48 flex-col gap-1 overflow-y-auto">
@@ -346,7 +346,7 @@ function ChainNodeCard({
                 signal: t(`signal.${edge.signal}`),
                 where: edge.declared_in,
               })}
-              className={`text-[0.58rem] ${SIGNAL_LINE[edge.signal]}`}
+              className={`text-xs ${SIGNAL_LINE[edge.signal]}`}
             >
               ← {edge.source}
               {edge.profile ? ` (${t(`profile.${edge.profile}`)})` : ""}

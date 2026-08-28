@@ -95,11 +95,11 @@ export async function QualityViewSwitch({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[0.8rem] font-semibold">{view.label}</span>
-              <span className="mt-0.5 block text-[0.66rem] text-[var(--tessera-text-muted)]">
+              <span className="mt-0.5 block text-xs text-[var(--tessera-text-muted)]">
                 {view.sub}
               </span>
               {view.status ? (
-                <span className="mt-1 flex items-center gap-1.5 text-[0.66rem]">
+                <span className="mt-1 flex items-center gap-1.5 text-xs">
                   <span
                     className={cn("h-1.5 w-1.5 shrink-0 rounded-full", view.status.dot)}
                     aria-hidden
@@ -111,11 +111,11 @@ export async function QualityViewSwitch({
               ) : null}
             </span>
             {isActive ? (
-              <span className="shrink-0 text-[0.66rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
+              <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-[var(--tessera-fg-accent)]">
                 {t("views.current")}
               </span>
             ) : (
-              <span className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-text)]">
+              <span className="flex shrink-0 items-center gap-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)] transition-colors group-hover:text-[var(--tessera-text)]">
                 {t("views.enter")}
                 <ChevronRight
                   className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"

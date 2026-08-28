@@ -69,9 +69,7 @@ function TabHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <h2 className="text-[0.95rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
-      {subtitle ? (
-        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{subtitle}</p>
-      ) : null}
+      {subtitle ? <p className="text-xs text-[var(--tessera-text-muted)]">{subtitle}</p> : null}
     </div>
   );
 }
@@ -80,7 +78,7 @@ function TabHeader({ title, subtitle }: { title: string; subtitle?: string }) {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="flex min-w-[92px] flex-col gap-0.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {label}
       </span>
       <span
@@ -97,7 +95,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
 
 function DrawerField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-[0.72rem]">
+    <div className="flex items-center justify-between gap-3 text-xs">
       <span className="text-[var(--tessera-text-muted)]">{label}</span>
       <span className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
         {children}
@@ -109,7 +107,7 @@ function DrawerField({ label, children }: { label: string; children: React.React
 function DrawerBlock({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-      <h3 className="mb-1.5 text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {title}
       </h3>
       {children}
@@ -162,7 +160,7 @@ export function SetsTab({ data }: { data: Data }) {
             {r.name}
           </Truncate>
           {r.active ? (
-            <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-[0.5rem] font-medium uppercase text-[var(--tessera-fg-success)]">
+            <span className="shrink-0 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-1.5 py-0.5 text-xs font-medium uppercase text-[var(--tessera-fg-success)]">
               {pick(locale, "Actif", "Aktiv", "Active")}
             </span>
           ) : null}
@@ -176,16 +174,14 @@ export function SetsTab({ data }: { data: Data }) {
       sortValue: (r) => (r.bound ? `1${r.agent_id}` : "0"),
       render: (r) =>
         r.bound ? (
-          <span className="text-[0.68rem] text-[var(--tessera-text)]">
+          <span className="text-xs text-[var(--tessera-text)]">
             {sets.bound_label}
-            <span className="ml-1 font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
+            <span className="ml-1 font-mono text-xs text-[var(--tessera-text-muted)]">
               {r.agent_id}
             </span>
           </span>
         ) : (
-          <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">
-            {sets.shared_label}
-          </span>
+          <span className="text-xs text-[var(--tessera-text-muted)]">{sets.shared_label}</span>
         ),
     },
     {
@@ -198,7 +194,7 @@ export function SetsTab({ data }: { data: Data }) {
         <span title={r.floor_count > 0 ? `+${r.floor_count} ${sets.floor_note}` : undefined}>
           {r.case_count}
           {r.floor_count > 0 ? (
-            <span className="ml-1 text-[0.58rem] text-[var(--tessera-text-muted)]">
+            <span className="ml-1 text-xs text-[var(--tessera-text-muted)]">
               (+{r.floor_count})
             </span>
           ) : null}
@@ -325,12 +321,12 @@ function SetDrawer({
       onClose={onClose}
     >
       {row.active ? (
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-success)]">
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-[var(--tessera-fg-success)]">
           {labels.active_label}
         </div>
       ) : null}
       {row.description ? (
-        <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
           {row.description}
         </p>
       ) : null}
@@ -349,7 +345,7 @@ function SetDrawer({
       </DrawerBlock>
       {row.gate_rationale ? (
         <DrawerBlock title={labels.rationale_label}>
-          <p className="text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
             {row.gate_rationale}
           </p>
         </DrawerBlock>
@@ -357,10 +353,10 @@ function SetDrawer({
       <DrawerBlock title={`${labels.cases_label} (${setCases.length})`}>
         <ul className="flex flex-col gap-1">
           {setCases.map((c) => (
-            <li key={c.id} className="flex items-center gap-2 text-[0.68rem]">
+            <li key={c.id} className="flex items-center gap-2 text-xs">
               <span
                 className={cn(
-                  "shrink-0 rounded border px-1 py-0.5 text-[0.5rem] font-medium uppercase",
+                  "shrink-0 rounded border px-1 py-0.5 text-xs font-medium uppercase",
                   SEVERITY_PILL[c.severity_tone] ?? SEVERITY_PILL.muted,
                 )}
               >
@@ -369,7 +365,7 @@ function SetDrawer({
               <Truncate full={c.title} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {c.title}
               </Truncate>
-              <span className="shrink-0 text-[0.58rem] text-[var(--tessera-text-muted)]">
+              <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">
                 {c.category_label}
               </span>
             </li>
@@ -448,10 +444,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
           <Truncate full={r.title} className="font-medium text-[var(--tessera-text)]">
             {r.title}
           </Truncate>
-          <Truncate
-            full={r.case_id}
-            className="font-mono text-[0.58rem] text-[var(--tessera-text-muted)]"
-          >
+          <Truncate full={r.case_id} className="font-mono text-xs text-[var(--tessera-text-muted)]">
             {r.case_id}
           </Truncate>
         </div>
@@ -465,7 +458,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       render: (r) => (
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[0.54rem] font-medium",
+            "rounded-full border px-2 py-0.5 text-xs font-medium",
             TYPE_TONE[r.category_tone] ?? TYPE_TONE.tpl,
           )}
         >
@@ -486,12 +479,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       width: "14%",
       sortValue: (r) => (r.passed ? 1 : 0),
       render: (r) => (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 text-[0.66rem]",
-            PASS_TONE[r.status_tone],
-          )}
-        >
+        <span className={cn("inline-flex items-center gap-1.5 text-xs", PASS_TONE[r.status_tone])}>
           <span className={cn("h-1.5 w-1.5 rounded-full", PASS_DOT[r.status_tone])} />
           {r.status_label}
         </span>
@@ -549,7 +537,7 @@ export function ResultsTab({ data, mode }: { data: Data; mode: "all" | "failed" 
       {mode === "failed" ? (
         <Link
           href={agentPath(agentId, "evaluations") as Route}
-          className="flex items-center gap-1.5 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+          className="flex items-center gap-1.5 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           <ShieldAlert className="h-3.5 w-3.5" />
           {pick(
@@ -641,7 +629,7 @@ function ResultDrawer({
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.62rem] font-medium",
+            "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium",
             row.passed
               ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
               : "border-[#e0566f]/50 bg-[#e0566f]/10 text-[var(--tessera-fg-danger)]",
@@ -652,33 +640,33 @@ function ResultDrawer({
         </span>
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[0.56rem] font-medium",
+            "rounded-full border px-2 py-0.5 text-xs font-medium",
             TYPE_TONE[row.category_tone] ?? TYPE_TONE.tpl,
           )}
         >
           {row.category_label}
         </span>
         {row.escalated ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[0.56rem] font-medium text-[var(--tessera-fg-warning)]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-[var(--tessera-fg-warning)]">
             <AlertTriangle className="h-3 w-3" /> {labels.escalated}
           </span>
         ) : null}
       </div>
       <DrawerBlock title={labels.question}>
-        <p className="whitespace-pre-wrap text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
+        <p className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--tessera-text)]">
           {row.question || (
             <span className="italic text-[var(--tessera-text-muted)]">{labels.no_question}</span>
           )}
         </p>
       </DrawerBlock>
       <DrawerBlock title={labels.response}>
-        <p className="whitespace-pre-wrap text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        <p className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--tessera-text-muted)]">
           {row.response || "-"}
         </p>
       </DrawerBlock>
       {row.reasons.length > 0 ? (
         <DrawerBlock title={labels.diagnostic}>
-          <ul className="flex flex-col gap-1 text-[0.7rem]">
+          <ul className="flex flex-col gap-1 text-xs">
             {row.reasons.map((reason) => (
               <li key={reason} className="flex items-start gap-1.5">
                 <span
@@ -699,14 +687,14 @@ function ResultDrawer({
             {row.tools.map((tool) => (
               <span
                 key={tool}
-                className="inline-flex items-center gap-1 rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[0.6rem] font-mono text-[var(--tessera-fg-info)]"
+                className="inline-flex items-center gap-1 rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-xs font-mono text-[var(--tessera-fg-info)]"
               >
                 <Wrench className="h-2.5 w-2.5" /> {tool}
               </span>
             ))}
           </div>
         ) : (
-          <p className="text-[0.68rem] text-[var(--tessera-text-muted)]">{labels.no_tools}</p>
+          <p className="text-xs text-[var(--tessera-text-muted)]">{labels.no_tools}</p>
         )}
       </DrawerBlock>
       <div className="flex flex-col gap-1.5">
@@ -757,13 +745,13 @@ function RunSelect({
 }) {
   return (
     <label className="flex flex-1 flex-col gap-1">
-      <span className="text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-[0.74rem] text-[var(--tessera-text)] focus:border-[#8b7cf0] focus:outline-none"
+        className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 text-xs text-[var(--tessera-text)] focus:border-[#8b7cf0] focus:outline-none"
       >
         {items.map((r, i) => (
           <option key={r.run_at} value={i}>
@@ -892,7 +880,7 @@ export function ComparaisonsTab({ data }: { data: Data }) {
         />
       </div>
       {!sameCatalogue ? (
-        <p className="rounded-md border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-warning)]">
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/5 px-2.5 py-1.5 text-xs text-[var(--tessera-fg-warning)]">
           {pick(
             locale,
             "Versions de catalogue différentes - l'écart de taux compare deux examens distincts.",
@@ -907,7 +895,7 @@ export function ComparaisonsTab({ data }: { data: Data }) {
           className="w-full min-w-[560px] border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-3 py-2 font-medium">
                 {pick(locale, "Métrique", "Metrik", "Metric")}
               </th>
@@ -990,7 +978,7 @@ export function VersionsTab({ data }: { data: Data }) {
       width: "16%",
       sortValue: (r) => r.catalogue_version,
       render: (r) => (
-        <span className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+        <span className="font-mono text-xs text-[var(--tessera-text-muted)]">
           {r.catalogue_version || "-"}
         </span>
       ),
@@ -1088,9 +1076,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
       onClose={onClose}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={cn("rounded-full border px-2 py-0.5 text-[0.62rem] font-semibold", v.tone)}
-        >
+        <span className={cn("rounded-full border px-2 py-0.5 text-xs font-semibold", v.tone)}>
           {pick(locale, "Gate :", "Gate:", "Gate:")} {v.label}
         </span>
       </div>
@@ -1130,7 +1116,7 @@ function VersionDrawer({ row, onClose }: { row: RunItem; onClose: () => void }) 
       </DrawerBlock>
       <Link
         href={`${agentPath(agentId, "evaluations")}?run=${encodeURIComponent(row.run_at)}` as Route}
-        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+        className="flex items-center gap-1.5 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {pick(
           locale,
@@ -1348,7 +1334,7 @@ export function ExportsTab({ data }: { data: Data }) {
                 <span className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]">
                   {c.icon}
                 </span>
-                <span className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.54rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <span className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
                   {c.format}
                 </span>
               </div>
@@ -1356,14 +1342,12 @@ export function ExportsTab({ data }: { data: Data }) {
                 <h3 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">
                   {c.title}
                 </h3>
-                <p className="text-[0.68rem] leading-snug text-[var(--tessera-text-muted)]">
-                  {c.desc}
-                </p>
+                <p className="text-xs leading-snug text-[var(--tessera-text-muted)]">{c.desc}</p>
               </div>
               <button
                 type="button"
                 onClick={c.onExport}
-                className="flex items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 py-1.5 text-[0.72rem] font-medium text-white hover:bg-[#7c5cf5]"
+                className="flex items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#7c5cf5]"
               >
                 <Download className="h-3.5 w-3.5" />{" "}
                 {pick(locale, "Télécharger", "Herunterladen", "Download")}
@@ -1372,7 +1356,7 @@ export function ExportsTab({ data }: { data: Data }) {
           ))}
         </div>
       )}
-      <p className="flex items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
         <FileText className="h-3.5 w-3.5" />
         {pick(
           locale,

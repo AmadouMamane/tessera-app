@@ -161,9 +161,7 @@ export function IncidentsOverview() {
           ending at T, bundles ≤ T, durable incidents replayed at T. */}
       <AgirRail />
       {frozen ? (
-        <output className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
-          {tr("frozenTitle")}
-        </output>
+        <output className="text-xs text-[var(--tessera-fg-warning)]">{tr("frozenTitle")}</output>
       ) : null}
       {showCreate && !frozen ? (
         <CreateIncidentForm
@@ -298,7 +296,7 @@ function CreateIncidentForm({
   const [domain, setDomain] = useState("securite");
   return (
     <section className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+      <label className="flex min-w-[16rem] flex-1 flex-col gap-1 text-xs text-[var(--tessera-text-muted)]">
         {t("durable.formTitle")}
         <input
           value={title}
@@ -307,7 +305,7 @@ function CreateIncidentForm({
           className="h-9 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 text-sm text-[var(--tessera-text)] outline-none focus:border-[#2e72d2]"
         />
       </label>
-      <label className="flex flex-col gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+      <label className="flex flex-col gap-1 text-xs text-[var(--tessera-text-muted)]">
         {t("durable.formSeverity")}
         <select
           value={severity}
@@ -322,7 +320,7 @@ function CreateIncidentForm({
           ))}
         </select>
       </label>
-      <label className="flex flex-col gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+      <label className="flex flex-col gap-1 text-xs text-[var(--tessera-text-muted)]">
         {t("durable.formDomain")}
         <select
           value={domain}
@@ -386,12 +384,19 @@ function DurableIncidents({
         {t("durable.title")}
       </h3>
       {rows.length === 0 ? (
-        <p className="py-3 text-[0.7rem] text-[var(--tessera-text-muted)]">{t("durable.empty")}</p>
+        <p className="py-3 text-xs text-[var(--tessera-text-muted)]">{t("durable.empty")}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-[0.72rem]">
+        // biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari.
+        <div
+          role="region"
+          aria-label={t("durable.title")}
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+          tabIndex={0}
+          className="overflow-x-auto max-sm:overflow-visible"
+        >
+          <table data-mobile-table="cards" className="w-full border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {[
                   "colId",
                   "colTitle",
@@ -413,34 +418,45 @@ function DurableIncidents({
                   key={inc.incident_id}
                   className="border-b border-[var(--tessera-border)]/60 last:border-0"
                 >
-                  <td className="px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">
+                  <td
+                    data-label={t("durable.colId")}
+                    className="px-2 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]"
+                  >
                     {inc.incident_id}
                   </td>
-                  <td className="max-w-[22rem] truncate px-2 py-1.5 text-[var(--tessera-text)]">
+                  <td
+                    data-label={t("durable.colTitle")}
+                    className="max-w-[22rem] px-2 py-1.5 text-[var(--tessera-text)] sm:truncate"
+                  >
                     {inc.title}
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td data-label={t("durable.colSeverity")} className="px-2 py-1.5">
                     <span
                       className={cn(
-                        "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+                        "inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium",
                         SEV_BADGE[inc.severity] ?? "border-[var(--tessera-border)]",
                       )}
                     >
                       {t(`sev.${inc.severity}`)}
                     </span>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td data-label={t("durable.colStatus")} className="px-2 py-1.5">
                     <span
                       className={cn(
-                        "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+                        "inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium",
                         DUR_STATUS_BADGE[inc.status] ?? "border-[var(--tessera-border)]",
                       )}
                     >
                       {t(`durable.status.${inc.status}`)}
                     </span>
                   </td>
-                  <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{inc.opened_by}</td>
-                  <td className="px-2 py-1.5">
+                  <td
+                    data-label={t("durable.colOpenedBy")}
+                    className="px-2 py-1.5 text-[var(--tessera-text-muted)]"
+                  >
+                    {inc.opened_by}
+                  </td>
+                  <td data-label={t("durable.colPlaybook")} className="px-2 py-1.5">
                     <select
                       aria-label={t("durable.colPlaybook")}
                       value={inc.playbook_id ?? ""}
@@ -448,7 +464,7 @@ function DurableIncidents({
                       onChange={(e) => {
                         if (e.target.value) onPlaybook(inc.incident_id, e.target.value);
                       }}
-                      className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.62rem] text-[var(--tessera-text)]"
+                      className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)]"
                     >
                       <option value="">{t("durable.playbookNone")}</option>
                       {["pb-injection", "pb-pii-purge", "pb-quality-review", "pb-degradation"].map(
@@ -460,14 +476,14 @@ function DurableIncidents({
                       )}
                     </select>
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td data-label={t("durable.colActions")} className="px-2 py-1.5">
                     <span className="flex items-center gap-2">
                       {inc.status === "ouvert" ? (
                         <button
                           type="button"
                           disabled={busy}
                           onClick={() => onTransition(inc.incident_id, "en_cours")}
-                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
+                          className="text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
                         >
                           {t("durable.takeCharge")}
                         </button>
@@ -477,7 +493,7 @@ function DurableIncidents({
                           type="button"
                           disabled={busy}
                           onClick={() => onTransition(inc.incident_id, "resolu")}
-                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-success)] hover:text-[var(--tessera-fg-success)] disabled:opacity-50"
+                          className="text-xs font-medium text-[var(--tessera-fg-success)] hover:text-[var(--tessera-fg-success)] disabled:opacity-50"
                         >
                           {t("durable.resolve")}
                         </button>
@@ -486,7 +502,7 @@ function DurableIncidents({
                           type="button"
                           disabled={busy}
                           onClick={() => onTransition(inc.incident_id, "ouvert")}
-                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-fg-warning)] disabled:opacity-50"
+                          className="text-xs font-medium text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-fg-warning)] disabled:opacity-50"
                         >
                           {t("durable.reopen")}
                         </button>
@@ -575,10 +591,17 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
       info={<KpiInfo k="queue" title={t("triage.queue")} />}
       action={<ViewAll label={t("triage.viewAll")} href="/a-traiter" />}
     >
-      <div className="-mx-1 overflow-x-auto">
-        <table className="w-full border-collapse text-left text-xs">
+      {/* biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari. */}
+      <div
+        role="region"
+        aria-label={t("triage.queue")}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+        tabIndex={0}
+        className="-mx-1 overflow-x-auto max-sm:mx-0 max-sm:overflow-visible"
+      >
+        <table data-mobile-table="cards" className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {cols.map((c) => (
                 <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
                   {t(`col.${c}`)}
@@ -589,21 +612,41 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
           <tbody>
             {data.priority_incidents.map((inc) => (
               <tr key={inc.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-2 py-1.5 font-mono text-[0.7rem] text-[var(--tessera-fg-info)]">
+                <td
+                  data-label={t("col.id")}
+                  className="px-2 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]"
+                >
                   {inc.id}
                 </td>
-                <td className="px-2 py-1.5">
+                <td data-label={t("col.severity")} className="px-2 py-1.5">
                   <SevBadge severity={inc.severity} t={t} />
                 </td>
-                <td className="px-2 py-1.5 text-[var(--tessera-text)]">{inc.trigger}</td>
-                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">
+                <td
+                  data-label={t("col.trigger")}
+                  className="px-2 py-1.5 text-[var(--tessera-text)]"
+                >
+                  {inc.trigger}
+                </td>
+                <td
+                  data-label={t("col.domain")}
+                  className="px-2 py-1.5 text-[var(--tessera-text-muted)]"
+                >
                   {t(`domain.${inc.domain}`)}
                 </td>
-                <td className={cn("px-2 py-1.5 font-medium", STATUS_TEXT[inc.status])}>
+                <td
+                  data-label={t("col.status")}
+                  className={cn("px-2 py-1.5 font-medium", STATUS_TEXT[inc.status])}
+                >
                   {t(`status.${inc.status}`)}
                 </td>
-                <td className="px-2 py-1.5 text-[var(--tessera-text-muted)]">{inc.owner}</td>
                 <td
+                  data-label={t("col.owner")}
+                  className="px-2 py-1.5 text-[var(--tessera-text-muted)]"
+                >
+                  {inc.owner}
+                </td>
+                <td
+                  data-label={t("col.sla")}
                   className={cn(
                     "whitespace-nowrap px-2 py-1.5 font-medium tabular-nums",
                     TONE_TEXT[inc.sla_tone],
@@ -611,8 +654,13 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
                 >
                   {inc.sla}
                 </td>
-                <td className="px-2 py-1.5 text-[var(--tessera-text)]">{inc.playbook}</td>
-                <td className="px-2 py-1.5">
+                <td
+                  data-label={t("col.playbook")}
+                  className="px-2 py-1.5 text-[var(--tessera-text)]"
+                >
+                  {inc.playbook}
+                </td>
+                <td data-label={t("col.role")} className="px-2 py-1.5">
                   <RoleBadge role={inc.role} />
                 </td>
               </tr>
@@ -620,7 +668,7 @@ function PriorityQueue({ t, data }: { t: T; data: Data }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">
         {t("triage.incidentsCount", { n: data.priority_incidents.length })}
       </p>
     </Panel>
@@ -642,17 +690,14 @@ function Catalog({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: () => v
           >
             <div className="flex items-center gap-1.5">
               <PlayCircle className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
-              <Truncate
-                full={pb.name}
-                className="text-[0.72rem] font-medium text-[var(--tessera-text)]"
-              >
+              <Truncate full={pb.name} className="text-xs font-medium text-[var(--tessera-text)]">
                 {pb.name}
               </Truncate>
             </div>
-            <p className="line-clamp-2 text-[0.62rem] leading-tight text-[var(--tessera-text-muted)]">
+            <p className="line-clamp-2 text-xs leading-tight text-[var(--tessera-text-muted)]">
               {pb.desc}
             </p>
-            <span className="mt-auto text-[0.62rem] font-medium text-[var(--tessera-green)]">
+            <span className="mt-auto text-xs font-medium text-[var(--tessera-green)]">
               {t("triage.runs", { n: pb.runs })}
             </span>
           </div>
@@ -670,9 +715,9 @@ function RecentIncidents({ t, data }: { t: T; data: Data }) {
     >
       <ul className="flex flex-col gap-1.5">
         {data.recent_incidents.map((inc) => (
-          <li key={inc.id} className="flex items-center gap-2 text-[0.72rem]">
+          <li key={inc.id} className="flex items-center gap-2 text-xs">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", SEV_DOT[inc.severity])} />
-            <span className="font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">{inc.id}</span>
+            <span className="font-mono text-xs text-[var(--tessera-fg-info)]">{inc.id}</span>
             <Truncate full={inc.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
               {inc.label}
             </Truncate>
@@ -683,7 +728,7 @@ function RecentIncidents({ t, data }: { t: T; data: Data }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">
         {t("triage.recentMore", { n: data.recent_more })}
       </p>
     </Panel>
@@ -699,9 +744,9 @@ function SlaEscalations({ t, data }: { t: T; data: Data }) {
     >
       <ul className="flex flex-col gap-1.5">
         {data.sla_escalations.map((e) => (
-          <li key={e.id} className="flex items-center gap-2 text-[0.72rem]">
+          <li key={e.id} className="flex items-center gap-2 text-xs">
             <Timer className={cn("h-3.5 w-3.5 shrink-0", TONE_TEXT[e.tone])} />
-            <span className="font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">{e.id}</span>
+            <span className="font-mono text-xs text-[var(--tessera-fg-info)]">{e.id}</span>
             <span className={cn("ml-auto shrink-0 tabular-nums font-medium", TONE_TEXT[e.tone])}>
               {e.remaining}
             </span>
@@ -728,12 +773,12 @@ function ControlCases({ t, data, onViewAll }: { t: T; data: Data; onViewAll?: ()
     >
       <ul className="flex flex-col gap-1.5">
         {data.control_cases.map((c) => (
-          <li key={c.id} className="flex items-center gap-2 text-[0.72rem]">
-            <span className="font-mono text-[0.66rem] text-[var(--tessera-green)]">{c.id}</span>
+          <li key={c.id} className="flex items-center gap-2 text-xs">
+            <span className="font-mono text-xs text-[var(--tessera-green)]">{c.id}</span>
             <Truncate full={c.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
               {c.label}
             </Truncate>
-            <span className="shrink-0 text-[0.66rem] text-[var(--tessera-text-muted)]">
+            <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">
               {t("triage.assoc", { n: c.assoc })}
             </span>
           </li>
@@ -765,7 +810,7 @@ function RunningPlaybook({ t, data, className }: { t: T; data: Data; className?:
                 />
                 <span
                   className={cn(
-                    "grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[0.62rem] font-semibold",
+                    "grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs font-semibold",
                     step.state === "done"
                       ? "border-[#1b805f] bg-[#05281f] text-[var(--tessera-green)]"
                       : step.state === "current"
@@ -782,19 +827,16 @@ function RunningPlaybook({ t, data, className }: { t: T; data: Data; className?:
                   )}
                 />
               </div>
-              <Truncate
-                full={step.label}
-                className="w-full text-[0.6rem] text-[var(--tessera-text)]"
-              >
+              <Truncate full={step.label} className="w-full text-xs text-[var(--tessera-text)]">
                 {step.label}
               </Truncate>
-              <span className="w-full truncate text-[0.55rem] tabular-nums text-[var(--tessera-text-muted)]">
+              <span className="w-full truncate text-xs tabular-nums text-[var(--tessera-text-muted)]">
                 {step.time || "—"}
               </span>
             </li>
           ))}
         </ol>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem]">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-[var(--tessera-border)] pt-2 text-xs">
           <KV label={t("exec.owner")} value={pb.owner} />
           <KV label={t("exec.role")} value={pb.role} />
           <KV label={t("exec.proofs")} value={String(pb.proofs)} />
@@ -817,10 +859,17 @@ function ResponseJournal({
       title={t("exec.journal")}
       action={<ViewAll label={t("exec.viewAll")} onClick={onViewAll} />}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+      {/* biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari. */}
+      <div
+        role="region"
+        aria-label={t("exec.journal")}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+        tabIndex={0}
+        className="overflow-x-auto max-sm:overflow-visible"
+      >
+        <table data-mobile-table="cards" className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("journalCol.time")}</th>
               <th className="px-1.5 py-1 font-medium">{t("journalCol.incident")}</th>
               <th className="px-1.5 py-1 font-medium">{t("journalCol.action")}</th>
@@ -833,14 +882,30 @@ function ResponseJournal({
                 key={`${r.time}-${r.incident}-${i}`}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
-                <td className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]">
+                <td
+                  data-label={t("journalCol.time")}
+                  className="px-1.5 py-1 font-mono tabular-nums text-[var(--tessera-text-muted)]"
+                >
                   {r.time}
                 </td>
-                <td className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]">
+                <td
+                  data-label={t("journalCol.incident")}
+                  className="px-1.5 py-1 font-mono text-[var(--tessera-fg-info)]"
+                >
                   {r.incident}
                 </td>
-                <td className="px-1.5 py-1 text-[var(--tessera-text)]">{r.action}</td>
-                <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.actor}</td>
+                <td
+                  data-label={t("journalCol.action")}
+                  className="px-1.5 py-1 text-[var(--tessera-text)]"
+                >
+                  {r.action}
+                </td>
+                <td
+                  data-label={t("journalCol.actor")}
+                  className="px-1.5 py-1 text-[var(--tessera-text-muted)]"
+                >
+                  {r.actor}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -864,15 +929,12 @@ function Automations({ t, data, className }: { t: T; data: Data; className?: str
             className="flex flex-col gap-0.5 border-b border-[var(--tessera-border)]/60 pb-1.5 last:border-0 last:pb-0"
           >
             <div className="flex items-center gap-2">
-              <Truncate
-                full={a.rule}
-                className="min-w-0 flex-1 text-[0.68rem] text-[var(--tessera-text)]"
-              >
+              <Truncate full={a.rule} className="min-w-0 flex-1 text-xs text-[var(--tessera-text)]">
                 {a.rule}
               </Truncate>
               <AutoStatus status={a.status} t={t} />
             </div>
-            <div className="flex items-center gap-2 text-[0.6rem] text-[var(--tessera-text-muted)]">
+            <div className="flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
               <span className="tabular-nums">{a.last}</span>
               <span className="ml-auto">{a.role}</span>
             </div>
@@ -902,7 +964,7 @@ function QuickActions({ t, className }: { t: T; className?: string }) {
             {it.href ? (
               <Link
                 href={it.href}
-                className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-[var(--tessera-muted)]"
+                className="flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--tessera-muted)]"
               >
                 <it.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
                 <span className="min-w-0 flex-1 truncate text-[var(--tessera-text)]">
@@ -915,7 +977,7 @@ function QuickActions({ t, className }: { t: T; className?: string }) {
                 type="button"
                 disabled
                 title={tc("notWired")}
-                className="flex w-full cursor-not-allowed items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] opacity-60"
+                className="flex w-full cursor-not-allowed items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs opacity-60"
               >
                 <it.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-text-muted)]" />
                 <span className="min-w-0 flex-1 truncate text-[var(--tessera-text-muted)]">
@@ -956,7 +1018,7 @@ function MttrChart({
           ticks={s.labels}
         />
       </div>
-      <div className="mt-1 flex items-center gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
+      <div className="mt-1 flex items-center gap-3 text-xs text-[var(--tessera-text-muted)]">
         <Legend color="var(--tessera-cat-1)" label={t("impact.mttaLine")} />
         <Legend color="var(--tessera-cat-2)" label={t("impact.mttrLine")} />
       </div>
@@ -969,7 +1031,7 @@ function ResolutionBars({ t, data, className }: { t: T; data: Data; className?: 
     <Panel className={className} title={t("impact.resolution")}>
       <ul className="flex flex-col gap-2">
         {data.resolution_by_playbook.map((b) => (
-          <li key={b.name} className="flex flex-col gap-1 text-[0.68rem]">
+          <li key={b.name} className="flex flex-col gap-1 text-xs">
             <div className="flex items-center justify-between gap-2">
               <Truncate full={b.name} className="min-w-0 text-[var(--tessera-text)]">
                 {b.name}
@@ -997,7 +1059,7 @@ function DomainBars({ t, data, className }: { t: T; data: Data; className?: stri
     <Panel className={className} title={t("impact.byDomain")}>
       <ul className="flex flex-col gap-2">
         {data.incidents_by_domain.map((d) => (
-          <li key={d.key} className="flex items-center gap-2 text-[0.68rem]">
+          <li key={d.key} className="flex items-center gap-2 text-xs">
             <span className="w-20 shrink-0 truncate text-[var(--tessera-text)]">
               {t(`domain.${d.key}`)}
             </span>
@@ -1035,20 +1097,16 @@ function Postmortems({
             key={p.id}
             className="flex flex-col gap-0.5 border-b border-[var(--tessera-border)]/60 pb-1.5 last:border-0 last:pb-0"
           >
-            <div className="flex items-center gap-2 text-[0.7rem]">
-              <span className="font-mono text-[0.64rem] text-[var(--tessera-fg-info)]">{p.id}</span>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-mono text-xs text-[var(--tessera-fg-info)]">{p.id}</span>
               <Truncate full={p.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {p.label}
               </Truncate>
-              <span className="shrink-0 text-[0.6rem] text-[var(--tessera-fg-success)]">
+              <span className="shrink-0 text-xs text-[var(--tessera-fg-success)]">
                 {p.resolved}
               </span>
             </div>
-            <Truncate
-              as="p"
-              full={p.rca}
-              className="text-[0.62rem] text-[var(--tessera-text-muted)]"
-            >
+            <Truncate as="p" full={p.rca} className="text-xs text-[var(--tessera-text-muted)]">
               {p.rca}
             </Truncate>
           </li>
@@ -1063,7 +1121,7 @@ function Postmortems({
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <Chip
         icon={Activity}
         tone="text-[var(--tessera-fg-danger)]"
@@ -1098,7 +1156,7 @@ function Zone({ label, children }: { label: string; children: ReactNode }) {
       data-slot="card"
       className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
     >
-      <h2 className="mb-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {label}
       </h2>
       {children}
@@ -1158,7 +1216,7 @@ function KpiTile({
       data-slot="card"
       className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <div className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+      <div className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </div>
@@ -1172,7 +1230,7 @@ function KpiTile({
           tone={kpi.good_is_up ? "success" : "danger"}
         />
       </div>
-      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-xs font-medium">
         <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
@@ -1186,7 +1244,7 @@ function SevBadge({ severity, t }: { severity: string; t: T }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[0.62rem] font-medium",
+        "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-medium",
         SEV_BADGE[severity],
       )}
     >
@@ -1197,7 +1255,7 @@ function SevBadge({ severity, t }: { severity: string; t: T }) {
 
 function RoleBadge({ role }: { role: string }) {
   return (
-    <span className="inline-flex shrink-0 items-center rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-text-muted)]">
+    <span className="inline-flex shrink-0 items-center rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--tessera-text-muted)]">
       <AuthorityLabel authority={role} />
     </span>
   );
@@ -1213,7 +1271,7 @@ function AutoStatus({ status, t }: { status: string; t: T }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         cls,
       )}
     >
@@ -1272,7 +1330,7 @@ function Donut({
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.66rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -1310,7 +1368,7 @@ function Legend({ color, label }: { color: string; label: string }) {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
+    "flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

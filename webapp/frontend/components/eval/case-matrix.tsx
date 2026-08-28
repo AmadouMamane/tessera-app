@@ -101,13 +101,13 @@ export async function CaseMatrix({
         <div className="flex flex-col gap-4">
           {[...byCategory.entries()].map(([category, cases]) => (
             <section key={category} className="flex flex-col gap-1.5">
-              <h4 className="font-medium text-[11px] text-[var(--muted-foreground)] uppercase tracking-wide">
+              <h4 className="font-medium text-xs text-[var(--muted-foreground)] uppercase tracking-wide">
                 {t(`categories.${category}`)}
               </h4>
               <ul className="flex flex-col gap-1">
                 {cases.map((c) => (
                   <li key={c.id} className="flex items-center gap-2">
-                    <span className="w-[13rem] shrink-0 truncate font-mono text-[11px] text-[var(--muted-foreground)]">
+                    <span className="w-[13rem] shrink-0 truncate font-mono text-xs text-[var(--muted-foreground)]">
                       {c.id}
                     </span>
                     <span className="hidden flex-1 truncate text-[var(--muted-foreground)] text-xs lg:block">
@@ -205,7 +205,7 @@ function Legend({
         <li key={state} className="flex items-center gap-1.5">
           <span
             aria-hidden
-            className={`flex h-5 w-7 items-center justify-center rounded text-[10px] ${CELL_CLASS[state]}`}
+            className={`flex h-5 w-7 items-center justify-center rounded text-xs ${CELL_CLASS[state]}`}
           >
             {CELL_GLYPH[state]}
           </span>

@@ -121,7 +121,7 @@ describe("premium cockpit contracts", () => {
     expect(css).toContain('[data-premium-table="true"]');
     expect(css).toContain(":is(th, td):first-child");
     expect(css).toContain("th:first-child");
-    expect(css).toContain("0.65rem");
+    expect(css).toContain("font-size: 0.75rem");
     expect(css).toContain("prefers-reduced-motion: reduce");
   });
 });

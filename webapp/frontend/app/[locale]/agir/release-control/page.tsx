@@ -61,7 +61,7 @@ export default async function ReleaseControlPage({ params, searchParams }: PageP
     <AppShell title={t("title")} description={t("subtitle")}>
       <div className="flex flex-wrap items-center gap-3">
         <AgentScopeFilter />
-        <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{ts("hint")}</span>
+        <span className="text-xs text-[var(--tessera-text-muted)]">{ts("hint")}</span>
       </div>
       {/* The shell + agent-scope filter paint at the first round-trip; the release-control
           fold (its one tunnel read) streams in behind the skeleton — same DOM, only the

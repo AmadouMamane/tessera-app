@@ -55,7 +55,7 @@ export function CustomerSessionBar() {
 
   return (
     <div
-      className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--muted)]/40 px-4 py-2 text-[0.7rem]"
+      className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border)] bg-[var(--muted)]/40 px-4 py-2 text-xs"
       title={authenticated ? t("demoHint") : t("anonymousHint")}
     >
       <span className="flex min-w-0 items-center gap-1.5 text-[var(--muted-foreground)]">

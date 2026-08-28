@@ -275,7 +275,7 @@ function VersionRail({ t, data }: { t: T; data: Data }) {
           <li key={v.version} className="flex items-center gap-1">
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[0.62rem] font-medium",
+                "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium",
                 VSTATUS[v.status],
               )}
               title={v.date}
@@ -289,7 +289,7 @@ function VersionRail({ t, data }: { t: T; data: Data }) {
           </li>
         ))}
       </ol>
-      <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <span className="text-xs text-[var(--tessera-text-muted)]">
         {t("version.compareTo")}{" "}
         <span className="font-medium text-[var(--tessera-text)]">{data.compare_to}</span>
       </span>
@@ -328,10 +328,17 @@ function ActivePolicies({
       info={<PolInfo k="zoneActivePolicies" title={t("zone.activePolicies")} />}
       action={<ViewAll label={t("viewAll.policies")} onClick={onViewAll} />}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+      {/* biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari. */}
+      <div
+        role="region"
+        aria-label={t("zone.activePolicies")}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+        tabIndex={0}
+        className="overflow-x-auto max-sm:overflow-visible"
+      >
+        <table data-mobile-table="cards" className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {cols.map((c) => (
                 <th key={c} className="whitespace-nowrap px-1.5 py-1.5 font-medium">
                   {t(`col.${c}`)}
@@ -342,27 +349,51 @@ function ActivePolicies({
           <tbody>
             {data.active_policies.map((p) => (
               <tr key={p.id} className="border-b border-[var(--tessera-border)]/60 last:border-0">
-                <td className="px-1.5 py-1.5 font-mono text-[0.64rem] text-[var(--tessera-fg-info)]">
+                <td
+                  data-label={t("col.id")}
+                  className="px-1.5 py-1.5 font-mono text-xs text-[var(--tessera-fg-info)]"
+                >
                   {p.id}
                 </td>
-                <td className="max-w-[140px] truncate px-1.5 py-1.5 text-[var(--tessera-text)]">
+                <td
+                  data-label={t("col.name")}
+                  className="max-w-[140px] px-1.5 py-1.5 text-[var(--tessera-text)] sm:truncate"
+                >
                   {p.name}
                 </td>
-                <td className="px-1.5 py-1.5">
+                <td data-label={t("col.type")} className="px-1.5 py-1.5">
                   <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
                     {t(`type.${p.type}`)}
                   </Badge>
                 </td>
-                <td className="px-1.5 py-1.5">
+                <td data-label={t("col.action")} className="px-1.5 py-1.5">
                   <Badge className={ACTION_BADGE[p.action]}>{t(`action.${p.action}`)}</Badge>
                 </td>
-                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{p.scope}</td>
-                <td className="px-1.5 py-1.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <td
+                  data-label={t("col.scope")}
+                  className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]"
+                >
+                  {p.scope}
+                </td>
+                <td
+                  data-label={t("col.version")}
+                  className="px-1.5 py-1.5 font-mono text-xs text-[var(--tessera-text-muted)]"
+                >
                   {p.version}
                 </td>
-                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{p.changed_by}</td>
-                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{p.approved_by}</td>
-                <td className="px-1.5 py-1.5">
+                <td
+                  data-label={t("col.changedBy")}
+                  className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]"
+                >
+                  {p.changed_by}
+                </td>
+                <td
+                  data-label={t("col.approvedBy")}
+                  className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]"
+                >
+                  {p.approved_by}
+                </td>
+                <td data-label={t("col.status")} className="px-1.5 py-1.5">
                   <span
                     className={cn(
                       "inline-flex items-center gap-1",
@@ -395,10 +426,17 @@ function VersionHistory({ t, data, className }: { t: T; data: Data; className?: 
       info={<PolInfo k="zoneHistory" title={t("zone.history")} />}
       action={<ViewAll label={t("viewAll.history")} />}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.72rem]">
+      {/* biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari. */}
+      <div
+        role="region"
+        aria-label={t("zone.history")}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+        tabIndex={0}
+        className="overflow-x-auto max-sm:overflow-visible"
+      >
+        <table data-mobile-table="cards" className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {cols.map((c) => (
                 <th key={c} className="whitespace-nowrap px-1.5 py-1.5 font-medium">
                   {t(`hCol.${c}`)}
@@ -412,15 +450,31 @@ function VersionHistory({ t, data, className }: { t: T; data: Data; className?: 
                 key={v.version}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
-                <td className="px-1.5 py-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]">
+                <td
+                  data-label={t("hCol.version")}
+                  className="px-1.5 py-1.5 font-mono text-xs text-[var(--tessera-text)]"
+                >
                   {v.version}
                 </td>
-                <td className="whitespace-nowrap px-1.5 py-1.5 tabular-nums text-[var(--tessera-text-muted)]">
+                <td
+                  data-label={t("hCol.datetime")}
+                  className="whitespace-nowrap px-1.5 py-1.5 tabular-nums text-[var(--tessera-text-muted)]"
+                >
                   {v.datetime}
                 </td>
-                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{v.author}</td>
-                <td className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]">{v.approver}</td>
-                <td className="px-1.5 py-1.5">
+                <td
+                  data-label={t("hCol.author")}
+                  className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]"
+                >
+                  {v.author}
+                </td>
+                <td
+                  data-label={t("hCol.approver")}
+                  className="px-1.5 py-1.5 text-[var(--tessera-text-muted)]"
+                >
+                  {v.approver}
+                </td>
+                <td data-label={t("hCol.status")} className="px-1.5 py-1.5">
                   <Badge className={VSTATUS[v.status]}>{t(`vStatus.${v.status}`)}</Badge>
                 </td>
               </tr>
@@ -428,7 +482,7 @@ function VersionHistory({ t, data, className }: { t: T; data: Data; className?: 
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
+      <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">
         {t("version.compareLabel", { active: data.active_version, compare: data.compare_to })}
       </p>
     </Panel>
@@ -444,7 +498,14 @@ function DiffYaml({ t, data, className }: { t: T; data: Data; className?: string
       className={className}
       info={<PolInfo k="zoneDiff" title={t("zone.diff")} />}
     >
-      <pre className="overflow-x-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2 font-mono text-[0.64rem] leading-relaxed">
+      {/* biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari. */}
+      <pre
+        role="region"
+        aria-label={t("zone.diff")}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+        tabIndex={0}
+        className="overflow-x-auto rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2 font-mono text-xs leading-relaxed"
+      >
         {data.diff.lines.map((l, i) => (
           <div
             key={`${i}-${l.text}`}
@@ -473,7 +534,7 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
     >
       <ul className="flex flex-col gap-2">
         {data.guardrails.map((g) => (
-          <li key={g.key} className="flex flex-col gap-0.5 text-[0.66rem]">
+          <li key={g.key} className="flex flex-col gap-0.5 text-xs">
             <div className="flex items-center justify-between gap-1.5">
               <span className="flex min-w-0 items-center gap-1">
                 <Truncate className="min-w-0 text-[var(--tessera-text)]">
@@ -513,10 +574,17 @@ function Impact({
       info={<PolInfo k="zoneImpact" title={t("zone.impact")} />}
     >
       {flagged ? <ProvenanceNotice signalId="policy_versioning" compact /> : null}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.68rem]">
+      {/* biome-ignore lint/a11y: Axe requires scrollable regions to be keyboard-focusable in Safari. */}
+      <div
+        role="region"
+        aria-label={t("zone.impact")}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: Axe requires keyboard access to the scrollable region in Safari.
+        tabIndex={0}
+        className="overflow-x-auto max-sm:overflow-visible"
+      >
+        <table data-mobile-table="cards" className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("impactCol.metric")}</th>
               <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.baseline")}</th>
               <th className="px-1.5 py-1 text-right font-medium">{t("impactCol.candidate")}</th>
@@ -529,14 +597,26 @@ function Impact({
                 key={r.metric}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
-                <td className="px-1.5 py-1.5 text-[var(--tessera-text)]">{r.metric}</td>
-                <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text-muted)]">
+                <td
+                  data-label={t("impactCol.metric")}
+                  className="px-1.5 py-1.5 text-[var(--tessera-text)]"
+                >
+                  {r.metric}
+                </td>
+                <td
+                  data-label={t("impactCol.baseline")}
+                  className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text-muted)]"
+                >
                   {r.baseline}
                 </td>
-                <td className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text)]">
+                <td
+                  data-label={t("impactCol.candidate")}
+                  className="px-1.5 py-1.5 text-right tabular-nums text-[var(--tessera-text)]"
+                >
                   {r.candidate}
                 </td>
                 <td
+                  data-label={t("impactCol.impact")}
                   className={cn(
                     "px-1.5 py-1.5 text-right tabular-nums font-medium",
                     TONE_TEXT[r.tone],
@@ -569,7 +649,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
         title={`${t("zone.detail")} · ${d.version}`}
         info={<PolInfo k="zoneDetail" title={t("zone.detail")} />}
       >
-        <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        <dl className="flex flex-col gap-1.5 text-xs">
           <KV label={t("version.effectiveFrom")} value={d.effective_from} />
           <KV label={t("version.commit")} value={d.commit} mono />
           <KV label={t("version.author")} value={d.author} />
@@ -588,7 +668,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
             <li key={a.key}>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 rounded-md border border-red-500/25 bg-red-500/5 px-2 py-1.5 text-left text-[0.68rem] transition-colors hover:bg-red-500/10"
+                className="flex w-full items-center gap-2 rounded-md border border-red-500/25 bg-red-500/5 px-2 py-1.5 text-left text-xs transition-colors hover:bg-red-500/10"
               >
                 <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-danger)]" />
                 <Truncate className="min-w-0 flex-1 text-[var(--tessera-text)]">
@@ -602,7 +682,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
               </button>
             </li>
           ))}
-          <li className="mt-0.5 text-[0.58rem] text-[var(--tessera-text-muted)]">
+          <li className="mt-0.5 text-xs text-[var(--tessera-text-muted)]">
             {t("sensitive.reservedOps")}
           </li>
         </ul>
@@ -616,7 +696,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
               <li key={link}>
                 <Link
                   href={LINK_ROUTES[link] ?? "/prouver/audit-logs"}
-                  className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.68rem] text-[var(--tessera-fg-info)] transition-colors hover:bg-[var(--tessera-muted)]"
+                  className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs text-[var(--tessera-fg-info)] transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <Truncate className="min-w-0 flex-1">{t(`links.${link}`)}</Truncate>
@@ -633,7 +713,7 @@ function PoliciesRail({ t, data, full }: { t: T; data: Data; full?: boolean }) {
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <Chip icon={Database} label={t("footer.source", { src: f.source })} />
       <Chip
         icon={ShieldCheck}
@@ -729,11 +809,12 @@ function KpiTile({
           className="absolute inset-0 z-10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2e72d2]/40"
         />
       ) : null}
-      <div className={cn("flex items-center gap-1.5", href && "pointer-events-none relative z-20")}>
+      <div className={cn("flex items-start gap-1.5", href && "pointer-events-none relative z-20")}>
         <Truncate
           as="p"
           full={label}
-          className="min-w-0 flex-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]"
+          lines={2}
+          className="min-w-0 flex-1 text-xs font-medium text-[var(--tessera-text-muted)]"
         >
           {label}
         </Truncate>
@@ -749,7 +830,7 @@ function KpiTile({
           tone={kpi.good_is_up ? "success" : "danger"}
         />
       </div>
-      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-xs font-medium">
         <span
           className={
             neutral
@@ -775,7 +856,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -791,7 +872,7 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
       <dd
         className={cn(
           "min-w-0 truncate text-right text-[var(--tessera-text)]",
-          mono && "font-mono text-[0.64rem]",
+          mono && "font-mono text-xs",
         )}
       >
         {value}
@@ -806,7 +887,7 @@ function ViewAll({ label, onClick }: { label: string; onClick?: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
+      className="flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
     >
       {label} <ChevronRight className="h-3 w-3" />
     </button>

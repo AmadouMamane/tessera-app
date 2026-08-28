@@ -64,7 +64,7 @@ function TabHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <h2 className="text-[0.95rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
-      <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{subtitle}</p>
+      <p className="text-xs text-[var(--tessera-text-muted)]">{subtitle}</p>
     </div>
   );
 }
@@ -72,7 +72,7 @@ function TabHeader({ title, subtitle }: { title: string; subtitle: string }) {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="flex min-w-[92px] flex-col gap-0.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {label}
       </span>
       <span
@@ -173,7 +173,7 @@ export function VariablesTab({ data }: { data: Data }) {
       render: (r) => (
         <Truncate
           full={r.prompts.map((p) => p.name).join(", ")}
-          className="text-[0.66rem] text-[var(--tessera-text-muted)]"
+          className="text-xs text-[var(--tessera-text-muted)]"
         >
           {r.prompts.map((p) => p.name).join(", ")}
         </Truncate>
@@ -244,12 +244,12 @@ export function VariablesTab({ data }: { data: Data }) {
             {selectedRow.prompts.map((p) => (
               <li
                 key={p.key}
-                className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.72rem]"
+                className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs"
               >
                 <Truncate full={p.name} className="min-w-0 font-medium text-[var(--tessera-text)]">
                   {p.name}
                 </Truncate>
-                <span className="shrink-0 font-mono text-[0.6rem] text-[var(--tessera-text-muted)]">
+                <span className="shrink-0 font-mono text-xs text-[var(--tessera-text-muted)]">
                   {p.id}
                 </span>
               </li>
@@ -346,7 +346,7 @@ export function I18nTab({ data }: { data: Data }) {
         r.missing.length === 0 ? (
           <LangBadges langs={r.langs} />
         ) : (
-          <span className="text-[0.62rem] text-[var(--tessera-fg-danger)]">
+          <span className="text-xs text-[var(--tessera-fg-danger)]">
             {pick(locale, "manque", "fehlt", "missing")} {r.missing.join(", ").toUpperCase()}
           </span>
         ),
@@ -434,14 +434,14 @@ export function I18nTab({ data }: { data: Data }) {
               className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
             >
               <div className="mb-1 flex items-center justify-between">
-                <span className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.56rem] font-medium uppercase text-[var(--tessera-text-muted)]">
+                <span className="rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-xs font-medium uppercase text-[var(--tessera-text-muted)]">
                   {c.lang}
                 </span>
-                <span className="text-[0.6rem] tabular-nums text-[var(--tessera-text-muted)]">
+                <span className="text-xs tabular-nums text-[var(--tessera-text-muted)]">
                   {c.text.length.toLocaleString(locale)} {pick(locale, "car.", "Z.", "chars")}
                 </span>
               </div>
-              <p className="line-clamp-4 whitespace-pre-wrap text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]">
+              <p className="line-clamp-4 whitespace-pre-wrap text-xs leading-relaxed text-[var(--tessera-text-muted)]">
                 {c.text}
               </p>
             </div>

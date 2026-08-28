@@ -34,10 +34,12 @@ import { type Page, expect, test } from "@playwright/test";
  *   4. Several pages render their own <footer> INSIDE main ("57 éléments…").
  *      Comparing a container with its own descendant always finds an overlap.
  *
- * WHAT IT CANNOT SEE, said plainly. It reads geometry, so it cannot judge whether a
- * layout that FITS is any good — a page can be legible-by-the-numbers and still be
- * a miserable phone experience. It also visits one locale and a fixed page list; a
- * route added tomorrow is not covered until someone adds it here.
+ * COMPLEMENTARY QUALITY GATE. This probe remains the exhaustive clipped-content
+ * sentinel. `premium-ui.spec.ts` now judges the experience it cannot infer from
+ * descendant geometry alone: full-width mobile shell, 44px direct-manipulation
+ * targets, table-to-card presentation, serious axe findings and visual baselines.
+ * Together the two tests cover reachability and usability instead of mistaking one
+ * for the other. Both still visit fixed route lists that must grow with the product.
  */
 
 /** Laptop, small laptop, tablet, phone. 1024 is in because it is where the left

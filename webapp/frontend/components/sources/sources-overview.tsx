@@ -320,7 +320,7 @@ function citeNum(r: Row): number {
 function CommandBar({ t, note, onExport }: { t: T; note: string; onExport: () => void }) {
   return (
     <section className="flex min-h-[54px] shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs text-[var(--tessera-text-muted)]">
         <ShieldCheck className="h-3.5 w-3.5" /> {note}
       </span>
       <div className="flex flex-wrap items-center gap-2">
@@ -360,7 +360,7 @@ function ExplainInfo({ k, title }: { k: string; title: string }) {
 function CompactKpi({ kpi }: { kpi: Data["kpis"][number] }) {
   return (
     <div className="flex h-[88px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5">
-      <p className="flex items-center gap-1 text-[0.62rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <Truncate full={kpi.label} className="min-w-0">
           {kpi.label}
         </Truncate>
@@ -425,7 +425,7 @@ function FilterStrip({
         <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--tessera-fg-info)]" />
       </label>
       <AgentScopeFilter />
-      <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+      <span className="shrink-0 text-xs tabular-nums text-[var(--tessera-text-muted)]">
         {count}/{total}
       </span>
     </section>
@@ -488,7 +488,7 @@ function Pagination({
   onPerPage: (n: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {t("page.summary", { start, end, total })}
       </span>
@@ -506,7 +506,7 @@ function Pagination({
             aria-current={n === page ? "page" : undefined}
             onClick={() => onPage(n)}
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "border-[#5b8def]/60 bg-[#5b8def]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -527,7 +527,7 @@ function Pagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {ROWS_PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>
@@ -621,7 +621,7 @@ function SourceTable({
           className="w-full min-w-[940px] table-fixed border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c) => (
                 <th
                   key={c.key}
@@ -726,7 +726,7 @@ function SourceTable({
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-xs text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {t("detail.open")}
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
@@ -739,7 +739,7 @@ function SourceTable({
               <tr>
                 <td
                   colSpan={COLS.length + 1}
-                  className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
+                  className="px-2 py-6 text-center text-xs text-[var(--tessera-text-muted)]"
                 >
                   {t("empty.rows")}
                 </td>
@@ -812,7 +812,7 @@ function IndexationView({ t, data }: { t: T; data: Data }) {
         title={t("view.embeddings")}
         info={<ExplainInfo k="embeddings" title={t("view.embeddings")} />}
       >
-        <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+        <dl className="flex flex-col gap-1.5 text-xs">
           {facts.map(([k, v]) => (
             <KV key={k} label={k} value={v} />
           ))}
@@ -821,7 +821,7 @@ function IndexationView({ t, data }: { t: T; data: Data }) {
       <Panel title={t("view.chunksBySource")}>
         <ul className="flex flex-col gap-1.5">
           {corpus.map((s) => (
-            <li key={s.id} className="flex items-center gap-2 text-[0.66rem]">
+            <li key={s.id} className="flex items-center gap-2 text-xs">
               <Truncate full={s.name} className="w-44 shrink-0 text-[var(--tessera-text)]">
                 {s.name}
               </Truncate>
@@ -853,7 +853,7 @@ function AccessView({
 }) {
   return (
     <Panel title={t("view.access")} info={<ExplainInfo k="access" title={t("view.access")} />}>
-      <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">{t("view.accessNote")}</p>
+      <p className="mb-2 text-xs text-[var(--tessera-text-muted)]">{t("view.accessNote")}</p>
       <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
         {data.sources.map((s) => {
           const Icon = TYPE_ICON[s.type] ?? Database;
@@ -868,7 +868,7 @@ function AccessView({
               role="button"
               aria-label={s.name}
               className={cn(
-                "-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-[0.7rem]",
+                "-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-xs",
                 ROW_INTERACT,
               )}
             >
@@ -888,7 +888,7 @@ function AccessView({
                   <span
                     key={c.agent_id}
                     title={c.label}
-                    className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.6rem]"
+                    className="inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-xs"
                   >
                     <span
                       className={cn(
@@ -924,9 +924,9 @@ function RetentionView({
       info={<ExplainInfo k="retention" title={t("view.retention")} />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-2 py-1.5 font-medium">{t("col.name")}</th>
               <th className="px-2 py-1.5 font-medium">{t("col.type")}</th>
               <th className="px-2 py-1.5 font-medium">{t("col.retention")}</th>
@@ -984,19 +984,17 @@ function LineageView({ t, data }: { t: T; data: Data }) {
   }
   return (
     <Panel title={t("view.lineage")} info={<ExplainInfo k="lineage" title={t("view.lineage")} />}>
-      <p className="mb-2 text-[0.64rem] text-[var(--tessera-text-muted)]">
-        {t("view.lineageNote")}
-      </p>
+      <p className="mb-2 text-xs text-[var(--tessera-text-muted)]">{t("view.lineageNote")}</p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {[...products.values()].map((p) => (
           <div
             key={p.name}
             className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5"
           >
-            <span className="inline-flex items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--tessera-text)]">
               <GitBranch className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {p.name}
             </span>
-            <ul className="flex flex-col gap-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
+            <ul className="flex flex-col gap-0.5 text-xs text-[var(--tessera-text-muted)]">
               {p.sources.map((name) => (
                 <li key={name} className="truncate">
                   {name}
@@ -1019,7 +1017,7 @@ function HistoryView({ t, data }: { t: T; data: Data }) {
         title={t("view.memoryGrowth")}
         info={<ExplainInfo k="memoryGrowth" title={t("view.memoryGrowth")} />}
       >
-        <p className="mb-2 inline-flex items-center gap-1.5 text-[0.64rem] text-[var(--tessera-fg-warning)]/90">
+        <p className="mb-2 inline-flex items-center gap-1.5 text-xs text-[var(--tessera-fg-warning)]/90">
           <AlertTriangle className="h-3.5 w-3.5" /> {t("view.historyNote")}
         </p>
         <div className="grid gap-3 md:grid-cols-2">
@@ -1031,7 +1029,7 @@ function HistoryView({ t, data }: { t: T; data: Data }) {
       <Panel title={t("view.corpusHeading")}>
         <ul className="flex flex-col divide-y divide-[var(--tessera-border)]/60">
           {corpus.map((s) => (
-            <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-[0.7rem]">
+            <li key={s.id} className="flex items-center justify-between gap-3 py-1.5 text-xs">
               <Truncate full={s.name} className="text-[var(--tessera-text)]">
                 {s.name}
               </Truncate>
@@ -1054,11 +1052,11 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
   return (
     <div className="flex flex-col gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex min-w-0 items-center gap-1.5 text-[0.72rem] font-semibold text-[var(--tessera-text)]">
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-[var(--tessera-text)]">
           <Database className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" />
           <Truncate full={source.name}>{source.name}</Truncate>
         </span>
-        <span className="shrink-0 text-[0.62rem] text-[var(--tessera-text-muted)]">
+        <span className="shrink-0 text-xs text-[var(--tessera-text-muted)]">
           {t("view.total")}:{" "}
           <span className="tabular-nums text-[var(--tessera-text-strong)]">{fmtInt(total)}</span>
         </span>
@@ -1068,7 +1066,7 @@ function GrowthCard({ t, source }: { t: T; source: Row }) {
         values={source.growth.map((d) => d.count)}
         tone="success"
       />
-      <div className="flex items-center justify-between text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
+      <div className="flex items-center justify-between text-xs tabular-nums text-[var(--tessera-text-muted)]">
         <span>{first}</span>
         <span>{last}</span>
       </div>
@@ -1101,7 +1099,7 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
     <Panel title={t("view.activity")}>
       <div className="flex gap-2">
         {/* y reference: peak at top, zero at bottom */}
-        <div className="flex shrink-0 flex-col justify-between py-0.5 text-right text-[0.5rem] tabular-nums leading-none text-[var(--tessera-text-muted)]">
+        <div className="flex shrink-0 flex-col justify-between py-0.5 text-right text-xs tabular-nums leading-none text-[var(--tessera-text-muted)]">
           <span>{fmtMax}</span>
           <span>0</span>
         </div>
@@ -1137,7 +1135,7 @@ function ActivityArea({ t, data }: { t: T; data: Data }) {
               strokeWidth="1.5"
             />
           </svg>
-          <div className="mt-1 flex items-center justify-between text-[0.56rem] tabular-nums text-[var(--tessera-text-muted)]">
+          <div className="mt-1 flex items-center justify-between text-xs tabular-nums text-[var(--tessera-text-muted)]">
             <span>{days.at(0)?.[0]}</span>
             <span>{days.at(-1)?.[0]}</span>
           </div>
@@ -1162,11 +1160,11 @@ function RecentActivity({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title={activity.title}>
       {activity.items.length === 0 ? (
-        <p className="py-1 text-[0.72rem] text-[var(--tessera-text-muted)]">{activity.empty}</p>
+        <p className="py-1 text-xs text-[var(--tessera-text-muted)]">{activity.empty}</p>
       ) : (
         <ul className="flex flex-col gap-2.5">
           {activity.items.map((e, i) => (
-            <li key={`${e.time}-${e.text}-${i}`} className="relative flex gap-2.5 text-[0.72rem]">
+            <li key={`${e.time}-${e.text}-${i}`} className="relative flex gap-2.5 text-xs">
               {/* connecting thread, centered on the dot column (w-4 -> 8px) */}
               {i < activity.items.length - 1 ? (
                 <span
@@ -1188,7 +1186,7 @@ function RecentActivity({ t, data }: { t: T; data: Data }) {
                 </span>
                 <span className="text-[var(--tessera-text)]">{e.text}</span>
                 {e.actor ? (
-                  <span className="block text-[0.66rem] text-[var(--tessera-text-muted)]">
+                  <span className="block text-xs text-[var(--tessera-text-muted)]">
                     {t("activitySubject")}{" "}
                     <span className="font-mono text-[var(--tessera-text)]">{e.actor}</span>
                   </span>
@@ -1215,7 +1213,7 @@ function ByVolume({ data }: { data: Data }) {
     <Panel title={data.zones.by_env}>
       <ul className="flex flex-col gap-2">
         {data.by_env.map((e) => (
-          <li key={e.key} className="flex flex-col gap-0.5 text-[0.66rem]">
+          <li key={e.key} className="flex flex-col gap-0.5 text-xs">
             <div className="flex items-center justify-between gap-1.5">
               <Truncate full={e.label} className="text-[var(--tessera-text)]">
                 {e.label}
@@ -1251,7 +1249,7 @@ function ByCitation({ t, data }: { t: T; data: Data }) {
     >
       <ul className="flex flex-col gap-2">
         {rows.map((r) => (
-          <li key={r.name} className="flex flex-col gap-1 text-[0.66rem]">
+          <li key={r.name} className="flex flex-col gap-1 text-xs">
             <div className="flex items-center justify-between gap-2">
               <Truncate full={r.name} className="min-w-0 text-[var(--tessera-text)]">
                 {r.name}
@@ -1279,7 +1277,7 @@ function ByLanguage({ data }: { data: Data }) {
     <Panel title={data.zones.cost}>
       <ul className="flex flex-col gap-2">
         {data.cost_by_source.map((c) => (
-          <li key={c.name} className="flex items-center gap-2 text-[0.66rem]">
+          <li key={c.name} className="flex items-center gap-2 text-xs">
             <Truncate
               full={c.name}
               className="w-10 shrink-0 font-medium text-[var(--tessera-text)]"
@@ -1348,7 +1346,7 @@ function QualitySignals({ t, rows }: { t: T; rows: Row[] }) {
           key={c.key}
           className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
         >
-          <p className="text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {c.label}
           </p>
           <p
@@ -1419,7 +1417,7 @@ function QualityTable({
 
   if (total === 0) {
     return (
-      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-xs text-[var(--tessera-text-muted)]">
         {t("quality.empty")}
       </p>
     );
@@ -1457,7 +1455,7 @@ function QualityTable({
           className="w-full min-w-[820px] table-fixed border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="w-[26%] truncate py-1.5 pl-5 pr-2 font-medium">
                 {t("quality.colSource")}
               </th>
@@ -1542,7 +1540,7 @@ function QualityTable({
                   <td className="px-2 py-1.5">
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[0.6rem]",
+                        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs",
                         warn
                           ? "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]"
                           : "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]",
@@ -1558,7 +1556,7 @@ function QualityTable({
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-xs text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {t("detail.open")}
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
@@ -1603,7 +1601,7 @@ function DetailPanel({
         className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-6 text-center xl:sticky xl:top-0 xl:h-fit xl:min-h-[200px]"
       >
         <Database className="h-5 w-5 text-[var(--tessera-text-muted)]" />
-        <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("detail.selectHint")}</p>
+        <p className="text-xs text-[var(--tessera-text-muted)]">{t("detail.selectHint")}</p>
       </aside>
     );
   }
@@ -1623,10 +1621,7 @@ function DetailPanel({
             {t(`classification.${detail.classification}`)}
           </Badge>
           <span
-            className={cn(
-              "inline-flex items-center gap-1 text-[0.62rem]",
-              STATUS[detail.status].text,
-            )}
+            className={cn("inline-flex items-center gap-1 text-xs", STATUS[detail.status].text)}
           >
             <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[detail.status].dot)} />{" "}
             {t(`status.${detail.status}`)}
@@ -1635,7 +1630,7 @@ function DetailPanel({
         {row.infra ? null : (
           <Link
             href={{ pathname: "/prouver/etat-a-date", query: { sources: row.id } }}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.64rem] text-[var(--tessera-text-muted)] hover:border-[#2e72d2] hover:text-[var(--tessera-text)]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs text-[var(--tessera-text-muted)] hover:border-[#2e72d2] hover:text-[var(--tessera-text)]"
           >
             <CalendarClock className="h-3.5 w-3.5" /> {t("detail.asof")}
           </Link>
@@ -1647,7 +1642,7 @@ function DetailPanel({
       <div className="flex items-stretch rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] py-3.5 pl-5">
         <div className="relative left-2 flex flex-col items-center justify-center gap-1.5">
           <ScoreRing value={row.citation} />
-          <span className="text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <span className="text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("detail.score")}
           </span>
         </div>
@@ -1687,7 +1682,7 @@ function DetailPanel({
             type="button"
             onClick={() => onTab(s.key)}
             className={cn(
-              "rounded px-2 py-1 text-[0.62rem] font-medium",
+              "rounded px-2 py-1 text-xs font-medium",
               s.key === section.key
                 ? "bg-[#0d3561] text-[#d8eaff]"
                 : "text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-muted)]",
@@ -1699,12 +1694,10 @@ function DetailPanel({
       </div>
 
       {tab === "overview" || section.key === "overview" ? (
-        <p className="text-[0.72rem] leading-relaxed text-[var(--tessera-text)]">
-          {detail.description}
-        </p>
+        <p className="text-xs leading-relaxed text-[var(--tessera-text)]">{detail.description}</p>
       ) : null}
 
-      <dl className="flex flex-col gap-1 text-[0.66rem]">
+      <dl className="flex flex-col gap-1 text-xs">
         {section.rows.map((r) => (
           <KV key={r.label} label={r.label} value={r.value} />
         ))}
@@ -1714,7 +1707,7 @@ function DetailPanel({
         {tags.map((tag) => (
           <span
             key={tag}
-            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]"
+            className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-xs text-[var(--tessera-text-muted)]"
           >
             {tag}
           </span>
@@ -1741,23 +1734,23 @@ function VersionsBlock({
 }) {
   return (
     <div className="border-t border-[var(--tessera-border)] pt-2" data-testid="source-versions">
-      <div className="mb-1.5 inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+      <div className="mb-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--tessera-text)]">
         <History className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {versions.title}
       </div>
       {versions.drift?.changed ? (
-        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[0.64rem] text-[var(--tessera-fg-warning)]">
+        <p className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-[var(--tessera-fg-warning)]">
           <AlertTriangle className="h-3 w-3" /> {versions.drift.label}
         </p>
       ) : null}
-      <p className="mb-1 text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <p className="mb-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {versions.current_title}
       </p>
-      <dl className="mb-2 flex flex-col gap-1 text-[0.62rem]">
+      <dl className="mb-2 flex flex-col gap-1 text-xs">
         {versions.current.map((r) => (
           <KV key={r.label} label={r.label} value={r.value} />
         ))}
       </dl>
-      <p className="mb-1 text-[0.64rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <p className="mb-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {versions.runs_title}
       </p>
       {versions.runs.length > 0 ? (
@@ -1765,13 +1758,13 @@ function VersionsBlock({
           {versions.runs.map((run) => (
             <li
               key={run.run_id}
-              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-[0.62rem]"
+              className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-xs"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 font-medium text-[var(--tessera-text)]">
                   <GitBranch className="h-3 w-3 text-[var(--tessera-fg-info)]" /> {run.run_id}
                   {run.language !== "-" ? (
-                    <span className="rounded border border-[var(--tessera-border)] px-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
+                    <span className="rounded border border-[var(--tessera-border)] px-1 text-xs text-[var(--tessera-text-muted)]">
                       {run.language}
                     </span>
                   ) : null}
@@ -1786,11 +1779,11 @@ function VersionsBlock({
           ))}
         </ul>
       ) : (
-        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-2 py-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-2 py-1.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
           {versions.empty}
         </p>
       )}
-      <p className="mt-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
+      <p className="mt-1.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
         {versions.note}
       </p>
     </div>
@@ -1801,11 +1794,11 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
   return (
     <div className="border-t border-[var(--tessera-border)] pt-2">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--tessera-text)]">
           <Users className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {consumers.title}
         </span>
         {consumers.regate_count > 0 ? (
-          <span className="inline-flex items-center gap-1 text-[0.64rem] text-[var(--tessera-fg-warning)]">
+          <span className="inline-flex items-center gap-1 text-xs text-[var(--tessera-fg-warning)]">
             <AlertTriangle className="h-3 w-3" /> {consumers.regate_label}
           </span>
         ) : null}
@@ -1815,7 +1808,7 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
           <li
             key={c.agent_id}
             title={c.label}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.62rem]"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs"
           >
             <span
               className={cn("h-1.5 w-1.5 rounded-full", VERDICT_DOT[c.tone] ?? VERDICT_DOT.muted)}
@@ -1824,14 +1817,14 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
           </li>
         ))}
       </ul>
-      <p className="mt-1.5 text-[0.64rem] leading-relaxed text-[var(--tessera-text-muted)]">
+      <p className="mt-1.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
         {consumers.note}
       </p>
       {consumers.count > 0 ? (
         <Link
           href={REVALIDATE_HREF}
           className={cn(
-            "mt-1.5 inline-flex items-center gap-1 text-[0.64rem] font-medium hover:underline",
+            "mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:underline",
             consumers.model_changed
               ? "text-[var(--tessera-fg-warning)]"
               : "text-[var(--tessera-fg-info)]",
@@ -1848,7 +1841,7 @@ function UsedByBlock({ consumers }: { consumers: NonNullable<Row["detail"]["cons
 
 function Note({ text, icon }: { text: string; icon: ReactNode }) {
   return (
-    <p className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 text-[0.66rem] text-[var(--tessera-text-muted)]">
+    <p className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="text-[var(--tessera-fg-info)]">{icon}</span> {text}
     </p>
   );
@@ -1857,7 +1850,7 @@ function Note({ text, icon }: { text: string; icon: ReactNode }) {
 function Fact({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="flex items-center gap-1.5 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <dt className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         <span className="shrink-0 text-[var(--tessera-fg-info)]">{icon}</span>
         <span className="truncate">{label}</span>
       </dt>
@@ -1911,7 +1904,7 @@ function Panel({
       data-slot="card"
       className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <h3 className="mb-2 flex items-center gap-1 text-[0.72rem] font-semibold uppercase leading-tight tracking-wide text-[var(--tessera-text-muted)]">
+      <h3 className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase leading-tight tracking-wide text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{title}</span>
         {info}
       </h3>
@@ -1970,7 +1963,7 @@ function Donut({
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.62rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -1991,7 +1984,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.64rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -2014,7 +2007,7 @@ function Footer({ t, data }: { t: T; data: Data }) {
   // total and the divider rule were dropped; the table + KPIs already carry the
   // count. The raw table names are the honesty signal on an operator cockpit.
   return (
-    <footer className="mt-1 shrink-0 pb-4 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="mt-1 shrink-0 pb-4 text-xs text-[var(--tessera-text-muted)]">
       <span>{t("footer.source", { src: data.footer.source.replaceAll(" + ", " · ") })}</span>
     </footer>
   );

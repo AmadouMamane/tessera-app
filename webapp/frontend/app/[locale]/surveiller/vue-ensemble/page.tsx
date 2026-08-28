@@ -51,9 +51,7 @@ export default async function OverviewPage({ params, searchParams }: OverviewPag
         lead={<SignalBreachHero />}
       >
         {isScopedToAgent(scope) ? (
-          <p className="mb-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
-            {ts("orgSignalsNote")}
-          </p>
+          <p className="mb-1 text-xs text-[var(--tessera-text-muted)]">{ts("orgSignalsNote")}</p>
         ) : null}
       </OverviewDashboard>
     </AppShell>

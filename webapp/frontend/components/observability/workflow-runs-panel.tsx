@@ -344,7 +344,7 @@ function RunsList({
                 <span className="min-w-0 text-[0.76rem] font-semibold leading-snug">
                   {runHeading(run)}
                 </span>
-                <span className="rounded bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-[0.58rem] text-[var(--tessera-text-muted)]">
+                <span className="rounded bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-xs text-[var(--tessera-text-muted)]">
                   {run.event_count}
                 </span>
               </div>
@@ -398,7 +398,7 @@ function RunContext({ run }: { run: RecouvrementRun }) {
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-2 text-[0.72rem] sm:grid-cols-2 xl:grid-cols-6">
+      <CardContent className="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-6">
         {contextFields.map(({ label, value }) => (
           <ContextFact key={label} label={label} value={value} />
         ))}
@@ -451,23 +451,21 @@ function TimelinePanel({ run }: { run: RecouvrementRun }) {
                   />
                   {plumbing ? (
                     <div className="flex items-baseline justify-between gap-2 py-0.5 text-[var(--tessera-text-muted)]">
-                      <span className="truncate font-mono text-[0.6rem]">
+                      <span className="truncate font-mono text-xs">
                         {event.event_name}
                         <span className="ml-1.5 opacity-60">{event.node_name ?? "node"}</span>
                       </span>
-                      <time className="shrink-0 text-[0.58rem] tabular-nums">{when}</time>
+                      <time className="shrink-0 text-xs tabular-nums">{when}</time>
                     </div>
                   ) : (
                     <div className={cn("rounded-lg border px-2.5 py-2", eventTone(event))}>
                       <div className="flex items-baseline justify-between gap-2">
-                        <Truncate className="font-mono text-[0.68rem] font-semibold leading-snug">
+                        <Truncate className="font-mono text-xs font-semibold leading-snug">
                           {event.event_name}
                         </Truncate>
-                        <time className="shrink-0 text-[0.58rem] tabular-nums opacity-80">
-                          {when}
-                        </time>
+                        <time className="shrink-0 text-xs tabular-nums opacity-80">{when}</time>
                       </div>
-                      <span className="block font-mono text-[0.58rem] opacity-70">
+                      <span className="block font-mono text-xs opacity-70">
                         {event.node_name ?? "node"}
                       </span>
                       <div className="mt-1 flex flex-wrap gap-1">
@@ -534,13 +532,13 @@ function ArtifactCard({
   return (
     <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]/45 p-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[0.74rem] font-semibold leading-snug">
+        <span className="text-xs font-semibold leading-snug">
           {artifact.title ?? artifact.artifact_type}
         </span>
         <Badge tone={statusMeta.tone}>{statusLabel}</Badge>
       </div>
       <IdChip value={artifact.artifact_id} className="mt-1" />
-      <div className="mt-2 grid gap-1.5 text-[0.66rem]">
+      <div className="mt-2 grid gap-1.5 text-xs">
         <Fact label="Type" value={artifact.artifact_type} />
         <Fact label="Generation" value={artifact.generation_mode} />
         <Fact label="Template" value={artifact.template_id} />
@@ -577,7 +575,7 @@ function DecisionPanel({ run }: { run: RecouvrementRun }) {
           run.decisions.map((decision, index) => (
             <div
               key={eventKey(decision, index)}
-              className="rounded-lg border border-[var(--tessera-border)] p-2 text-[0.68rem]"
+              className="rounded-lg border border-[var(--tessera-border)] p-2 text-xs"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold">{decision.decision ?? decision.event_name}</span>
@@ -624,7 +622,7 @@ function SensitiveActionsPanel({ run }: { run: RecouvrementRun }) {
 
 function SensitiveActionCard({ action }: { action: RecouvrementSensitiveAction }) {
   return (
-    <div className="rounded-lg border border-[var(--tessera-border)] p-2 text-[0.68rem]">
+    <div className="rounded-lg border border-[var(--tessera-border)] p-2 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-semibold">{actionLabel(action.action_name)}</span>
         <EffectBadge flag={action.no_external_effect} />
@@ -669,7 +667,7 @@ function ScoresPanel({ scores }: { scores: BusinessScore[] }) {
           return (
             <div
               key={score.metric}
-              className="rounded-lg border border-[var(--tessera-border)] px-2.5 py-2 text-[0.68rem]"
+              className="rounded-lg border border-[var(--tessera-border)] px-2.5 py-2 text-xs"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="min-w-0 font-medium leading-snug">{label}</span>
@@ -680,7 +678,7 @@ function ScoresPanel({ scores }: { scores: BusinessScore[] }) {
                   <Badge tone={scoreTone(score)}>{scoreLabel(score)}</Badge>
                 </span>
               </div>
-              <p className="mt-1 text-[0.6rem] leading-snug text-[var(--tessera-text-muted)]">
+              <p className="mt-1 text-xs leading-snug text-[var(--tessera-text-muted)]">
                 {scoreReasonLabel(score)}
               </p>
             </div>
@@ -743,10 +741,10 @@ function ContextFact({ label, value }: { label: string; value: unknown }) {
   const display = ID_LABELS.has(label) ? shortId(raw) : valueLabel(value);
   return (
     <div className="min-w-0 rounded-md border border-[var(--tessera-border)]/60 bg-[var(--tessera-bg)]/30 px-2 py-1.5">
-      <span className="block text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <span className="block text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {label}
       </span>
-      <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-[0.68rem]" title={raw}>
+      <span className="mt-0.5 flex min-w-0 items-center gap-1 font-mono text-xs" title={raw}>
         <span className="min-w-0 break-words">{display}</span>
         {ID_LABELS.has(label) && raw ? (
           <button
@@ -770,7 +768,7 @@ function IdChip({
   if (!value) return null;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-[0.58rem] text-[var(--tessera-text-muted)] ${className}`}
+      className={`inline-flex items-center gap-1 rounded bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-xs text-[var(--tessera-text-muted)] ${className}`}
       title={value}
     >
       {shortId(value)}
@@ -799,7 +797,7 @@ function CodeBadge({ code }: { code: string }) {
   return (
     <Badge
       tone={dangerous ? "danger" : "neutral"}
-      className="font-mono text-[0.56rem]"
+      className="font-mono text-xs"
       title={codeLabel(normalized)}
     >
       {normalized}

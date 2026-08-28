@@ -63,7 +63,7 @@ export function LoginForm({
 
       <div className="my-5 flex items-center gap-3" aria-hidden="true">
         <span className="h-px flex-1 bg-[var(--border-subtle)]" />
-        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+        <span className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
           {t("manualCredentials")}
         </span>
         <span className="h-px flex-1 bg-[var(--border-subtle)]" />

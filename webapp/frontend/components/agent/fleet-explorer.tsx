@@ -213,14 +213,14 @@ export function FleetExplorer({ agents }: { agents: FleetAgent[] }) {
             type="button"
             onClick={() => setFilter(f.key)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.72rem] font-medium transition-colors",
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               filter === f.key
                 ? "border-[#7c5cf5]/60 bg-[#7c5cf5]/12 text-[var(--tessera-text)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-surface)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
             )}
           >
             {f.label}
-            <span className="rounded-full bg-[var(--tessera-surface-2)] px-1.5 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+            <span className="rounded-full bg-[var(--tessera-surface-2)] px-1.5 text-xs tabular-nums text-[var(--tessera-text-muted)]">
               {f.count}
             </span>
           </button>
@@ -274,7 +274,7 @@ function AudienceBadge({ external, t }: { external: boolean; t: T }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em]",
+        "inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs font-medium uppercase tracking-[0.05em]",
         external
           ? "border-sky-500/40 bg-sky-500/10 text-[var(--tessera-fg-info)]"
           : "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]",
@@ -289,7 +289,7 @@ function AudienceBadge({ external, t }: { external: boolean; t: T }) {
 // The neutral chip: states a fact about the agent without ranking it. Shared so the contract
 // chips read as the same family as the witness chip, and stay that way.
 const NEUTRAL_CHIP =
-  "inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]";
+  "inline-flex items-center gap-1 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-xs font-medium uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]";
 
 // "Témoin plateforme", never "Démonstration": that word is reserved for the surface pill
 // (headers spec §5), and a second use with a different meaning would collide.
@@ -350,7 +350,7 @@ function LevelBadge({ agent, t }: { agent: FleetAgent; t: T }) {
     return (
       <span
         title={hint}
-        className="inline-flex items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]"
+        className="inline-flex items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.05em] text-[var(--tessera-text-muted)]"
       >
         {t("levelDeclaredNoEvidence", { level: view.level })}
       </span>
@@ -360,7 +360,7 @@ function LevelBadge({ agent, t }: { agent: FleetAgent; t: T }) {
   return (
     <span
       title={t("observabilityLevel", { level: view.level })}
-      className="inline-flex items-center rounded-full border border-[#7c5cf5]/40 bg-[#7c5cf5]/10 px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] text-[var(--tessera-fg-accent)]"
+      className="inline-flex items-center rounded-full border border-[#7c5cf5]/40 bg-[#7c5cf5]/10 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.05em] text-[var(--tessera-fg-accent)]"
     >
       {view.level}
     </span>
@@ -385,14 +385,12 @@ function FavButton({ favorite, onToggle, t }: { favorite: boolean; onToggle: () 
 
 function ReleaseChip({ agent, t }: { agent: FleetAgent; t: T }) {
   if (!agent.release || !agent.release.available) {
-    return (
-      <span className="text-[0.62rem] text-[var(--tessera-text-muted)]">{t("releaseNotRun")}</span>
-    );
+    return <span className="text-xs text-[var(--tessera-text-muted)]">{t("releaseNotRun")}</span>;
   }
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[0.62rem] font-medium",
+        "inline-flex items-center rounded-md border px-1.5 py-0.5 text-xs font-medium",
         RELEASE_TONE[agent.release.verdict_tone] ?? RELEASE_TONE.muted,
       )}
     >
@@ -408,7 +406,7 @@ function BusinessSignalLabel({ agent, tBusiness }: { agent: FleetAgent; tBusines
   const label = tBusiness.has(signal.key) ? tBusiness(signal.key) : signal.key;
   return (
     <span
-      className="inline-flex min-w-0 items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-success)]"
+      className="inline-flex min-w-0 items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 text-xs font-medium text-[var(--tessera-fg-success)]"
       title={`${label} · ${value}`}
     >
       <span className="truncate">{label}</span>
@@ -421,7 +419,7 @@ function PendingBusinessChip({ agent, t }: { agent: FleetAgent; t: T }) {
   const n = agent.pending_business_items ?? 0;
   if (n <= 0) return null;
   return (
-    <span className="inline-flex items-center rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[0.6rem] font-medium text-[var(--tessera-fg-warning)]">
+    <span className="inline-flex items-center rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-[var(--tessera-fg-warning)]">
       {t("pendingBusinessItems", { n })}
     </span>
   );
@@ -429,7 +427,7 @@ function PendingBusinessChip({ agent, t }: { agent: FleetAgent; t: T }) {
 
 function StaleChip({ t }: { t: T }) {
   return (
-    <span className="inline-flex items-center rounded-md border border-amber-500/45 px-1.5 py-0.5 text-[0.58rem] font-semibold uppercase tracking-[0.04em] text-[var(--tessera-fg-warning)]">
+    <span className="inline-flex items-center rounded-md border border-amber-500/45 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.04em] text-[var(--tessera-fg-warning)]">
       {t("stale")}
     </span>
   );
@@ -491,7 +489,7 @@ function AgentCard({
       {agent.description ? (
         <p
           title={agent.description}
-          className="-mt-1.5 line-clamp-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]"
+          className="-mt-1.5 line-clamp-2 text-xs leading-snug text-[var(--tessera-text-muted)]"
         >
           {agent.description}
         </p>
@@ -503,7 +501,7 @@ function AgentCard({
         <LevelBadge agent={agent} t={t} />
         <BusinessSignalLabel agent={agent} tBusiness={tBusiness} />
         <PendingBusinessChip agent={agent} t={t} />
-        <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">{agent.owner}</span>
+        <span className="text-xs text-[var(--tessera-text-muted)]">{agent.owner}</span>
       </div>
       {/* Eval-gate verdict — leads the card. */}
       <div className="flex flex-col gap-1.5">
@@ -512,19 +510,19 @@ function AgentCard({
           {r?.verdict_stale ? <StaleChip t={t} /> : null}
         </div>
         {pct != null && r?.summary_passed != null && r.summary_total != null ? (
-          <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+          <p className="text-xs text-[var(--tessera-text-muted)]">
             {t("evalRate", { rate: pct, passed: r.summary_passed, total: r.summary_total })}
           </p>
         ) : null}
         {r?.socle_passed != null && r.socle_total != null ? (
-          <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">
+          <p className="text-xs text-[var(--tessera-text-muted)]">
             {t("socleSecurity", { passed: r.socle_passed, total: r.socle_total })}
           </p>
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-2 border-[var(--tessera-border)] border-t pt-2">
         {date ? (
-          <span className="inline-flex items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+          <span className="inline-flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
             <Calendar className="h-3 w-3 shrink-0" />
             {t("evaluatedOn", { date })}
           </span>
@@ -537,14 +535,14 @@ function AgentCard({
           <Link
             href={agentPath(agent.id, "evaluations") as Route}
             onClick={onOpen}
-            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text-strong)]"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text-strong)]"
           >
             {t("evaluations")}
           </Link>
           <Link
             href={agentPath(agent.id, "synthese")}
             onClick={onOpen}
-            className="inline-flex items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
           >
             {t("govern")} <ArrowRight className="h-3 w-3" />
           </Link>
@@ -589,7 +587,7 @@ function AgentRow({
       <PendingBusinessChip agent={agent} t={t} />
       <Truncate
         full={agent.owner}
-        className="hidden text-[0.66rem] text-[var(--tessera-text-muted)] md:inline"
+        className="hidden text-xs text-[var(--tessera-text-muted)] md:inline"
       >
         {agent.owner}
       </Truncate>
@@ -598,7 +596,7 @@ function AgentRow({
         const pct = passPct(agent);
         return pct != null && r?.summary_passed != null && r.summary_total != null ? (
           <span
-            className="ml-auto hidden text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)] sm:inline"
+            className="ml-auto hidden text-xs tabular-nums text-[var(--tessera-text-muted)] sm:inline"
             title={t("evalRate", { rate: pct, passed: r.summary_passed, total: r.summary_total })}
           >
             {r.summary_passed}/{r.summary_total}
@@ -613,14 +611,14 @@ function AgentRow({
       <Link
         href={agentPath(agent.id, "evaluations") as Route}
         onClick={onOpen}
-        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text-strong)]"
+        className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text-strong)]"
       >
         {t("evaluations")}
       </Link>
       <Link
         href={agentPath(agent.id, "synthese")}
         onClick={onOpen}
-        className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+        className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {t("govern")} <ArrowRight className="h-3 w-3" />
       </Link>

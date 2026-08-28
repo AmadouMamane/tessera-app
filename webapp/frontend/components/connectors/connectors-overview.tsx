@@ -118,16 +118,14 @@ export function ConnectorsOverview() {
             key={k.key}
             className="flex h-[92px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
           >
-            <p className="flex items-center gap-1 truncate text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
+            <p className="flex items-center gap-1 truncate text-xs font-medium text-[var(--tessera-text-muted)]">
               <span className="truncate">{t(`kpi.${k.key}`)}</span>
               <ExplainInfo k={k.key} title={t(`kpi.${k.key}`)} />
             </p>
             <p className="mt-0.5 text-[1.3rem] font-semibold leading-none text-[var(--tessera-text-strong)]">
               {k.value}
             </p>
-            <p className="mt-0.5 truncate text-[0.56rem] text-[var(--tessera-text-muted)]">
-              {k.sub}
-            </p>
+            <p className="mt-0.5 truncate text-xs text-[var(--tessera-text-muted)]">{k.sub}</p>
             <MetricSparkline className="mt-auto h-4 w-full" values={k.series} tone="success" />
           </div>
         ))}
@@ -161,7 +159,7 @@ export function ConnectorsOverview() {
       </div>
 
       {data.footer ? (
-        <footer className="mt-1 flex flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <footer className="mt-1 flex flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
           <span>{t("footer.total", { n: data.footer.total ?? rows.length })}</span>
           <span>{t("footer.source", { src: data.footer.source })}</span>
         </footer>
@@ -240,7 +238,7 @@ function FilterStrip({
         </select>
         <ChevronsUpDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--tessera-fg-info)]" />
       </label>
-      <span className="shrink-0 text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+      <span className="shrink-0 text-xs tabular-nums text-[var(--tessera-text-muted)]">
         {count}/{total}
       </span>
     </section>
@@ -286,7 +284,7 @@ function ConnectorsTable({
           className="w-full min-w-[820px] table-fixed border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, idx) => (
                 <th
                   key={c.key}
@@ -376,7 +374,7 @@ function ConnectorsTable({
                   </td>
                   <td className="px-2 py-1.5">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-xs text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {tt("rowOpen")}
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
@@ -389,7 +387,7 @@ function ConnectorsTable({
               <tr>
                 <td
                   colSpan={COLS.length + 1}
-                  className="px-2 py-6 text-center text-[0.7rem] text-[var(--tessera-text-muted)]"
+                  className="px-2 py-6 text-center text-xs text-[var(--tessera-text-muted)]"
                 >
                   {tt("empty")}
                 </td>
@@ -446,7 +444,7 @@ function TablePagination({
   accent: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {tt("summary", { start, end, total })}
       </span>
@@ -470,7 +468,7 @@ function TablePagination({
               n === page ? { borderColor: `${accent}99`, background: `${accent}26` } : undefined
             }
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -494,7 +492,7 @@ function TablePagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {ROWS_PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>
@@ -512,11 +510,11 @@ function TablePagination({
 function Distribution({ t, data }: { t: T; data: Data }) {
   return (
     <aside className="flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <h3 className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {t("byCategory")}
       </h3>
       {(data.distribution ?? []).map((s) => (
-        <div key={s.key} className="flex items-center gap-2 text-[0.7rem]">
+        <div key={s.key} className="flex items-center gap-2 text-xs">
           <span className="w-28 shrink-0 truncate">{t(`category.${s.key}`)}</span>
           <div className="h-[4px] flex-1 overflow-hidden rounded-full bg-[var(--tessera-border)]">
             <div
@@ -555,20 +553,18 @@ function CxDrawer({ t, cx, onClose }: { t: T; cx: Cx; onClose: () => void }) {
     >
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={CAT_BADGE[cx.category]}>{t(`category.${cx.category}`)}</Badge>
-        <span
-          className={cn("inline-flex items-center gap-1.5 text-[0.66rem]", STATUS[cx.status]?.text)}
-        >
+        <span className={cn("inline-flex items-center gap-1.5 text-xs", STATUS[cx.status]?.text)}>
           <span className={cn("h-1.5 w-1.5 rounded-full", STATUS[cx.status]?.dot)} />
           {t(`status.${cx.status}`)}
         </span>
       </div>
       <div data-testid="connector-detail" className="flex flex-col gap-4">
         <p className="text-[0.8rem] leading-relaxed text-[var(--tessera-text)]">{cx.description}</p>
-        <dl className="flex flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.72rem]">
+        <dl className="flex flex-col gap-1.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-xs">
           {meta.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between gap-3">
               <dt className="shrink-0 text-[var(--tessera-text-muted)]">{k}</dt>
-              <dd className="min-w-0 truncate text-right font-mono text-[0.68rem] text-[var(--tessera-text)]">
+              <dd className="min-w-0 truncate text-right font-mono text-xs text-[var(--tessera-text)]">
                 {v}
               </dd>
             </div>
@@ -583,7 +579,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >

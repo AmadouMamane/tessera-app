@@ -55,7 +55,7 @@ const catColor = (c: string) => CAT_COLOR[c] ?? "var(--tessera-text-muted)";
 /** Section heading. */
 function Sec({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+    <h2 className="mt-1 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
       {children}
     </h2>
   );
@@ -86,7 +86,7 @@ function Kpi({
       <div className={`text-2xl font-semibold tabular-nums ${tone ?? "text-[var(--foreground)]"}`}>
         {value}
       </div>
-      {hint ? <div className={`truncate text-[0.65rem] ${hintTone ?? MUTED}`}>{hint}</div> : null}
+      {hint ? <div className={`truncate text-xs ${hintTone ?? MUTED}`}>{hint}</div> : null}
     </Card>
   );
 }
@@ -98,7 +98,7 @@ function ConfusionMatrix({ tp, fp, fn, tn }: { tp: number; fp: number; fn: numbe
   const cell = (n: number, diag: boolean) => (
     <td className="border border-[var(--tessera-border)] px-3 py-2 text-center">
       <span className={`font-semibold tabular-nums ${diag ? GOOD : n > 0 ? BAD : MUTED}`}>{n}</span>
-      <span className="block text-[0.65rem] text-[var(--muted-foreground)]">
+      <span className="block text-xs text-[var(--muted-foreground)]">
         {Math.round((n / total) * 100)}%
       </span>
     </td>
@@ -124,14 +124,14 @@ function ConfusionMatrix({ tp, fp, fn, tn }: { tp: number; fp: number; fn: numbe
         </thead>
         <tbody>
           <tr>
-            <th className="px-2 py-1 text-left text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+            <th className="px-2 py-1 text-left text-xs font-medium text-[var(--muted-foreground)]">
               {tq("judge.correct")}
             </th>
             {cell(tp, true)}
             {cell(fp, false)}
           </tr>
           <tr>
-            <th className="px-2 py-1 text-left text-[0.7rem] font-medium text-[var(--muted-foreground)]">
+            <th className="px-2 py-1 text-left text-xs font-medium text-[var(--muted-foreground)]">
               {tq("judge.incorrect")}
             </th>
             {cell(fn, false)}
@@ -147,7 +147,7 @@ function ConfusionMatrix({ tp, fp, fn, tn }: { tp: number; fp: number; fn: numbe
 function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
   const tq = useTranslations("quality");
   if (points.length === 0)
-    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+    return <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">—</p>;
   const bins = new Map<number, { sum: number; good: number; n: number }>();
   for (const p of points) {
     const b = Math.min(4, Math.max(0, Math.floor(p.judge_score * 5)));
@@ -201,12 +201,12 @@ function CalibrationCurve({ points }: { points: CalibrationPoint[] }) {
           x={W / 2}
           y={H - 1}
           textAnchor="middle"
-          className="fill-[var(--muted-foreground)] text-[6px]"
+          className="fill-[var(--muted-foreground)] text-xs"
         >
           {tq("judge.curveX")}
         </text>
       </svg>
-      <div className="flex gap-3 text-[0.55rem] text-[var(--muted-foreground)]">
+      <div className="flex gap-3 text-xs text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-3 rounded-full bg-[var(--tessera-fg-info)]" />
           {tq("judge.curveActual")}
@@ -239,18 +239,18 @@ function ScoreDistribution({ points }: { points: CalibrationPoint[] }) {
       <div className="flex h-36 items-end gap-2">
         {bins.map((c, i) => (
           <div key={(i * 0.2).toFixed(1)} className="flex flex-1 flex-col items-center gap-1">
-            <span className="text-[0.6rem] tabular-nums text-[var(--muted-foreground)]">{c}</span>
+            <span className="text-xs tabular-nums text-[var(--muted-foreground)]">{c}</span>
             <div
               className="w-full rounded-t bg-[#818cf8]/70"
               style={{ height: `${(c / max) * 100}%`, minHeight: c > 0 ? "4px" : "0" }}
             />
-            <span className="text-[0.55rem] tabular-nums text-[var(--muted-foreground)]">
+            <span className="text-xs tabular-nums text-[var(--muted-foreground)]">
               {fmtDec1(i * 0.2)}
             </span>
           </div>
         ))}
       </div>
-      <p className="text-[0.65rem] text-[var(--muted-foreground)]">
+      <p className="text-xs text-[var(--muted-foreground)]">
         {tq("judge.meanMedian", { m: fmtDec2(mean), md: fmtDec2(median) })}
       </p>
     </div>
@@ -308,19 +308,17 @@ function DisagreementDonut({
           <span className="max-w-[48px] truncate text-lg font-semibold leading-none tabular-nums">
             {total}
           </span>
-          <span className="line-clamp-2 max-w-[56px] break-words text-center text-[0.55rem] uppercase leading-tight text-[var(--muted-foreground)]">
+          <span className="line-clamp-2 max-w-[56px] break-words text-center text-xs uppercase leading-tight text-[var(--muted-foreground)]">
             {tq("judge.casDisagree")}
           </span>
         </div>
       </div>
       <ul className="flex min-w-0 flex-1 flex-col gap-1">
         {data.length === 0 ? (
-          <li className="text-[0.7rem] text-[var(--muted-foreground)]">
-            {tq("judge.noDisagreements")}
-          </li>
+          <li className="text-xs text-[var(--muted-foreground)]">{tq("judge.noDisagreements")}</li>
         ) : (
           data.map((d) => (
-            <li key={d.label} className="flex flex-col gap-0.5 text-[0.66rem]">
+            <li key={d.label} className="flex flex-col gap-0.5 text-xs">
               <span className="flex min-w-0 items-center gap-1">
                 <span className="h-1 w-1 shrink-0 rounded-full" style={{ background: d.color }} />
                 <Truncate className="min-w-0">{tq(`judge.cat.${d.label}`)}</Truncate>
@@ -353,7 +351,7 @@ function GroupRows({
         const tone =
           g.agreement >= 0.95 ? MATCH : g.agreement >= 0.8 ? "var(--tessera-fg-warning)" : MISS;
         return (
-          <li key={g.label} className="flex items-center gap-2 text-[0.72rem]">
+          <li key={g.label} className="flex items-center gap-2 text-xs">
             <Truncate className="w-24 shrink-0">{labelKey ? labelKey(g.label) : g.label}</Truncate>
             <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
               <div
@@ -380,7 +378,7 @@ function GroupRows({
 function MiniLine({ buckets, baseline }: { buckets: SeriesBucket[]; baseline?: number }) {
   const pts = buckets.filter((b) => b.mean != null).map((b) => b.mean as number);
   if (pts.length < 2)
-    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+    return <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">—</p>;
   const W = 200;
   const H = 56;
   const min = Math.min(...pts, baseline ?? 1);
@@ -440,7 +438,7 @@ function ActionCard({
   href?: Route;
   notWired?: string;
 }) {
-  const ctaCls = `mt-auto h-7 justify-center text-[0.7rem] ${
+  const ctaCls = `mt-auto h-7 justify-center text-xs ${
     ctaTone === "danger"
       ? "border-[#b45309] bg-[#78350f]/40 text-[var(--tessera-fg-warning)] hover:bg-[#78350f]/60"
       : ""
@@ -448,7 +446,7 @@ function ActionCard({
   return (
     <Card className="flex min-w-0 flex-col gap-2 p-3">
       <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
-      <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
+      <p className="text-xs leading-snug text-[var(--muted-foreground)]">{desc}</p>
       <div className="flex flex-wrap gap-1">
         {roles.map((r) => (
           <Badge key={r.label} tone={r.tone}>
@@ -637,7 +635,7 @@ export function JudgeCalibration({
           className="2xl:col-span-1"
         >
           <MiniLine buckets={drift?.buckets ?? []} baseline={drift?.mean ?? undefined} />
-          <p className="mt-1 text-[0.62rem] text-[var(--muted-foreground)]">
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
             {tq("judge.kappaEvolutionNote")}
           </p>
         </Panel>
@@ -649,7 +647,7 @@ export function JudgeCalibration({
         </Panel>
         <div className="flex flex-col gap-2">
           <Panel title={tq("judge.topSegments")} explainKey="jgTopSeg">
-            <ul className="flex flex-col gap-1 text-[0.72rem]">
+            <ul className="flex flex-col gap-1 text-xs">
               {(data.by_segment ?? [])
                 .filter((s) => s.n_disagree > 0)
                 .slice(0, 4)
@@ -669,7 +667,7 @@ export function JudgeCalibration({
           <Panel title={tq("judge.overrides")} explainKey="jgOverrides">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-semibold tabular-nums">{data.n_overrides ?? 0}</span>
-              <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+              <span className="text-xs text-[var(--muted-foreground)]">
                 {total > 0 ? pctFmt((data.n_overrides ?? 0) / total) : "—"}
               </span>
             </div>
@@ -677,7 +675,7 @@ export function JudgeCalibration({
               {overrides.slice(0, 3).map((o) => (
                 <li
                   key={o.case_id}
-                  className="truncate font-mono text-[0.62rem] text-[var(--muted-foreground)]"
+                  className="truncate font-mono text-xs text-[var(--muted-foreground)]"
                 >
                   {o.case_id}
                 </li>
@@ -709,7 +707,7 @@ export function JudgeCalibration({
               <tbody>
                 {disagreements.map((p) => (
                   <tr key={p.case_id || p.question} className="border-b border-[var(--border)]/50">
-                    <td className="py-2 pr-3 font-mono text-[0.7rem]">{p.case_id || "—"}</td>
+                    <td className="py-2 pr-3 font-mono text-xs">{p.case_id || "—"}</td>
                     <td className="py-2 pr-3 text-[var(--muted-foreground)]">
                       <span className="line-clamp-1 max-w-sm">{p.question}</span>
                     </td>
@@ -789,7 +787,7 @@ export function JudgeCalibration({
       </div>
 
       {/* Footer chips */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--muted-foreground)]">
         <Chip
           icon={Boxes}
           label={`${tq("judge.chip.dataset")}: judge-gold-v1`}
@@ -937,9 +935,9 @@ export function JudgeRail({
               <QInfo title={tq("judge.fiche")} k="jgFiche" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1 text-[0.72rem]">
+          <CardContent className="flex flex-col gap-1 text-xs">
             <RailRow label={tq("judge.model")}>
-              <span className="font-mono text-[0.7rem]">{data?.judge_model ?? "—"}</span>
+              <span className="font-mono text-xs">{data?.judge_model ?? "—"}</span>
             </RailRow>
             <RailRow label={tq("judge.byHumans")}>
               <span className="tabular-nums">{data?.n ?? "—"}</span>
@@ -962,7 +960,7 @@ export function JudgeRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {gates.map((g) => (
-              <div key={g.label} className="flex items-center justify-between gap-2 text-[0.72rem]">
+              <div key={g.label} className="flex items-center justify-between gap-2 text-xs">
                 <span className="min-w-0 truncate text-[var(--muted-foreground)]">{g.label}</span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="tabular-nums">{g.value}</span>
@@ -995,7 +993,7 @@ export function JudgeRail({
               <span className="pb-1 text-xs text-[var(--muted-foreground)]">/100</span>
               <span className={`pb-1 text-xs ${riskTone}`}>· {riskLevel}</span>
             </div>
-            <ul className="flex flex-col gap-1 text-[0.68rem] text-[var(--muted-foreground)]">
+            <ul className="flex flex-col gap-1 text-xs text-[var(--muted-foreground)]">
               <li>• {tq("judge.attnOverconfidence")}</li>
               <li>• {tq("judge.attnRegCases")}</li>
               <li>• {tq("judge.attnDe")}</li>
@@ -1013,7 +1011,7 @@ export function JudgeRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {topCats.length === 0 ? (
-              <p className="text-[0.7rem] text-[var(--muted-foreground)]">
+              <p className="text-xs text-[var(--muted-foreground)]">
                 {/* "No disagreement" is a finding; it may only be stated after looking. An
                     unread calibration produced the same empty map as a perfectly-agreeing
                     judge, and printed the reassuring half. */}
@@ -1021,7 +1019,7 @@ export function JudgeRail({
               </p>
             ) : (
               topCats.map((c) => (
-                <div key={c.label} className="flex items-center gap-2 text-[0.72rem]">
+                <div key={c.label} className="flex items-center gap-2 text-xs">
                   <Truncate className="w-20 shrink-0">{tq(`judge.cat.${c.label}`)}</Truncate>
                   <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
                     <div
@@ -1064,7 +1062,7 @@ export function JudgeRail({
           <GitCompareArrows className="h-5 w-5 shrink-0 text-[var(--tessera-fg-accent)]" />
           <span className="flex min-w-0 flex-col">
             <span className="text-[0.8rem] font-medium">{tq("judge.evidencePack")}</span>
-            <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+            <span className="text-xs text-[var(--muted-foreground)]">
               {tq("judge.evidencePackHint")}
             </span>
           </span>
@@ -1085,7 +1083,7 @@ function RailRow({ label, children }: { label: string; children: ReactNode }) {
 
 function SensitiveAction({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 text-[0.72rem]">
+    <div className="flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 text-xs">
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <Badge tone="warning">

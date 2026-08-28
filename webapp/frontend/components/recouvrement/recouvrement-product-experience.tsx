@@ -28,6 +28,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -329,7 +330,7 @@ function ArtifactStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-bold text-[0.64rem] whitespace-nowrap",
+        "inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 font-bold text-xs whitespace-nowrap",
         ARTIFACT_STATUS_TONE_CLASS[meta.tone],
         className,
       )}
@@ -817,7 +818,7 @@ function AssistantContextPanel({ compact = false }: { compact?: boolean }) {
             key={item}
             className={cn(
               "flex items-center gap-2 rounded-sm bg-[#fbfbfd] px-3",
-              compact ? "min-h-7 text-[0.72rem]" : "min-h-8",
+              compact ? "min-h-7 text-xs" : "min-h-8",
             )}
           >
             <CircleCheck className="h-4 w-4 shrink-0 text-[#071044]/70" />
@@ -929,7 +930,7 @@ function AssistantDraftPanel({
               disabled={status === "loading" || content.versions.length === 0}
               onClick={() => onSelectVersion(version.id)}
               className={cn(
-                "h-7 min-w-9 rounded-sm px-2 font-bold text-[0.68rem] transition",
+                "h-7 min-w-9 rounded-sm px-2 font-bold text-xs transition",
                 selectedVersion?.id === version.id
                   ? "bg-[#6048ff] text-white shadow-[0_4px_10px_rgba(96,72,255,0.22)]"
                   : "text-[#071044]/70 hover:bg-white",
@@ -1026,11 +1027,11 @@ function AssistantContactRulePanel({
           </h3>
           {isBlocked ? (
             <>
-              <span className="rounded-full bg-[#ffe8e5] px-2 py-0.5 font-bold text-[#c0362c] text-[0.64rem]">
+              <span className="rounded-full bg-[#ffe8e5] px-2 py-0.5 font-bold text-[#c0362c] text-xs">
                 {copy.ui.blocked}
               </span>
               {reasonCodes[0] ? (
-                <span className="rounded-full border border-[#ffd2c9] bg-white px-2 py-0.5 font-bold text-[#a23b2a] text-[0.64rem]">
+                <span className="rounded-full border border-[#ffd2c9] bg-white px-2 py-0.5 font-bold text-[#a23b2a] text-xs">
                   {reasonCodes[0]}
                 </span>
               ) : null}
@@ -1237,7 +1238,7 @@ function AssistantDrawer({
               <span
                 className={cn(
                   "rounded-full bg-[#f0edff] font-bold text-[#6048ff]",
-                  isPinned ? "px-1.5 py-0.5 text-[0.5rem]" : "px-2.5 py-1 text-[0.68rem]",
+                  isPinned ? "px-1.5 py-0.5 text-xs" : "px-2.5 py-1 text-xs",
                 )}
               >
                 {copy.ui.contextualized}
@@ -1291,7 +1292,7 @@ function AssistantDrawer({
                 type="button"
                 onClick={() => onSelectTab(tab)}
                 className={cn(
-                  "relative h-10 shrink-0 font-bold text-[0.72rem] transition",
+                  "relative h-10 shrink-0 font-bold text-xs transition",
                   activeTab === tab ? "text-[#6048ff]" : "text-[#071044]",
                 )}
               >
@@ -1394,7 +1395,7 @@ function AssistantDrawer({
               </p>
               <p className="mt-1">{isBlockedContact ? contactStatus : "8h - 20h"}</p>
               {isBlockedContact && contactReasonCode ? (
-                <p className="mt-1 font-bold text-[0.62rem]">{contactReasonCode}</p>
+                <p className="mt-1 font-bold text-xs">{contactReasonCode}</p>
               ) : null}
             </div>
           </section>
@@ -1551,7 +1552,7 @@ function AssistantDrawer({
                 <Maximize2 className="h-4 w-4" />
               </button>
             </div>
-            <p className="mt-3 text-[#071044]/55 text-[0.64rem]">{copy.ui.disclaimer}</p>
+            <p className="mt-3 text-[#071044]/55 text-xs">{copy.ui.disclaimer}</p>
           </>
         ) : (
           <>
@@ -1579,7 +1580,7 @@ function AssistantDrawer({
                 <Send className="h-5 w-5" />
               </button>
             </form>
-            <p className="mt-3 text-[#071044]/55 text-[0.68rem]">{copy.ui.disclaimer}</p>
+            <p className="mt-3 text-[#071044]/55 text-xs">{copy.ui.disclaimer}</p>
           </>
         )}
       </footer>
@@ -1590,6 +1591,16 @@ function AssistantDrawer({
 export function RecouvrementProductExperience() {
   const locale = useLocale() as Locale;
   const copy = recouvrementProductCopy(locale);
+  const { data: session } = useSession();
+  const operatorName = session?.user?.name?.trim() || copy.ui.role;
+  const operatorInitials =
+    operatorName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "OP";
   const dateLocale = locale === "fr" ? "fr-FR" : locale === "de" ? "de-DE" : "en-GB";
   // The REAL case queue (lot 9): counters, the notification badge and the
   // priority dossier all derive from the durable store — never invented.
@@ -2321,7 +2332,7 @@ export function RecouvrementProductExperience() {
               <button
                 type="button"
                 aria-label={copy.ui.help}
-                className="hidden flex-col items-center gap-1 rounded-sm text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35 sm:flex"
+                className="hidden flex-col items-center gap-1 rounded-sm text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35 sm:flex"
               >
                 <CircleHelp className="h-[22px] w-[22px]" />
                 {copy.ui.help}
@@ -2338,11 +2349,11 @@ export function RecouvrementProductExperience() {
                     ? copy.ui.notificationsAria.replace("{count}", String(counters.open))
                     : copy.ui.notifications
                 }
-                className="relative flex flex-col items-center gap-1 rounded-sm text-[10.5px] outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
+                className="relative flex flex-col items-center gap-1 rounded-sm text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <Bell className="h-[22px] w-[22px]" />
                 {counters && counters.open > 0 ? (
-                  <span className="-top-1 absolute right-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#b99245] px-1 text-[#050816] text-[9px]">
+                  <span className="-top-1 absolute right-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#b99245] px-1 text-[#050816] text-xs">
                     {counters.open}
                   </span>
                 ) : null}
@@ -2354,10 +2365,10 @@ export function RecouvrementProductExperience() {
                 className="flex items-center gap-3 rounded-sm outline-none transition focus-visible:ring-2 focus-visible:ring-[#b99245]/35"
               >
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#fbf0dd] font-bold text-[#050816]">
-                  JD
+                  {operatorInitials}
                 </span>
                 <span className="hidden text-left sm:block">
-                  <span className="block font-bold text-sm">Julie Dubois</span>
+                  <span className="block font-bold text-sm">{operatorName}</span>
                   <span className="block text-[#050816]/65 text-xs">{copy.ui.role}</span>
                 </span>
                 <ChevronDown className="h-5 w-5" />
@@ -2451,7 +2462,7 @@ export function RecouvrementProductExperience() {
                                 <h2 className="!font-sans !text-[#071044] font-bold text-[1.5rem] leading-8 tracking-[0]">
                                   RC-2048
                                 </h2>
-                                <span className="shrink-0 rounded-md bg-[#ffe8e5] px-2.5 py-1 font-medium text-[#f23932] text-[0.68rem]">
+                                <span className="shrink-0 rounded-md bg-[#ffe8e5] px-2.5 py-1 font-medium text-[#f23932] text-xs">
                                   {copy.ui.brokenPromise}
                                 </span>
                               </div>
@@ -2520,7 +2531,7 @@ export function RecouvrementProductExperience() {
                             <button
                               type="button"
                               onClick={() => openAssistant("Préparer une relance")}
-                              className="inline-flex h-11 w-[198px] items-center justify-center gap-2 rounded-lg px-1.5 font-semibold text-[#6048ff] text-[0.74rem] transition hover:bg-[#f4f1ff]"
+                              className="inline-flex h-11 w-[198px] items-center justify-center gap-2 rounded-lg px-1.5 font-semibold text-[#6048ff] text-xs transition hover:bg-[#f4f1ff]"
                             >
                               <Sparkles className="h-4 w-4" />
                               {copy.ui.prepareWithAssistant}
@@ -2536,7 +2547,7 @@ export function RecouvrementProductExperience() {
                             <h2 className="flex flex-wrap items-center gap-3 !font-sans !text-[#6048ff] font-bold text-sm uppercase tracking-[0]">
                               <Sparkles className="h-5 w-5" />
                               {copy.ui.assistant}
-                              <span className="rounded-full border border-[#c8bbff] bg-white px-2.5 py-1 font-bold text-[#6048ff] text-[0.68rem]">
+                              <span className="rounded-full border border-[#c8bbff] bg-white px-2.5 py-1 font-bold text-[#6048ff] text-xs">
                                 RC-2048
                               </span>
                             </h2>
@@ -2568,7 +2579,7 @@ export function RecouvrementProductExperience() {
                                 <span className="block font-bold text-[0.76rem] leading-[1rem]">
                                   {copy.actions[index]?.[0]}
                                 </span>
-                                <span className="mt-1.5 block text-[0.66rem] leading-[0.98rem]">
+                                <span className="mt-1.5 block text-xs leading-[0.98rem]">
                                   {copy.actions[index]?.[1]}
                                 </span>
                               </span>

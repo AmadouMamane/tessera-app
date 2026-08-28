@@ -138,7 +138,7 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
     return qs ? `${basePath}?${qs}` : basePath;
   };
   const chip = (active: boolean) =>
-    `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.66rem] transition-colors ${
+    `inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
       active
         ? "border-[#7c5cf5] bg-[#6d4aed]/25 text-[var(--tessera-fg-accent)]"
         : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
@@ -149,20 +149,20 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
       {/* Header: conversation + involved agents */}
       <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4">
         <p className="truncate text-[0.95rem] font-semibold">{data.title}</p>
-        <p className="mt-1 font-mono text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <p className="mt-1 font-mono text-xs text-[var(--tessera-text-muted)]">
           {data.conversation_id}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {agents.map((a) => (
             <span
               key={a.id}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem] ${accent(a.id)}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${accent(a.id)}`}
             >
               <Bot className="h-3.5 w-3.5" /> {a.name}
             </span>
           ))}
           {data.spans_agents ? (
-            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-[0.7rem] text-[var(--tessera-fg-success)]">
+            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 py-1 text-xs text-[var(--tessera-fg-success)]">
               {t("sessionDetail.spansAgents")}
             </span>
           ) : null}
@@ -193,15 +193,15 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
           lacquered chrome, visually distinct from the content cards. */}
       <section className="sr01-strip mt-1 flex flex-col gap-2 rounded-2xl px-3 py-2 backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[0.66rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("sessionDetail.timeline")}
           </p>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-0.5 text-[0.64rem] text-[var(--tessera-text-muted)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 py-0.5 text-xs text-[var(--tessera-text-muted)]">
             {t("sessionDetail.modeHistory")}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("sessionDetail.filterLabel")}
           </span>
           <Link href={filterHref({ turn_agent: null })} className={chip(turnAgent === null)}>
@@ -237,11 +237,11 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
             className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3.5"
           >
             <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+              <span className="text-xs text-[var(--tessera-text-muted)]">
                 {t("sessionDetail.turn")} {turn.turn} · {turn.time}
               </span>
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[0.66rem] ${accent(turn.agent_id)}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${accent(turn.agent_id)}`}
                 title={
                   turn.routing_reason
                     ? `${t("sessionDetail.routedBy")}: ${turn.routing_reason}`
@@ -252,7 +252,7 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
               </span>
             </div>
             {turn.routing_reason ? (
-              <p className="mb-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+              <p className="mb-1.5 text-xs text-[var(--tessera-text-muted)]">
                 {t("sessionDetail.routedBy")}: {turn.routing_reason}
               </p>
             ) : null}

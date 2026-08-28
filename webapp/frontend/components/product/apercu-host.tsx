@@ -33,7 +33,7 @@ export function ApercuHost() {
               {t("space")}
             </span>
           </div>
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-dashed border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-dashed border-[var(--border)] bg-[var(--muted)]/40 px-2.5 py-1 text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
             <Lock className="h-3 w-3" />
             {t("demoBadge")}
           </span>
@@ -66,7 +66,7 @@ export function ApercuHost() {
                 <div className="h-3 w-full animate-pulse rounded bg-[var(--muted)]/70" />
                 <div className="h-3 w-4/5 animate-pulse rounded bg-[var(--muted)]/70" />
               </div>
-              <span className="mt-4 inline-block text-[0.62rem] uppercase tracking-wider text-[var(--muted-foreground)]/60">
+              <span className="mt-4 inline-block text-xs uppercase tracking-wider text-[var(--muted-foreground)]/60">
                 {t("tiles.placeholder")}
               </span>
             </div>

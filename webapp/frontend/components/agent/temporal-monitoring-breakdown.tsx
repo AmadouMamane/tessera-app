@@ -147,7 +147,7 @@ export function MonitoringFleetTable({
         className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4"
       >
         <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
-        <p className="mt-2 text-[0.72rem] text-[var(--tessera-text-muted)]">{t("empty")}</p>
+        <p className="mt-2 text-xs text-[var(--tessera-text-muted)]">{t("empty")}</p>
       </section>
     );
   }
@@ -165,10 +165,10 @@ export function MonitoringFleetTable({
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-[0.82rem] font-semibold">{t("breakdownTitle")}</h2>
       </div>
-      <div className="overflow-x-auto">
-        <table data-breakdown="agent" className={TABLE_BREAKDOWN}>
+      <div className="overflow-x-auto max-sm:overflow-visible">
+        <table data-breakdown="agent" data-mobile-table="cards" className={TABLE_BREAKDOWN}>
           <thead>
-            <tr className="text-left text-[0.66rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="text-left text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className={`${COL_IDENTITY} pb-2 pr-3 font-medium`}>{t("colAgent")}</th>
               <th className="pb-2 text-center font-medium">{t("colVolume")}</th>
               <th className="pb-2 text-center font-medium">{t("colEscalation")}</th>
@@ -186,16 +186,22 @@ export function MonitoringFleetTable({
               const dimmed = scope !== AGENT_SCOPE_ALL && agent.id !== scope;
               return (
                 <tr key={agent.id} className={rowClass(selected, dimmed)}>
-                  <td className="py-1.5 pr-3 font-medium">{agent.name}</td>
-                  <td className="py-1.5 text-center tabular-nums">{fmtInt(agent.conversations)}</td>
-                  <td className="py-1.5 text-center tabular-nums">
+                  <td data-label={t("colAgent")} className="py-1.5 pr-3 font-medium">
+                    {agent.name}
+                  </td>
+                  <td data-label={t("colVolume")} className="py-1.5 text-center tabular-nums">
+                    {fmtInt(agent.conversations)}
+                  </td>
+                  <td data-label={t("colEscalation")} className="py-1.5 text-center tabular-nums">
                     {fmtPct(agent.escalation_rate)}
                   </td>
-                  <td className="py-1.5 text-center tabular-nums">{fmtSecs(agent.latency_ms)}</td>
-                  <td className="py-1.5 text-center tabular-nums">
+                  <td data-label={t("colLatency")} className="py-1.5 text-center tabular-nums">
+                    {fmtSecs(agent.latency_ms)}
+                  </td>
+                  <td data-label={t("colHandoffs")} className="py-1.5 text-center tabular-nums">
                     {agent.handoffs_in} / {agent.handoffs_out}
                   </td>
-                  <td className="py-1.5 pr-2 text-right">
+                  <td data-label={t("colRelease")} className="py-1.5 pr-2 text-right">
                     <span
                       className={
                         RELEASE_TONE[agent.release?.verdict_tone ?? "muted"] ?? RELEASE_TONE.muted
@@ -221,7 +227,7 @@ export function MonitoringFleetTable({
               </td>
               <td
                 colSpan={4}
-                className="py-2 pr-2 text-right text-[0.66rem] text-[var(--tessera-text-muted)]"
+                className="py-2 pr-2 text-right text-xs text-[var(--tessera-text-muted)]"
               >
                 <DedupFooter
                   fleet={fleet}

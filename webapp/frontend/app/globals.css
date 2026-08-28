@@ -1240,7 +1240,7 @@
 }
 
 :is([data-premium-table="true"] table, table[data-premium-table="true"]) thead tr {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   letter-spacing: 0.06em;
 }
 
@@ -1268,4 +1268,119 @@
   tr[aria-pressed="true"]
   > * {
   background: var(--tessera-surface-elevated);
+}
+
+/* Direct-manipulation quality floor. Dense desktop controls stay compact, while
+ * every touch viewport gets the 44px target users can reliably acquire. */
+@media (max-width: 767px), (pointer: coarse) {
+  [data-shell-content] :where(button, [role="button"], input, select, textarea),
+  header :where(button, [role="button"], input, select) {
+    min-block-size: 2.75rem;
+  }
+}
+
+/* A cockpit heading must read as a heading even when a legacy call site passes
+ * a micro-label utility. This central floor removes the 11–14px pseudo-titles. */
+[data-slot="card-title"] {
+  font-size: 1rem !important;
+}
+
+[data-shell-content] h2:is(.text-xs, [class*="text-[0."]) {
+  font-size: 1rem !important;
+}
+
+[data-shell-content] h3:is(.text-xs, [class*="text-[0."]) {
+  font-size: 0.9375rem !important;
+}
+
+/* Semantic mobile table-to-card transform. Call sites provide `data-label` from
+ * the same translation key as their header, so no value becomes anonymous. */
+@media (max-width: 639px) {
+  table[data-mobile-table="cards"] {
+    display: block;
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  table[data-mobile-table="cards"] thead {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  table[data-mobile-table="cards"] :is(tbody, tfoot, tr, td) {
+    display: block;
+    width: 100% !important;
+  }
+
+  table[data-mobile-table="cards"] tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  table[data-mobile-table="cards"] tbody tr {
+    overflow: hidden;
+    border: 1px solid var(--tessera-border);
+    border-radius: var(--radius-lg);
+    background: var(--tessera-bg-soft);
+    padding: 0.5rem 0.625rem;
+  }
+
+  table[data-mobile-table="cards"] tbody td[data-label] {
+    position: static !important;
+    display: grid;
+    max-width: none !important;
+    grid-template-columns: minmax(6.75rem, 40%) minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+    padding: 0.45rem 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  table[data-mobile-table="cards"] tbody td[data-label]::before {
+    content: attr(data-label);
+    color: var(--tessera-text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+  }
+
+  table[data-mobile-table="cards"] tbody td[data-label] > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  table[data-mobile-table="cards"] tbody td:not([data-label]) {
+    padding: 0.75rem !important;
+    text-align: center;
+  }
+
+  table[data-mobile-table="cards"] tfoot {
+    margin-top: 0.75rem;
+  }
+
+  table[data-mobile-table="cards"] tfoot tr {
+    display: grid;
+    gap: 0.5rem;
+    border-top: 1px solid var(--tessera-border);
+    padding-top: 0.75rem;
+  }
+
+  table[data-mobile-table="cards"] tfoot td {
+    position: static !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left !important;
+    white-space: normal !important;
+  }
 }

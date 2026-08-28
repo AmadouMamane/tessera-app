@@ -79,7 +79,7 @@ export async function ReleaseControlView({
         <div className="flex items-center justify-end">
           <Link
             href="/agents"
-            className="inline-flex items-center gap-0.5 text-[0.66rem] text-[var(--tessera-fg-accent)] hover:underline"
+            className="inline-flex items-center gap-0.5 text-xs text-[var(--tessera-fg-accent)] hover:underline"
           >
             {t("viewFleet")}
             <ChevronRight className="h-3 w-3" />
@@ -129,9 +129,9 @@ export async function ReleaseControlView({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{a.name}</p>
-                  <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{a.owner}</p>
+                  <p className="text-xs text-[var(--tessera-text-muted)]">{a.owner}</p>
                 </div>
-                <span className="inline-flex shrink-0 items-center gap-1.5 text-[0.66rem] text-[var(--tessera-text-muted)]">
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
                   <span
                     className={`h-2 w-2 rounded-full ${STATE_DOT[a.state_tone] ?? "bg-amber-400"}`}
                   />
@@ -142,7 +142,7 @@ export async function ReleaseControlView({
               {/* Verdict — the headline, colour tied to gate conformity (policy §6). */}
               {rel.available ? (
                 <div
-                  className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[0.72rem] font-medium ${
+                  className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium ${
                     VERDICT_TONE[rel.verdict_tone] ?? VERDICT_TONE.muted
                   }`}
                 >
@@ -150,7 +150,7 @@ export async function ReleaseControlView({
                     {rel.verdict_label}
                     {rel.verdict_stale ? (
                       <span
-                        className="rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-[0.55rem] font-medium text-[var(--tessera-fg-warning)]"
+                        className="rounded border border-amber-500/40 bg-amber-500/10 px-1 py-0.5 text-xs font-medium text-[var(--tessera-fg-warning)]"
                         title={t("staleTitle", {
                           was: rel.catalogue_version ?? "",
                           now: rel.current_catalogue_version ?? "",
@@ -160,19 +160,17 @@ export async function ReleaseControlView({
                       </span>
                     ) : null}
                   </span>
-                  <span className="font-mono text-[0.58rem] opacity-80">
-                    {rel.candidate_version}
-                  </span>
+                  <span className="font-mono text-xs opacity-80">{rel.candidate_version}</span>
                 </div>
               ) : (
-                <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2.5 py-1.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+                <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2.5 py-1.5 text-xs text-[var(--tessera-text-muted)]">
                   {t("evalNotRun")}
                 </div>
               )}
 
               {/* Gate breakdown — case×langue grain, reconciled with Évaluations. */}
               {rel.available ? (
-                <dl className="grid grid-cols-2 gap-1.5 text-[0.66rem]">
+                <dl className="grid grid-cols-2 gap-1.5 text-xs">
                   <Cell label={t("evalSet")} value={rel.eval_set} />
                   <Cell label={t("executions")} value={String(rel.executions)} />
                   <Cell
@@ -218,13 +216,13 @@ export async function ReleaseControlView({
                   The source diagnosis remains verbatim and available one click below it. */}
               {rel.available && !rel.passed && rel.floor_block ? (
                 <div className="rounded-md border border-red-500/30 bg-red-500/5 px-2.5 py-1.5">
-                  <p className="text-[0.6rem] font-medium uppercase tracking-wide text-[var(--tessera-fg-danger)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--tessera-fg-danger)]">
                     {t("floorReason")}
                   </p>
-                  <p className="mt-1 text-[0.68rem] leading-relaxed text-[var(--tessera-text)]">
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--tessera-text)]">
                     {floorParams ? t("floorSummary", floorParams) : t("floorSummaryGeneric")}
                   </p>
-                  <details className="mt-1.5 text-[0.6rem] text-[var(--tessera-text-muted)]">
+                  <details className="mt-1.5 text-xs text-[var(--tessera-text-muted)]">
                     <summary className="cursor-pointer text-[var(--tessera-fg-accent)] hover:underline">
                       {t("floorTechnicalDetail")}
                     </summary>
@@ -234,7 +232,7 @@ export async function ReleaseControlView({
               ) : null}
 
               {/* Governance flow stepper. */}
-              <div className="flex items-center gap-1 text-[0.6rem]">
+              <div className="flex items-center gap-1 text-xs">
                 {a.flow.map((stage, i) => {
                   const reached =
                     a.flow.indexOf(a.last_phase) >= i && a.last_phase !== "registered";
@@ -258,14 +256,14 @@ export async function ReleaseControlView({
               </div>
 
               {a.history[0] ? (
-                <p className="border-t border-[var(--tessera-border)] pt-2 text-[0.6rem] text-[var(--tessera-text-muted)]">
+                <p className="border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
                   {t("lastEvent")}: {a.history[0].phase} · {a.history[0].occurred_at}
                 </p>
               ) : null}
               {/* Drill into the agent's own surface (release/eval detail). */}
               <Link
                 href={`/agents/${a.agent_id}` as Route}
-                className="mt-auto inline-flex items-center gap-0.5 self-start text-[0.62rem] text-[var(--tessera-fg-accent)] hover:underline"
+                className="mt-auto inline-flex items-center gap-0.5 self-start text-xs text-[var(--tessera-fg-accent)] hover:underline"
               >
                 {t("viewAgent")}
                 <ChevronRight className="h-3 w-3" />
@@ -307,7 +305,7 @@ function Kpi({
           : GitBranch;
   return (
     <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <div className="flex items-center gap-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+      <div className="flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="min-w-0 truncate">{label}</span>
         {info ? <span className="ml-auto shrink-0">{info}</span> : null}

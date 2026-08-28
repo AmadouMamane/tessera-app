@@ -71,13 +71,11 @@ export function PeriodRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-2 pt-1">
             <div className="flex flex-col gap-1">
-              <span className="text-[0.6rem] text-[var(--muted-foreground)]">
-                {labels.selected}
-              </span>
+              <span className="text-xs text-[var(--muted-foreground)]">{labels.selected}</span>
               <select
                 value={days}
                 onChange={(e) => setDays(Number(e.target.value))}
-                className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-[0.72rem]"
+                className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1.5 text-xs"
               >
                 {knownPreset ? null : <option value={days}>{`${days} j`}</option>}
                 {presets.map((p) => (
@@ -89,7 +87,7 @@ export function PeriodRail({
             </div>
 
             {items.length === 0 ? (
-              <p className="py-2 text-[0.7rem] text-[var(--muted-foreground)]">{labels.noData}</p>
+              <p className="py-2 text-xs text-[var(--muted-foreground)]">{labels.noData}</p>
             ) : (
               <ol className="flex max-h-[260px] flex-col overflow-y-auto">
                 {items.map((it, i) => {
@@ -113,7 +111,7 @@ export function PeriodRail({
                       <button
                         type="button"
                         onClick={() => setAnchor(it.stamp)}
-                        className={`mb-1.5 flex-1 rounded-md px-2 py-1 text-left text-[0.72rem] tabular-nums ${
+                        className={`mb-1.5 flex-1 rounded-md px-2 py-1 text-left text-xs tabular-nums ${
                           sel
                             ? "bg-[var(--tessera-green)]/15 font-medium text-[var(--tessera-text)]"
                             : "text-[var(--muted-foreground)] hover:bg-[var(--tessera-muted)]/40"
@@ -127,7 +125,7 @@ export function PeriodRail({
               </ol>
             )}
 
-            <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] px-2 py-1.5 text-[0.62rem] text-[var(--muted-foreground)]">
+            <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] px-2 py-1.5 text-xs text-[var(--muted-foreground)]">
               <span>{labels.from}</span>
               <span className="tabular-nums text-[var(--foreground)]">
                 {startLabel} → {newest}
@@ -137,7 +135,7 @@ export function PeriodRail({
             <button
               type="button"
               onClick={() => onApply({ days, anchor })}
-              className="rounded-md bg-[var(--tessera-green)] px-3 py-1.5 text-[0.72rem] font-medium text-[var(--tessera-text-strong)] hover:brightness-110"
+              className="rounded-md bg-[var(--tessera-green)] px-3 py-1.5 text-xs font-medium text-[var(--tessera-text-strong)] hover:brightness-110"
             >
               {labels.apply}
             </button>

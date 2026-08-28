@@ -171,7 +171,7 @@ export function CommandPalette() {
             placeholder={tp("placeholder")}
             className="h-12 min-w-0 flex-1 bg-transparent text-sm text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
           />
-          <kbd className="shrink-0 rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+          <kbd className="shrink-0 rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 font-mono text-xs text-[var(--tessera-text-muted)]">
             Esc
           </kbd>
         </div>
@@ -196,7 +196,7 @@ export function CommandPalette() {
                 >
                   <c.icon className="h-4 w-4 shrink-0 text-[var(--tessera-text-muted)]" />
                   <span className="min-w-0 flex-1 truncate">{c.label}</span>
-                  <span className="shrink-0 text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                  <span className="shrink-0 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                     {c.group}
                   </span>
                 </button>

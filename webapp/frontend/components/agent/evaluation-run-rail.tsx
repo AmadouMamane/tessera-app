@@ -104,13 +104,13 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+        <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
           {runs.title}
         </span>
         {/* The active mode, always visible (registre §1/§5). */}
         <span
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+            "rounded-full border px-2 py-0.5 text-xs font-medium",
             live
               ? "border-emerald-500/40 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
               : "border-amber-500/40 bg-amber-500/10 text-[var(--tessera-fg-warning)]",
@@ -121,12 +121,12 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
             : `${pick(locale, "Historique · run du", "Historisch · Lauf vom", "History · run of")} ${selected?.label ?? ""}`}
         </span>
       </div>
-      <p className="-mt-1 text-[10px] text-[var(--tessera-text-muted)]">{runs.subtitle}</p>
+      <p className="-mt-1 text-xs text-[var(--tessera-text-muted)]">{runs.subtitle}</p>
 
       {items.length === 0 ? (
         // Honest-empty: no run recorded — an explicitly empty rail, never a ghost
         // axis nor an invented zero.
-        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-3 py-4 text-[11px] text-[var(--tessera-text-muted)]">
+        <p className="rounded-md border border-dashed border-[var(--tessera-border)] px-3 py-4 text-xs text-[var(--tessera-text-muted)]">
           {runs.empty_label}
         </p>
       ) : (
@@ -159,7 +159,7 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
                   </span>
                   <span
                     className={cn(
-                      "text-[9px] tabular-nums",
+                      "text-xs tabular-nums",
                       isSelected
                         ? "text-[var(--tessera-text)]"
                         : "text-[var(--tessera-text-muted)]",
@@ -173,7 +173,7 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
           </div>
 
           {requestedUnknown ? (
-            <p className="text-[10px] text-[var(--tessera-fg-warning)]">
+            <p className="text-xs text-[var(--tessera-fg-warning)]">
               {pick(
                 locale,
                 "Run demandé introuvable — dernier run affiché.",
@@ -188,7 +188,7 @@ export function EvaluationRunRail({ data, className }: { data: Data; className?:
           ) : null}
 
           {items.length === 1 ? (
-            <p className="text-[10px] text-[var(--tessera-text-muted)]">
+            <p className="text-xs text-[var(--tessera-text-muted)]">
               {pick(
                 locale,
                 "Un seul run — un point n'est pas une tendance ; la comparaison apparaîtra au deuxième run.",
@@ -220,24 +220,24 @@ function SelectedRunFacts({
   const verdictTone = VERDICT_TEXT[String(run.gate_passed)] ?? VERDICT_TEXT.null;
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5">
-      <span className="text-[11px] font-medium text-[var(--tessera-text)]">
+      <span className="text-xs font-medium text-[var(--tessera-text)]">
         {provenance(run, locale)}
       </span>
-      <span className="text-[10px] text-[var(--tessera-text-muted)]">{run.label}</span>
-      <span className="text-[10px] text-[var(--tessera-text-muted)]">{run.model}</span>
-      <span className="text-[11px] tabular-nums text-[var(--tessera-text)]">
+      <span className="text-xs text-[var(--tessera-text-muted)]">{run.label}</span>
+      <span className="text-xs text-[var(--tessera-text-muted)]">{run.model}</span>
+      <span className="text-xs tabular-nums text-[var(--tessera-text)]">
         {run.total > 0
           ? `${run.passed}/${run.total} (${fmt.format(run.pass_rate * 100)}%)`
           : pick(locale, "0 cas", "0 Faelle", "0 cases")}
       </span>
-      <span className={cn("text-[11px] font-semibold", verdictTone)}>
+      <span className={cn("text-xs font-semibold", verdictTone)}>
         {pick(locale, "Gate :", "Gate:", "Gate:")} {verdictLabel(run.gate_passed, locale)}
       </span>
       {/* Δ only exists between TWO runs of the SAME catalogue version. */}
       {run.delta_pass_rate !== null ? (
         <span
           className={cn(
-            "text-[11px] tabular-nums",
+            "text-xs tabular-nums",
             run.delta_pass_rate > 0
               ? "text-[var(--tessera-fg-success)]"
               : run.delta_pass_rate < 0
@@ -248,7 +248,7 @@ function SelectedRunFacts({
           {`Δ ${run.delta_pass_rate > 0 ? "+" : ""}${fmt.format(run.delta_pass_rate * 100)} pt ${pick(locale, "vs run précédent", "ggue. vorherigem Lauf", "vs previous run")}`}
         </span>
       ) : hasPrevious ? (
-        <span className="text-[10px] text-[var(--tessera-text-muted)]">
+        <span className="text-xs text-[var(--tessera-text-muted)]">
           {pick(
             locale,
             "Δ non comparable (version de catalogue différente)",

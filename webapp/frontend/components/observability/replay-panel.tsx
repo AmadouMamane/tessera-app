@@ -205,7 +205,7 @@ export function ReplayPanel() {
                         {b.original_model}
                       </p>
                       {b.lineage ? (
-                        <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]/80">
+                        <p className="mt-0.5 text-xs text-[var(--muted-foreground)]/80">
                           {t("lineage.prompt")} {b.lineage.prompt_version} · {t("lineage.policy")}{" "}
                           {b.lineage.guard_policy_version} · {b.lineage.doc_sources.length}{" "}
                           {t("lineage.docs")}
@@ -458,7 +458,7 @@ function LatencyWaterfall({ timings }: { timings: Record<string, number> }) {
           />
         ))}
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.65rem] text-[var(--muted-foreground)]">
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--muted-foreground)]">
         {entries.map(([name, ms], i) => (
           <span key={name} className="flex items-center gap-1">
             <span className={`h-2 w-2 rounded-full ${LATENCY_COLORS[i % LATENCY_COLORS.length]}`} />
@@ -527,11 +527,9 @@ function WhyView({ report }: { report: WhyExplanation }) {
             <span className="min-w-0">
               <span className={c.supported ? "" : "text-red-600 dark:text-red-400"}>{c.claim}</span>
               {c.source ? (
-                <span className="block text-[0.65rem] text-[var(--muted-foreground)]">
-                  ← {c.source}
-                </span>
+                <span className="block text-xs text-[var(--muted-foreground)]">← {c.source}</span>
               ) : (
-                <span className="block text-[0.65rem] text-red-600 dark:text-red-400">
+                <span className="block text-xs text-red-600 dark:text-red-400">
                   {t("why.unsupported")}
                 </span>
               )}

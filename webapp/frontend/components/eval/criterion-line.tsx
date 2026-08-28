@@ -32,7 +32,7 @@ export async function CriterionLine({
           {criterion.values.map((value) => (
             <code
               key={value}
-              className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-[11px] text-[var(--muted-foreground)]"
+              className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs text-[var(--muted-foreground)]"
             >
               {value}
             </code>
@@ -40,7 +40,7 @@ export async function CriterionLine({
         </span>
       ) : null}
       {typeof criterion.scalar === "number" ? (
-        <code className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-[11px] tabular-nums">
+        <code className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs tabular-nums">
           {criterion.scalar}
         </code>
       ) : null}

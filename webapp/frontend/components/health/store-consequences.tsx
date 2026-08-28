@@ -100,7 +100,7 @@ export function StoreConsequences() {
                   title={`${t(`capability.${row.key}`)} — ${t("readsTitle", { module: row.reads })}`}
                   className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[var(--tessera-border)]/50 py-1 last:border-0"
                 >
-                  <span className="flex items-center gap-1 text-[0.72rem] font-medium text-[var(--foreground)]">
+                  <span className="flex items-center gap-1 text-xs font-medium text-[var(--foreground)]">
                     {row.gates_agents ? (
                       <ShieldAlert
                         className="h-3 w-3 shrink-0 text-[var(--tessera-fg-warning)]"
@@ -117,7 +117,7 @@ export function StoreConsequences() {
                       "which capability" with "which component is red" by eye is the work this
                       block exists to remove. */}
                   {row.because.length > 0 ? (
-                    <span className="text-[0.66rem] text-[var(--muted-foreground)]">
+                    <span className="text-xs text-[var(--muted-foreground)]">
                       {t("because", { list: row.because.join(", ") })}
                     </span>
                   ) : null}
@@ -126,7 +126,7 @@ export function StoreConsequences() {
                       the stronger claim, so the stronger claim is marked and named. */}
                   {row.checked_by_read.length > 0 ? (
                     <span
-                      className="flex items-center gap-0.5 text-[0.62rem] text-[var(--muted-foreground)]"
+                      className="flex items-center gap-0.5 text-xs text-[var(--muted-foreground)]"
                       title={t("readBackedTitle", { list: row.checked_by_read.join(", ") })}
                     >
                       <SearchCheck className="h-3 w-3" />
@@ -137,7 +137,7 @@ export function StoreConsequences() {
                       own and read as a floating fragment, detached from the row it qualifies.
                       It belongs at the end of the same sentence. */}
                   {row.gates_agents && row.state !== "served" ? (
-                    <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+                    <span className="text-xs text-[var(--tessera-fg-warning)]">
                       {t("mayBlockAgents")}
                     </span>
                   ) : null}
@@ -145,7 +145,7 @@ export function StoreConsequences() {
                       not carry. « Suivi des appels au modèle — indécidable » names a capability
                       and leaves the reader to work out what they have stopped being able to
                       answer; this says it. */}
-                  <span className="w-full text-[0.62rem] leading-snug text-[var(--muted-foreground)]">
+                  <span className="w-full text-xs leading-snug text-[var(--muted-foreground)]">
                     {t(`cost.${row.key}`)}
                   </span>
                 </li>

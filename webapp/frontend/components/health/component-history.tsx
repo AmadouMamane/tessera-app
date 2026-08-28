@@ -65,7 +65,7 @@ export function ComponentHistoryPanel() {
               key={option}
               type="button"
               onClick={() => setDays(option)}
-              className={`rounded-md px-2 py-0.5 text-[0.66rem] transition-colors ${
+              className={`rounded-md px-2 py-0.5 text-xs transition-colors ${
                 option === days
                   ? "bg-[var(--tessera-surface)] font-medium text-[var(--foreground)] shadow-sm"
                   : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -95,7 +95,7 @@ export function ComponentHistoryPanel() {
                 <TimelineTable data={query.data} rows={rows} days={days} />
                 {/* Why a hole is a hole: the reader who just saw an empty stretch of track is
                     told the rule that refused to paint over it. */}
-                <p className="text-[0.62rem] leading-relaxed text-[var(--muted-foreground)]">
+                <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
                   {t("holesFootnote", {
                     continuity: humanSeconds(query.data.continuity_window_s),
                     from: format.dateTime(new Date(query.data.window.since), {
@@ -113,7 +113,7 @@ export function ComponentHistoryPanel() {
                   })}
                 </p>
                 <div>
-                  <p className="mb-1 text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">
                     {t("transitions", { n: changes.length })}
                   </p>
                   {changes.length === 0 ? (
@@ -124,7 +124,7 @@ export function ComponentHistoryPanel() {
                         {shown.map((change) => (
                           <li
                             key={`${change.component}-${change.at}`}
-                            className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.7rem]"
+                            className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs"
                           >
                             <span className="font-medium text-[var(--foreground)]">
                               {change.component}
@@ -134,14 +134,14 @@ export function ComponentHistoryPanel() {
                             </Badge>
                             <ArrowRight className="h-3 w-3 shrink-0 text-[var(--muted-foreground)]" />
                             <Badge tone={verdictTone(change.to)}>{t(`state.${change.to}`)}</Badge>
-                            <span className="text-[0.66rem] text-[var(--muted-foreground)]">
+                            <span className="text-xs text-[var(--muted-foreground)]">
                               {format.relativeTime(new Date(change.at), relativeNow())}
                             </span>
                             {/* Witnessed or merely found? The instant means different things,
                                 and a reader acting on a timestamp deserves to know which. */}
                             {change.after_gap ? (
                               <span
-                                className="flex items-center gap-0.5 text-[0.62rem] text-[var(--tessera-fg-warning)]"
+                                className="flex items-center gap-0.5 text-xs text-[var(--tessera-fg-warning)]"
                                 title={t("discoveredTitle")}
                               >
                                 <Search className="h-2.5 w-2.5" />
@@ -155,7 +155,7 @@ export function ComponentHistoryPanel() {
                         <button
                           type="button"
                           onClick={() => setAllTransitions((value) => !value)}
-                          className="mt-1 text-[0.66rem] text-[var(--tessera-green)] transition-colors hover:underline"
+                          className="mt-1 text-xs text-[var(--tessera-green)] transition-colors hover:underline"
                         >
                           {allTransitions
                             ? t("showLess")
@@ -212,7 +212,7 @@ function SchedulerLine({ data }: { data: ComponentHistory }) {
           ? t("probeNever", { every: cadence(probe.interval_s) })
           : t("probeOnDemand");
   return (
-    <p className="flex items-center gap-1.5 text-[0.66rem] text-[var(--muted-foreground)]">
+    <p className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
       {sentence}
     </p>
@@ -233,9 +233,9 @@ function TimelineTable({
   const t = useTranslations("health.history");
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[42rem] table-fixed border-collapse text-left text-[0.72rem]">
+      <table className="w-full min-w-[42rem] table-fixed border-collapse text-left text-xs">
         <thead>
-          <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+          <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
             <th className="w-[9rem] px-1.5 py-1 font-medium 2xl:w-[11rem]">{t("col.component")}</th>
             <th className="px-1.5 py-1 font-medium">{t("col.timeline")}</th>
             <th className="w-[5.5rem] px-1.5 py-1 text-center font-medium">{t("col.ok")}</th>
@@ -301,7 +301,7 @@ function TimelineTable({
                     ? pctFmt(row.observed_ratio)
                     : pctCoarse(row.observed_ratio)}
                 </td>
-                <td className="px-1.5 py-1.5 pr-2 text-right text-[0.66rem] text-[var(--muted-foreground)]">
+                <td className="px-1.5 py-1.5 pr-2 text-right text-xs text-[var(--muted-foreground)]">
                   {unobserved
                     ? t("unobserved")
                     : Object.entries(row.seconds_by_verdict)

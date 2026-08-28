@@ -70,7 +70,7 @@ export function ComprendreDiagram() {
           aria-hidden
           className="absolute left-[14%] top-1/2 h-0 w-0 -translate-x-full -translate-y-1/2 border-y-4 border-y-transparent border-r-[7px] border-r-[var(--tessera-text-muted)]"
         />
-        <p className="-translate-y-1/2 absolute top-1/2 right-0 left-0 mx-auto w-fit bg-[var(--tessera-surface)] px-3 text-center text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <p className="-translate-y-1/2 absolute top-1/2 right-0 left-0 mx-auto w-fit bg-[var(--tessera-surface)] px-3 text-center text-xs text-[var(--tessera-text-muted)]">
           {t("door")}
         </p>
       </div>
@@ -78,7 +78,7 @@ export function ComprendreDiagram() {
         <FlowStacked glyph="↑" label={t("door")} dashed />
       </div>
 
-      <figcaption className="mt-4 text-center text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <figcaption className="mt-4 text-center text-xs text-[var(--tessera-text-muted)]">
         {t("caption")}
       </figcaption>
     </figure>
@@ -98,7 +98,7 @@ function FlowAcross({ direction, label }: { direction: "left" | "right"; label: 
           <span className="h-0 w-0 border-y-4 border-y-transparent border-l-[7px] border-l-[var(--tessera-text-muted)]" />
         ) : null}
       </span>
-      <span className="text-center text-[0.68rem] text-[var(--tessera-text-muted)] leading-tight">
+      <span className="text-center text-xs text-[var(--tessera-text-muted)] leading-tight">
         {label}
       </span>
     </div>
@@ -117,7 +117,7 @@ function FlowStacked({
 }) {
   return (
     <p
-      className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-[0.72rem] text-[var(--tessera-text-muted)] ${
+      className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs text-[var(--tessera-text-muted)] ${
         dashed
           ? "border border-[var(--tessera-border)] border-dashed"
           : "bg-[var(--tessera-surface-2)]"

@@ -74,7 +74,7 @@ function TabHeader({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <h2 className="text-[0.95rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
-      <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{subtitle}</p>
+      <p className="text-xs text-[var(--tessera-text-muted)]">{subtitle}</p>
     </div>
   );
 }
@@ -82,7 +82,7 @@ function TabHeader({ title, subtitle }: { title: string; subtitle: string }) {
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <div className="flex min-w-[92px] flex-col gap-0.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {label}
       </span>
       <span
@@ -99,7 +99,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: str
 
 function HonestNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 py-2 text-[0.68rem] leading-relaxed text-[var(--tessera-text-muted)]">
+    <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-3 py-2 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
       {children}
     </div>
   );
@@ -107,7 +107,7 @@ function HonestNote({ children }: { children: React.ReactNode }) {
 
 function DrawerField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 text-[0.72rem]">
+    <div className="flex items-center justify-between gap-3 text-xs">
       <span className="text-[var(--tessera-text-muted)]">{label}</span>
       <span className="min-w-0 truncate text-right font-medium text-[var(--tessera-text)]">
         {children}
@@ -119,10 +119,10 @@ function DrawerField({ label, children }: { label: string; children: React.React
 function DrawerText({ title, text }: { title: string; text: string }) {
   return (
     <div className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-2.5">
-      <h3 className="mb-1.5 text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
         {title}
       </h3>
-      <p className="whitespace-pre-wrap text-[0.7rem] leading-relaxed text-[var(--tessera-text)]">
+      <p className="whitespace-pre-wrap text-xs leading-relaxed text-[var(--tessera-text)]">
         {text}
       </p>
     </div>
@@ -137,9 +137,7 @@ function identityColumns(locale: string): Column<Row>[] {
       label: "Session",
       width: "14%",
       sortValue: (r) => r.sid,
-      render: (r) => (
-        <span className="font-mono text-[0.64rem] text-[var(--tessera-text)]">{r.sid}</span>
-      ),
+      render: (r) => <span className="font-mono text-xs text-[var(--tessera-text)]">{r.sid}</span>,
     },
     {
       key: "case",
@@ -147,10 +145,7 @@ function identityColumns(locale: string): Column<Row>[] {
       width: "20%",
       sortValue: (r) => r.case_id,
       render: (r) => (
-        <Truncate
-          full={r.case_id}
-          className="font-mono text-[0.62rem] text-[var(--tessera-text-muted)]"
-        >
+        <Truncate full={r.case_id} className="font-mono text-xs text-[var(--tessera-text-muted)]">
           {r.case_id}
         </Truncate>
       ),
@@ -161,7 +156,7 @@ function identityColumns(locale: string): Column<Row>[] {
       width: "16%",
       sortValue: (r) => r.category_label,
       render: (r) => (
-        <Truncate full={r.category_label} className="text-[0.68rem] text-[var(--tessera-text)]">
+        <Truncate full={r.category_label} className="text-xs text-[var(--tessera-text)]">
           {r.category_label}
         </Truncate>
       ),
@@ -178,7 +173,7 @@ function statusColumn(locale: string): Column<Row> {
     render: (r) => (
       <span
         className={cn(
-          "rounded-full border px-2 py-0.5 text-[0.58rem] font-medium",
+          "rounded-full border px-2 py-0.5 text-xs font-medium",
           STATUS_PILL[r.status_tone] ?? STATUS_PILL.info,
         )}
       >
@@ -237,7 +232,7 @@ export function MessagesTab({ data }: { data: Data }) {
       width: "8%",
       sortValue: (r) => r.lang,
       render: (r) => (
-        <span className="font-mono text-[0.62rem] uppercase text-[var(--tessera-text-muted)]">
+        <span className="font-mono text-xs uppercase text-[var(--tessera-text-muted)]">
           {r.lang}
         </span>
       ),
@@ -248,7 +243,7 @@ export function MessagesTab({ data }: { data: Data }) {
       width: "28%",
       sortable: false,
       render: (r) => (
-        <Truncate full={r.question} className="text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <Truncate full={r.question} className="text-xs text-[var(--tessera-text-muted)]">
           {r.question}
         </Truncate>
       ),
@@ -259,7 +254,7 @@ export function MessagesTab({ data }: { data: Data }) {
       width: "14%",
       sortValue: (r) => r.start_ts,
       render: (r) => (
-        <span className="whitespace-nowrap text-[0.66rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <span className="whitespace-nowrap text-xs tabular-nums text-[var(--tessera-text-muted)]">
           {r.start}
         </span>
       ),
@@ -390,11 +385,11 @@ export function EvaluationsTab({ data }: { data: Data }) {
       sortValue: (r) => (r.escalation ? 1 : 0),
       render: (r) =>
         r.escalation ? (
-          <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+          <span className="text-xs text-[var(--tessera-fg-warning)]">
             {pick(locale, "oui", "ja", "yes")}
           </span>
         ) : (
-          <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+          <span className="text-xs text-[var(--tessera-text-muted)]">
             {pick(locale, "non", "nein", "no")}
           </span>
         ),
@@ -460,7 +455,7 @@ export function EvaluationsTab({ data }: { data: Data }) {
       />
       <Link
         href={agentPath(agentId, "evaluations") as Route}
-        className="flex items-center gap-1.5 self-start text-[0.7rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+        className="flex items-center gap-1.5 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
       >
         {pick(
           locale,
@@ -698,7 +693,7 @@ export function UsersTab({ data }: { data: Data }) {
       width: "19%",
       sortValue: (r) => r.first,
       render: (r) => (
-        <span className="text-[0.66rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <span className="text-xs tabular-nums text-[var(--tessera-text-muted)]">
           {r.first.slice(0, 10)}
         </span>
       ),
@@ -709,7 +704,7 @@ export function UsersTab({ data }: { data: Data }) {
       width: "19%",
       sortValue: (r) => r.last,
       render: (r) => (
-        <span className="text-[0.66rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <span className="text-xs tabular-nums text-[var(--tessera-text-muted)]">
           {r.last.slice(0, 10)}
         </span>
       ),
@@ -807,7 +802,7 @@ export function ContentTab() {
         </p>
         <Link
           href={agentPath(agentId, "connaissances") as Route}
-          className="flex items-center gap-1.5 text-[0.72rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+          className="flex items-center gap-1.5 text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
         >
           {pick(
             locale,
@@ -845,7 +840,7 @@ export function ErrorsTab({ data }: { data: Data }) {
     return (
       <div className="flex flex-col gap-2.5">
         <TabHeader title={title} subtitle={subtitle} />
-        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-[0.68rem] text-[var(--tessera-fg-success)]">
+        <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-[var(--tessera-fg-success)]">
           {pick(
             locale,
             "Aucune session en échec sur ce run.",
@@ -866,7 +861,7 @@ export function ErrorsTab({ data }: { data: Data }) {
       width: "8%",
       sortValue: (r) => r.lang,
       render: (r) => (
-        <span className="font-mono text-[0.62rem] uppercase text-[var(--tessera-text-muted)]">
+        <span className="font-mono text-xs uppercase text-[var(--tessera-text-muted)]">
           {r.lang}
         </span>
       ),
@@ -879,11 +874,11 @@ export function ErrorsTab({ data }: { data: Data }) {
       sortValue: (r) => (r.escalation ? 1 : 0),
       render: (r) =>
         r.escalation ? (
-          <span className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
+          <span className="text-xs text-[var(--tessera-fg-warning)]">
             {pick(locale, "oui", "ja", "yes")}
           </span>
         ) : (
-          <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+          <span className="text-xs text-[var(--tessera-text-muted)]">
             {pick(locale, "non", "nein", "no")}
           </span>
         ),
@@ -894,7 +889,7 @@ export function ErrorsTab({ data }: { data: Data }) {
       width: "14%",
       sortValue: (r) => r.start_ts,
       render: (r) => (
-        <span className="whitespace-nowrap text-[0.66rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <span className="whitespace-nowrap text-xs tabular-nums text-[var(--tessera-text-muted)]">
           {r.start}
         </span>
       ),
@@ -1152,7 +1147,7 @@ export function HistoriqueExportsTab({ data }: { data: Data }) {
                 <span className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)]">
                   {c.icon}
                 </span>
-                <span className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-[0.54rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <span className="rounded border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
                   {c.format}
                 </span>
               </div>
@@ -1160,14 +1155,12 @@ export function HistoriqueExportsTab({ data }: { data: Data }) {
                 <h3 className="text-[0.82rem] font-semibold text-[var(--tessera-text)]">
                   {c.title}
                 </h3>
-                <p className="text-[0.68rem] leading-snug text-[var(--tessera-text-muted)]">
-                  {c.desc}
-                </p>
+                <p className="text-xs leading-snug text-[var(--tessera-text-muted)]">{c.desc}</p>
               </div>
               <button
                 type="button"
                 onClick={c.onExport}
-                className="flex items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 py-1.5 text-[0.72rem] font-medium text-white hover:bg-[#7c5cf5]"
+                className="flex items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#7c5cf5]"
               >
                 <Download className="h-3.5 w-3.5" />{" "}
                 {pick(locale, "Télécharger", "Herunterladen", "Download")}

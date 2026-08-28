@@ -187,7 +187,7 @@ function MoreMenu({ data, label }: { data: Data; label: string }) {
     setOpen(false);
   };
   const itemCls =
-    "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[0.74rem] text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]";
+    "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-[var(--tessera-text-muted)] hover:bg-[var(--tessera-bg)] hover:text-[var(--tessera-text)]";
   return (
     <div className="relative" ref={ref}>
       <button
@@ -250,9 +250,9 @@ function Header({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {error ? (
-          <span className="text-[0.72rem] text-[var(--tessera-fg-danger)]">{t("saveError")}</span>
+          <span className="text-xs text-[var(--tessera-fg-danger)]">{t("saveError")}</span>
         ) : !dirty ? (
-          <span className="text-[0.72rem] text-[var(--tessera-fg-success)]">{actions?.saved}</span>
+          <span className="text-xs text-[var(--tessera-fg-success)]">{actions?.saved}</span>
         ) : null}
         {dirty ? (
           <button
@@ -319,7 +319,7 @@ function FieldSection({
         {block.link ? (
           <Link
             href={block.link.href as "/configurer/modeles"}
-            className="inline-flex items-center gap-1 text-[0.68rem] text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-text-strong)]"
+            className="inline-flex items-center gap-1 text-xs text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-text-strong)]"
           >
             {block.link.label} <ChevronRight className="h-3 w-3" />
           </Link>
@@ -440,7 +440,7 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
           {current}
         </Truncate>
         {field.badge ? (
-          <span className="ml-auto shrink-0 rounded-full bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--tessera-text)]">
+          <span className="ml-auto shrink-0 rounded-full bg-[var(--tessera-muted)] px-2 py-0.5 text-xs font-semibold text-[var(--tessera-text)]">
             {field.badge}
           </span>
         ) : null}
@@ -449,7 +449,7 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
             type="button"
             aria-label="Copier l'identifiant"
             onClick={() => navigator.clipboard?.writeText(current)}
-            className="ml-auto flex shrink-0 items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-[0.62rem] text-[var(--tessera-text-muted)] transition-colors hover:border-[#5fd0c6]/50 hover:text-[var(--tessera-fg-teal)]"
+            className="ml-auto flex shrink-0 items-center gap-1 rounded border border-[var(--tessera-border)] px-1.5 py-0.5 text-xs text-[var(--tessera-text-muted)] transition-colors hover:border-[#5fd0c6]/50 hover:text-[var(--tessera-fg-teal)]"
           >
             <Copy className="h-3.5 w-3.5" /> Copier
           </button>
@@ -463,9 +463,7 @@ function LabeledControl({ field, ctx }: { field: Field; ctx: Ctx }) {
 
   return (
     <div className="grid gap-1">
-      <span className="text-[0.68rem] font-medium text-[var(--tessera-text-muted)]">
-        {field.label}
-      </span>
+      <span className="text-xs font-medium text-[var(--tessera-text-muted)]">{field.label}</span>
       {control}
     </div>
   );
@@ -502,18 +500,18 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+            <span className="text-xs font-medium text-[var(--tessera-text)]">
               {b.runtime.label}
             </span>
             <CardInfo ns="agentConfigurations" k="behavior_runtime" title={b.runtime.label} />
-            <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1.5 text-[0.62rem] text-[var(--tessera-fg-teal)]">
+            <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1.5 text-xs text-[var(--tessera-fg-teal)]">
               {b.runtime.backend}
             </span>
-            <span className="text-[0.62rem] tabular-nums text-[var(--tessera-text-muted)]">
+            <span className="text-xs tabular-nums text-[var(--tessera-text-muted)]">
               {b.runtime.model}
             </span>
           </div>
-          <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">{b.runtime.note}</p>
+          <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{b.runtime.note}</p>
         </div>
       ) : null}
       {b.escalation ? (
@@ -524,7 +522,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+            <span className="text-xs font-medium text-[var(--tessera-text)]">
               {b.escalation.title}
             </span>
             <CardInfo ns="agentConfigurations" k="behavior_escalation" title={b.escalation.title} />
@@ -532,9 +530,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           <div className="mt-1.5">
             <SliderRow item={b.escalation.slider} ctx={ctx} runtime={b.runtime} />
           </div>
-          <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">
-            {b.escalation.note}
-          </p>
+          <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{b.escalation.note}</p>
         </div>
       ) : null}
       {b.retrieval ? (
@@ -544,7 +540,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
+            <span className="text-xs font-medium text-[var(--tessera-text)]">
               {b.retrieval.title}
             </span>
             <CardInfo ns="agentConfigurations" k="behavior_retrieval" title={b.retrieval.title} />
@@ -553,7 +549,7 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
             <SliderRow item={b.retrieval.slider} ctx={ctx} runtime={b.runtime} />
             <LabeledControl field={b.retrieval.toggle} ctx={ctx} />
           </div>
-          <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">{b.retrieval.note}</p>
+          <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{b.retrieval.note}</p>
         </div>
       ) : null}
       {b.memory ? (
@@ -563,19 +559,17 @@ function Behavior({ data, ctx }: { data: Data; ctx: Ctx }) {
           className="mt-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.5)] px-3 py-2"
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-[0.68rem] font-medium text-[var(--tessera-text)]">
-              {b.memory.title}
-            </span>
+            <span className="text-xs font-medium text-[var(--tessera-text)]">{b.memory.title}</span>
             <CardInfo ns="agentConfigurations" k="behavior_memory" title={b.memory.title} />
           </div>
           <div className="mt-1.5 grid gap-2">
             <SelectRow field={b.memory.select} ctx={ctx} />
             <SliderRow item={b.memory.slider} ctx={ctx} runtime={b.runtime} />
           </div>
-          <p className="mt-1 text-[0.64rem] text-[var(--tessera-text-muted)]">{b.memory.note}</p>
+          <p className="mt-1 text-xs text-[var(--tessera-text-muted)]">{b.memory.note}</p>
         </div>
       ) : null}
-      <p className="mt-2 flex items-center gap-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <p className="mt-2 flex items-center gap-2 text-xs text-[var(--tessera-text-muted)]">
         <Info className="h-3.5 w-3.5 text-[var(--tessera-fg-teal)]" />
         {b.note}
       </p>
@@ -592,7 +586,7 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
   const items = tools.items ?? [];
   return (
     <div className="grid grid-cols-[170px_1fr] items-center gap-3">
-      <span className="text-[0.68rem] text-[var(--tessera-text-muted)]">{tools.label}</span>
+      <span className="text-xs text-[var(--tessera-text-muted)]">{tools.label}</span>
       <div className="relative" ref={ref}>
         <button
           type="button"
@@ -618,14 +612,14 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
               {items.map((tool) => (
                 <li
                   key={tool}
-                  className="flex items-center gap-2 rounded px-2 py-1.5 text-[0.72rem] text-[var(--tessera-text)]"
+                  className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-[var(--tessera-text)]"
                 >
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-success)]" />
                   {tool}
                 </li>
               ))}
               {items.length === 0 ? (
-                <li className="px-2 py-1.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+                <li className="px-2 py-1.5 text-xs text-[var(--tessera-text-muted)]">
                   Aucun outil autorisé
                 </li>
               ) : null}
@@ -633,7 +627,7 @@ function ToolsRow({ tools }: { tools: NonNullable<Data["behavior"]>["tools"] }) 
             {tools.href ? (
               <Link
                 href={tools.href as Route}
-                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-[0.68rem] text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-text-strong)]"
+                className="mt-1 flex items-center gap-1 border-t border-[var(--tessera-border)] px-2 pt-1.5 text-xs text-[var(--tessera-fg-teal)] hover:text-[var(--tessera-text-strong)]"
               >
                 Gérer dans les garde-fous <ChevronRight className="h-3 w-3" />
               </Link>
@@ -649,12 +643,12 @@ function SelectRow({ field, ctx }: { field: Field; ctx: Ctx }) {
   const current = field.key ? String(ctx.draft[field.key] ?? field.value) : field.value;
   return (
     <div className="grid grid-cols-[140px_1fr] items-center gap-3">
-      <span className="flex flex-wrap items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <span className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
         {field.label}
         {field.badge ? (
           // ADR 0032 — the select says HOW it takes effect (prompt injection /
           // hard token cap), next to the control — never silently cosmetic.
-          <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1 text-[0.58rem] text-[var(--tessera-fg-teal)]">
+          <span className="rounded border border-cyan-400/40 bg-cyan-400/10 px-1 text-xs text-[var(--tessera-fg-teal)]">
             {field.badge}
           </span>
         ) : null}
@@ -698,12 +692,12 @@ function SliderRow({ item, ctx, runtime }: { item: Slider; ctx: Ctx; runtime?: R
   const applied = item.applied !== false;
   return (
     <div className="grid grid-cols-[170px_84px_1fr_auto] items-center gap-3">
-      <span className="flex items-center gap-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
+      <span className="flex items-center gap-1.5 text-xs text-[var(--tessera-text-muted)]">
         {item.label}
         {!applied && runtime ? (
           <span
             title={runtime.note}
-            className="rounded border border-amber-400/40 bg-amber-400/10 px-1 text-[0.58rem] text-[var(--tessera-fg-warning)]"
+            className="rounded border border-amber-400/40 bg-amber-400/10 px-1 text-xs text-[var(--tessera-fg-warning)]"
           >
             {t("notApplied", { backend: runtime.backend })}
           </span>
@@ -777,12 +771,12 @@ function Tags({
       </h2>
       <div className="grid gap-x-12 gap-y-2 lg:grid-cols-2">
         <div>
-          <p className="mb-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">Tags</p>
+          <p className="mb-1.5 text-xs text-[var(--tessera-text-muted)]">Tags</p>
           <div className="flex min-h-[34px] flex-wrap items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[rgba(5,20,35,0.76)] px-2 py-1">
             {current.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex h-6 items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 text-[0.7rem] text-[var(--tessera-text)]"
+                className="inline-flex h-6 items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 text-xs text-[var(--tessera-text)]"
               >
                 {tag}
                 <button
@@ -806,14 +800,12 @@ function Tags({
               }}
               placeholder={tags.add_tag}
               aria-label={tags.add_tag}
-              className="h-6 min-w-[110px] flex-1 bg-transparent text-[0.7rem] text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
+              className="h-6 min-w-[110px] flex-1 bg-transparent text-xs text-[var(--tessera-text)] outline-none placeholder:text-[var(--tessera-text-muted)]"
             />
           </div>
         </div>
         <div>
-          <p className="mb-1.5 text-[0.68rem] text-[var(--tessera-text-muted)]">
-            {tags.metadata_label}
-          </p>
+          <p className="mb-1.5 text-xs text-[var(--tessera-text-muted)]">{tags.metadata_label}</p>
           <div className="grid grid-cols-[1fr_auto] items-center gap-3">
             <span className="text-[0.76rem] text-[var(--tessera-text-muted)]">{tags.metadata}</span>
             <button
@@ -827,7 +819,7 @@ function Tags({
         </div>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] pt-2">
-        <p className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+        <p className="text-xs text-[var(--tessera-text-muted)]">
           {tags.created} <span className="mx-2">-</span> {tags.modified}
         </p>
         <button
@@ -836,7 +828,7 @@ function Tags({
           disabled={archiving}
           aria-pressed={tags.archived ?? false}
           className={cn(
-            "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-[0.68rem] font-medium disabled:opacity-50",
+            "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium disabled:opacity-50",
             tags.archived
               ? "border-emerald-500/45 bg-emerald-500/10 text-[var(--tessera-fg-success)]"
               : "border-red-500/45 bg-red-500/10 text-[var(--tessera-fg-danger)]",
@@ -872,7 +864,7 @@ function Status({ data }: { data: Data }) {
         </h2>
         <span
           className={cn(
-            "rounded-full px-2.5 py-1 text-[0.65rem] font-semibold",
+            "rounded-full px-2.5 py-1 text-xs font-semibold",
             s.badge_tone === "crit"
               ? "bg-red-500/15 text-[var(--tessera-fg-danger)]"
               : "bg-emerald-500/15 text-[var(--tessera-fg-success)]",
@@ -893,7 +885,7 @@ function Status({ data }: { data: Data }) {
                 : "LLM injoignable"
             : row.value;
           return (
-            <div key={row.label} className="grid grid-cols-[1fr_auto] gap-3 text-[0.72rem]">
+            <div key={row.label} className="grid grid-cols-[1fr_auto] gap-3 text-xs">
               <span className="text-[var(--tessera-text-muted)]">{row.label}</span>
               <span className="flex items-center gap-2 text-right text-[var(--tessera-text)]">
                 {row.badge ? (
@@ -936,7 +928,7 @@ function ActiveModel({ data }: { data: Data }) {
           <Badge>{m.provider}</Badge>
         </div>
         {m.rows.map((row) => (
-          <div key={row.label} className="grid grid-cols-[1fr_auto] gap-2 text-[0.72rem]">
+          <div key={row.label} className="grid grid-cols-[1fr_auto] gap-2 text-xs">
             <span className="text-[var(--tessera-text-muted)]">{row.label}</span>
             <span className="text-[var(--tessera-text)]">{row.value}</span>
           </div>
@@ -957,7 +949,7 @@ function Summary({ data }: { data: Data }) {
       </h2>
       <div className="grid gap-1.5">
         {s.rows.map((row) => (
-          <div key={row.label} className="grid grid-cols-[1fr_1fr] gap-3 text-[0.74rem]">
+          <div key={row.label} className="grid grid-cols-[1fr_1fr] gap-3 text-xs">
             <span className="text-[var(--tessera-text-muted)]">{row.label}</span>
             <span className="text-[var(--tessera-text)]">{row.value}</span>
           </div>
@@ -999,7 +991,7 @@ function History({ data }: { data: Data }) {
               ) : null}
             </span>
             <span className="min-w-0">
-              <span className="grid grid-cols-[1fr_auto] gap-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+              <span className="grid grid-cols-[1fr_auto] gap-2 text-xs text-[var(--tessera-text-muted)]">
                 <span>{item.time}</span>
                 <span>{item.actor}</span>
               </span>
@@ -1034,7 +1026,7 @@ function LinksPanel({ data }: { data: Data }) {
               <span className="block text-[0.76rem] font-medium text-[var(--tessera-text)] group-hover:text-[var(--tessera-fg-teal)]">
                 {link.title}
               </span>
-              <span className="mt-0.5 block text-[0.68rem] leading-snug text-[var(--tessera-text-muted)]">
+              <span className="mt-0.5 block text-xs leading-snug text-[var(--tessera-text-muted)]">
                 {link.desc}
               </span>
             </span>
@@ -1056,7 +1048,7 @@ function Panel({ children }: { children: ReactNode }) {
 
 function Badge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[0.62rem] font-semibold text-[var(--tessera-fg-teal)]">
+    <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-xs font-semibold text-[var(--tessera-fg-teal)]">
       {children}
     </span>
   );

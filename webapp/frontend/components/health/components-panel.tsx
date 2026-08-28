@@ -114,7 +114,7 @@ export function ComponentsPanel() {
             {/* The observation instant, published because it is NOT the render instant: the
                 probe is cached, and a component list that does not say when it last looked
                 invites the reader to assume "now". */}
-            <span className="text-[0.66rem] text-[var(--muted-foreground)]">
+            <span className="text-xs text-[var(--muted-foreground)]">
               {t("checked", {
                 when: format.relativeTime(observedAt(query.data.observed_at), relativeNow()),
               })}
@@ -154,7 +154,7 @@ export function ComponentsPanel() {
                       type="button"
                       onClick={() => setFilter(option)}
                       aria-pressed={active}
-                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.68rem] transition-colors ${
+                      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors ${
                         active
                           ? "bg-[var(--tessera-surface)] font-medium text-[var(--foreground)] shadow-sm ring-1 ring-inset ring-[var(--tessera-border)]"
                           : "text-[var(--muted-foreground)] hover:bg-[var(--tessera-muted)]/40 hover:text-[var(--foreground)]"
@@ -162,7 +162,7 @@ export function ComponentsPanel() {
                     >
                       {t(`filter.${option}`)}
                       <span
-                        className={`min-w-[1.15rem] rounded px-1 py-px text-center text-[0.62rem] tabular-nums ${
+                        className={`min-w-[1.15rem] rounded px-1 py-px text-center text-xs tabular-nums ${
                           active
                             ? "bg-[var(--tessera-muted)] text-[var(--foreground)]"
                             : "bg-[var(--tessera-muted)]/50 text-[var(--muted-foreground)]"
@@ -186,7 +186,7 @@ export function ComponentsPanel() {
                   value={needle}
                   onChange={(event) => setNeedle(event.target.value)}
                   placeholder={t("searchPlaceholder")}
-                  className="h-6.5 w-56 rounded-md border border-[var(--tessera-border)] bg-transparent pl-6.5 pr-2 text-[0.7rem] text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  className="h-6.5 w-56 rounded-md border border-[var(--tessera-border)] bg-transparent pl-6.5 pr-2 text-xs text-[var(--foreground)] outline-none transition-colors placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                 />
               </label>
             </div>
@@ -194,9 +194,9 @@ export function ComponentsPanel() {
               <p className="py-2 text-xs text-[var(--muted-foreground)]">{t("noMatch")}</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full table-fixed border-collapse text-left text-[0.72rem]">
+                <table className="w-full table-fixed border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                    <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                       <SortableHeader
                         className="w-[11rem] 2xl:w-[14rem]"
                         label={t("col.name")}
@@ -225,7 +225,7 @@ export function ComponentsPanel() {
                         <tr key={`h-${group}`}>
                           <th
                             colSpan={4}
-                            className="px-1.5 pb-1 pt-3 text-left text-[0.6rem] font-medium uppercase tracking-wide text-[var(--muted-foreground)]"
+                            className="px-1.5 pb-1 pt-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]"
                           >
                             <span className="flex items-baseline gap-2">
                               {t(`group.${group}`, { n: groupRows.length })}
@@ -377,9 +377,7 @@ function ComponentRow({
           <ChevronRight className="h-3 w-3 shrink-0 text-[var(--muted-foreground)] opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70" />
         </span>
         {role ? (
-          <span className="block truncate text-[0.62rem] text-[var(--muted-foreground)]">
-            {role}
-          </span>
+          <span className="block truncate text-xs text-[var(--muted-foreground)]">{role}</span>
         ) : null}
       </td>
       <td className="px-1.5 py-1">
@@ -391,7 +389,7 @@ function ComponentRow({
             to nineteen calm rows and hides the one that matters. */}
         {component.read && component.read.verdict !== component.verdict ? (
           <span
-            className={`mt-0.5 flex items-center gap-0.5 text-[0.6rem] ${
+            className={`mt-0.5 flex items-center gap-0.5 text-xs ${
               component.read.verdict === "ok"
                 ? "text-[var(--muted-foreground)]"
                 : "text-[var(--tessera-fg-warning)]"
@@ -407,7 +405,7 @@ function ComponentRow({
         {asked || "—"}
       </td>
       <td
-        className="truncate px-1.5 py-1 pr-2 text-right font-mono text-[0.66rem] text-[var(--muted-foreground)]"
+        className="truncate px-1.5 py-1 pr-2 text-right font-mono text-xs text-[var(--muted-foreground)]"
         title={component.detail}
       >
         {echoes ? <span className="font-sans italic">{t("answeredByVerdict")}</span> : found}

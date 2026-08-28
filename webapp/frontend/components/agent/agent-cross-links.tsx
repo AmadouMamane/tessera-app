@@ -80,14 +80,14 @@ export function AgentCrossLinks({ page }: { page: AgentLinkPage }) {
   ];
   return (
     <section className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 py-2">
-      <span className="text-[10px] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+      <span className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
         Liens utiles
       </span>
       {items.map((it) => (
         <Link
           key={it.label}
           href={it.href}
-          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-[11px] text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-[var(--tessera-text-strong)]"
+          className="rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface-2)] px-2 py-1 text-xs text-[var(--tessera-text)] transition-colors hover:border-[#7c5cf5]/50 hover:text-[var(--tessera-text-strong)]"
         >
           {it.label} →
         </Link>

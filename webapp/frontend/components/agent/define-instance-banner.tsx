@@ -34,23 +34,23 @@ export function DefineInstanceBanner({
         <section className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-[0.82rem] font-semibold text-[var(--tessera-text)]">
-              <span className="grid h-5 w-5 place-items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[0.62rem] font-bold text-[var(--tessera-fg-accent)]">
+              <span className="grid h-5 w-5 place-items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs font-bold text-[var(--tessera-fg-accent)]">
                 1
               </span>
               <Layers className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
               {definition.title}
-              <span className="rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-[0.58rem] font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <span className="rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {definition.subtitle}
               </span>
             </h2>
             <Link
               href={definition.link.href as Route}
-              className="flex items-center gap-1 text-[0.7rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
+              className="flex items-center gap-1 text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]"
             >
               {definition.link.label} <ExternalLink className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[0.72rem] md:grid-cols-3">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs md:grid-cols-3">
             {definition.rows.map((r) => (
               <div key={r.label} className="flex items-center justify-between gap-2">
                 <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
@@ -66,7 +66,7 @@ export function DefineInstanceBanner({
       {/* 2 · Configuration pour cet agent (instance) — introduces the editable
           sections below; the actual controls remain each page's own. */}
       <div className="flex items-center gap-2 px-0.5">
-        <span className="grid h-5 w-5 place-items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[0.62rem] font-bold text-[var(--tessera-fg-success)]">
+        <span className="grid h-5 w-5 place-items-center rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-xs font-bold text-[var(--tessera-fg-success)]">
           2
         </span>
         <SlidersHorizontal className="h-4 w-4 text-[var(--tessera-fg-success)]" />
@@ -74,12 +74,12 @@ export function DefineInstanceBanner({
           {instanceLabel}
         </span>
         {instanceHint ? (
-          <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">· {instanceHint}</span>
+          <span className="text-xs text-[var(--tessera-text-muted)]">· {instanceHint}</span>
         ) : null}
       </div>
 
       {governanceBanner ? (
-        <div className="flex items-start gap-2 rounded-lg border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2.5 text-[0.72rem] text-[var(--tessera-text-muted)]">
+        <div className="flex items-start gap-2 rounded-lg border border-[#1f3a5f]/60 bg-[#0e1f33]/40 px-3 py-2.5 text-xs text-[var(--tessera-text-muted)]">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tessera-fg-info)]" />
           <span>{governanceBanner}</span>
         </div>

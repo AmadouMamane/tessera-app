@@ -73,7 +73,7 @@ export function ModelCatalogue() {
   }, [data, scope]);
 
   if (isLoading) {
-    return <p className="text-[0.72rem] text-[var(--tessera-text-muted)]">{t("loading")}</p>;
+    return <p className="text-xs text-[var(--tessera-text-muted)]">{t("loading")}</p>;
   }
   // Three states, not one — see the identical note in `guardrail-catalogue`. "No models are
   // served" is a very different sentence from "we could not ask", and only one of them should
@@ -83,14 +83,14 @@ export function ModelCatalogue() {
   }
   if (!data.available) {
     return (
-      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-xs text-[var(--tessera-text-muted)]">
         {t("unavailable")}
       </p>
     );
   }
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-[0.72rem] text-[var(--tessera-text-muted)]">
+      <p className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-4 text-xs text-[var(--tessera-text-muted)]">
         {t("empty")}
       </p>
     );
@@ -108,7 +108,7 @@ export function ModelCatalogue() {
               data-slot="card"
               className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-2.5"
             >
-              <p className="flex items-center gap-1 text-[0.58rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <p className="flex items-center gap-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 <Truncate full={kpi.label} className="min-w-0">
                   {kpi.label}
                 </Truncate>
@@ -132,7 +132,7 @@ export function ModelCatalogue() {
             data-testid="models-table"
           >
             <thead>
-              <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {(data.columns ?? []).map((c) => (
                   <th key={c} className="px-2.5 py-2 font-medium">
                     {c}
@@ -191,9 +191,7 @@ export function ModelCatalogue() {
         </div>
       </div>
       {selected ? <ModelDetail row={selected} onClose={() => setSelectedId(null)} /> : null}
-      {data.note ? (
-        <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{data.note}</p>
-      ) : null}
+      {data.note ? <p className="text-xs text-[var(--tessera-text-muted)]">{data.note}</p> : null}
     </div>
   );
 }
@@ -293,9 +291,7 @@ function ServingModels() {
       <h3 className="text-[0.78rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {t("title")}
       </h3>
-      <p className="mt-0.5 text-[0.6rem] leading-relaxed text-[var(--tessera-text-muted)]">
-        {t("note")}
-      </p>
+      <p className="mt-0.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">{t("note")}</p>
       <ul className="mt-2 flex flex-col gap-1.5">
         {data.knobs.map((k) => {
           const effective = k.override?.value ?? k.base;
@@ -318,15 +314,13 @@ function ServingModels() {
               className="flex flex-col gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="min-w-[180px] text-[0.7rem] font-medium text-[var(--tessera-text)]">
+                <span className="min-w-[180px] text-xs font-medium text-[var(--tessera-text)]">
                   {rowLabel}
                 </span>
-                <span className="font-mono text-[0.68rem] text-[var(--tessera-fg-info)]">
-                  {effective}
-                </span>
+                <span className="font-mono text-xs text-[var(--tessera-fg-info)]">{effective}</span>
                 <span
                   className={cn(
-                    "inline-flex items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+                    "inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium",
                     k.override
                       ? "border-sky-500/30 bg-sky-500/15 text-[var(--tessera-fg-info)]"
                       : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]",
@@ -344,7 +338,7 @@ function ServingModels() {
                         type="button"
                         disabled={busy}
                         onClick={() => startEdit(k.key, "set", editSeed(k, kind, effective))}
-                        className="text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
+                        className="text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)] disabled:opacity-50"
                       >
                         {t("change")}
                       </button>
@@ -353,7 +347,7 @@ function ServingModels() {
                           type="button"
                           disabled={busy}
                           onClick={() => startEdit(k.key, "revert", effective)}
-                          className="text-[0.62rem] font-medium text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-fg-warning)] disabled:opacity-50"
+                          className="text-xs font-medium text-[var(--tessera-fg-warning)] hover:text-[var(--tessera-fg-warning)] disabled:opacity-50"
                         >
                           {t("revert")}
                         </button>
@@ -364,7 +358,7 @@ function ServingModels() {
                       <button
                         type="button"
                         disabled
-                        className="cursor-not-allowed text-[0.62rem] font-medium text-[var(--tessera-text-muted)] opacity-60"
+                        className="cursor-not-allowed text-xs font-medium text-[var(--tessera-text-muted)] opacity-60"
                       >
                         {t("change")}
                       </button>
@@ -373,7 +367,7 @@ function ServingModels() {
                 </span>
               </div>
               {k.override ? (
-                <p className="text-[0.6rem] text-[var(--tessera-text-muted)]">
+                <p className="text-xs text-[var(--tessera-text-muted)]">
                   {t("provenance", {
                     author: k.override.author,
                     date: new Date(k.override.updated_at).toLocaleString(locale, {
@@ -399,7 +393,7 @@ function ServingModels() {
                         aria-label={t("budgetDaily")}
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
-                        className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                        className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-xs text-[var(--tessera-text)]"
                       />
                     ) : kind === "overrun" || kind === "choice" ? (
                       // ADR 0034/0053 — a closed value list, never free text.
@@ -407,7 +401,7 @@ function ServingModels() {
                         aria-label={rowLabel}
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
-                        className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                        className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-xs text-[var(--tessera-text)]"
                       >
                         {(k.options ?? []).map((o) => (
                           <option key={o} value={o}>
@@ -425,14 +419,14 @@ function ServingModels() {
                         aria-label={rowLabel}
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
-                        className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                        className="h-7 w-28 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-xs text-[var(--tessera-text)]"
                       />
                     ) : (
                       <select
                         aria-label={t("modelLabel")}
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
-                        className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-[0.64rem] text-[var(--tessera-text)]"
+                        className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-1.5 font-mono text-xs text-[var(--tessera-text)]"
                       >
                         {data.allowed_chat_models.map((m) => (
                           <option key={m} value={m}>
@@ -442,7 +436,7 @@ function ServingModels() {
                       </select>
                     )
                   ) : (
-                    <span className="text-[0.64rem] text-[var(--tessera-text)]">
+                    <span className="text-xs text-[var(--tessera-text)]">
                       {t("revertTo", { base: k.base })}
                     </span>
                   )}
@@ -451,25 +445,25 @@ function ServingModels() {
                     placeholder={t("reasonPlaceholder")}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
-                    className="h-7 w-64 min-w-0 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 text-[0.64rem] text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)]"
+                    className="h-7 w-64 min-w-0 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-2 text-xs text-[var(--tessera-text)] placeholder:text-[var(--tessera-text-muted)]"
                   />
                   <Button
                     size="sm"
                     disabled={busy || !reason.trim()}
                     onClick={submit}
-                    className="h-7 border border-[#2e72d2] bg-[#1b4f8a] px-2.5 text-[0.64rem] text-[#d8eaff] hover:bg-[#22609f]"
+                    className="h-7 border border-[#2e72d2] bg-[#1b4f8a] px-2.5 text-xs text-[#d8eaff] hover:bg-[#22609f]"
                   >
                     {editing.mode === "set" ? t("apply") : t("confirmRevert")}
                   </Button>
                   <button
                     type="button"
                     onClick={() => setEditing(null)}
-                    className="text-[0.62rem] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
+                    className="text-xs text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]"
                   >
                     {t("cancel")}
                   </button>
                   {error ? (
-                    <p role="alert" className="text-[0.62rem] text-[var(--tessera-fg-danger)]">
+                    <p role="alert" className="text-xs text-[var(--tessera-fg-danger)]">
                       {error}
                     </p>
                   ) : null}
@@ -502,10 +496,10 @@ function ModelDetail({
     >
       {d.sections.map((s) => (
         <div key={s.key}>
-          <p className="mb-1 text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="mb-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {s.title}
           </p>
-          <dl className="flex flex-col gap-1 text-[0.66rem]">
+          <dl className="flex flex-col gap-1 text-xs">
             {s.rows.map((r) => (
               <div key={r.label} className="flex items-center justify-between gap-3">
                 <dt className="text-[var(--tessera-text-muted)]">{r.label}</dt>
@@ -519,11 +513,11 @@ function ModelDetail({
       ))}
       <div className="border-t border-[var(--tessera-border)] pt-2">
         <div className="mb-1.5 flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[0.66rem] font-semibold text-[var(--tessera-text)]">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--tessera-text)]">
             <Users className="h-3.5 w-3.5 text-[var(--tessera-fg-info)]" /> {d.consumers.title}
           </span>
           {d.consumers.regate_count > 0 ? (
-            <span className="inline-flex items-center gap-1 text-[0.6rem] text-[var(--tessera-fg-warning)]">
+            <span className="inline-flex items-center gap-1 text-xs text-[var(--tessera-fg-warning)]">
               <AlertTriangle className="h-3 w-3" /> {d.consumers.regate_label}
             </span>
           ) : null}
@@ -534,7 +528,7 @@ function ModelDetail({
               <li
                 key={c.agent_id}
                 title={c.label}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-[0.62rem]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1 text-xs"
               >
                 <span
                   className={cn(
@@ -547,16 +541,16 @@ function ModelDetail({
             ))}
           </ul>
         ) : (
-          <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{d.consumers.empty}</p>
+          <p className="text-xs text-[var(--tessera-text-muted)]">{d.consumers.empty}</p>
         )}
-        <p className="mt-1.5 text-[0.56rem] leading-relaxed text-[var(--tessera-text-muted)]">
+        <p className="mt-1.5 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
           {d.consumers.note}
         </p>
         {d.consumers.count > 0 ? (
           <Link
             href={REVALIDATE_HREF}
             className={cn(
-              "mt-1.5 inline-flex items-center gap-1 text-[0.6rem] font-medium hover:underline",
+              "mt-1.5 inline-flex items-center gap-1 text-xs font-medium hover:underline",
               d.consumers.regate_count > 0
                 ? "text-[var(--tessera-fg-warning)]"
                 : "text-[var(--tessera-fg-info)]",

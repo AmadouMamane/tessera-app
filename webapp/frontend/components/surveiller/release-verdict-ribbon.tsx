@@ -102,7 +102,7 @@ export async function ReleaseVerdictRibbon({
       action={
         <Link
           href={{ pathname: "/agir/release-control" }}
-          className="inline-flex h-7 items-center rounded-md border border-[var(--ribbon-border)] px-2.5 text-[11px] font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--ribbon-hover)]"
+          className="inline-flex h-7 items-center rounded-md border border-[var(--ribbon-border)] px-2.5 text-xs font-medium text-[var(--tessera-text)] transition-colors hover:bg-[var(--ribbon-hover)]"
         >
           {t("verdict.open")}
         </Link>

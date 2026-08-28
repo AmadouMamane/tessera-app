@@ -209,7 +209,7 @@ function Donut({ slices }: { slices: { label: string; count: number; color: stri
           {total}
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.7rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
         {slices.map((s) => (
           <li key={s.label} className="flex items-center gap-1.5">
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -368,7 +368,7 @@ export function ImprovementDashboard() {
       info={<ExplainInfo k="opportunities" title={ti("panel.opportunities")} />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.72rem]">
+        <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-[var(--muted-foreground)]">
               <th className="py-1 pr-2 font-medium">{ti("col.action")}</th>
@@ -393,7 +393,7 @@ export function ImprovementDashboard() {
   const panelCauses = (
     <Panel title={ti("panel.causes")} info={<ExplainInfo k="causes" title={ti("panel.causes")} />}>
       {causeSlices.length === 0 ? (
-        <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
+        <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">—</p>
       ) : (
         <Donut slices={causeSlices} />
       )}
@@ -421,11 +421,11 @@ export function ImprovementDashboard() {
           style={{ width: `${(d.eval_coverage ?? 0) * 100}%` }}
         />
       </div>
-      <div className="mt-2 flex justify-between text-[0.7rem]">
+      <div className="mt-2 flex justify-between text-xs">
         <span className="text-[var(--muted-foreground)]">{ti("panel.debt")}</span>
         <span className="tabular-nums">{showNumber(d.corpus_debt_days, (v) => `${v} j`)}</span>
       </div>
-      <div className="flex justify-between text-[0.7rem]">
+      <div className="flex justify-between text-xs">
         <span className="text-[var(--muted-foreground)]">{ti("panel.curate")}</span>
         <span className="tabular-nums">{d.n_to_curate ?? 0}</span>
       </div>
@@ -496,7 +496,7 @@ export function ImprovementDashboard() {
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
           {[kpi.shadow, kpi.gain, kpi.roi]}
         </div>
-        <p className="text-[0.72rem] leading-relaxed text-[var(--muted-foreground)]">
+        <p className="text-xs leading-relaxed text-[var(--muted-foreground)]">
           {ti("cta.experimentsNote")}
         </p>
         {topProblemsCard}
@@ -565,7 +565,7 @@ export function ImprovementDashboard() {
         />
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+      <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--muted-foreground)]">
         <Chip icon={ShieldCheck} label={ti("status.chain")} tone="text-[var(--tessera-green)]" />
         <Chip icon={Boxes} label={ti("status.truth")} />
         <Chip icon={Sparkles} label={ti("status.improvement")} />
@@ -580,7 +580,7 @@ function OpportunityRow({ o }: { o: Opportunity }) {
     <tr className="border-b border-[var(--border)]/50">
       <td className="py-1 pr-2">
         <span className="flex items-center gap-1.5">
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[var(--tessera-muted)] text-[0.55rem] font-semibold tabular-nums">
+          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-[var(--tessera-muted)] text-xs font-semibold tabular-nums">
             {o.rank}
           </span>
           <Truncate className="min-w-0">{o.action}</Truncate>
@@ -633,7 +633,7 @@ function CandidateCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-1.5">
         {candidate.gates.map((g) => (
-          <div key={g.name} className="flex items-center justify-between gap-2 text-[0.72rem]">
+          <div key={g.name} className="flex items-center justify-between gap-2 text-xs">
             <span className="text-[var(--muted-foreground)]">{ti(`gate.${g.name}`)}</span>
             <span className="flex items-center gap-2">
               <span className="tabular-nums">{g.value}</span>
@@ -661,10 +661,10 @@ function TopProblemsCard({ topProblems }: { topProblems: Opportunity[] }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-1.5">
         {topProblems.length === 0 ? (
-          <p className="py-2 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>
+          <p className="py-2 text-center text-xs text-[var(--muted-foreground)]">—</p>
         ) : (
           topProblems.slice(0, 5).map((p) => (
-            <div key={p.rank} className="flex items-center gap-2 text-[0.72rem]">
+            <div key={p.rank} className="flex items-center gap-2 text-xs">
               <Truncate className="min-w-0 flex-1">{p.cause}</Truncate>
               <span className={`shrink-0 tabular-nums ${GOOD}`}>+{p.gain_pts} pts</span>
             </div>
@@ -686,7 +686,7 @@ function CurrentReleaseCard({ currentVersion }: { currentVersion: string }) {
           <ExplainInfo k="current" title={ti("rail.current")} />
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex items-center justify-between gap-2 text-[0.72rem]">
+      <CardContent className="flex items-center justify-between gap-2 text-xs">
         <span className="font-serif text-base font-semibold tabular-nums">
           {currentVersion || "—"}
         </span>
@@ -718,7 +718,7 @@ function CtaCard({
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-[0.8rem] font-medium">{label}</span>
-        <span className="text-[0.68rem] text-[var(--muted-foreground)]">{desc}</span>
+        <span className="text-xs text-[var(--muted-foreground)]">{desc}</span>
       </span>
       <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--muted-foreground)] opacity-40 transition-opacity group-hover:opacity-80" />
     </Link>
@@ -782,7 +782,7 @@ function SensitiveLink({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 text-[0.72rem] transition-colors hover:border-[var(--tessera-green)]/40 hover:bg-[var(--tessera-surface)]/50"
+      className="group flex items-center gap-2 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 text-xs transition-colors hover:border-[var(--tessera-green)]/40 hover:bg-[var(--tessera-surface)]/50"
     >
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)] group-hover:text-[var(--tessera-green)]" />
       <span className="min-w-0 flex-1 truncate">{label}</span>

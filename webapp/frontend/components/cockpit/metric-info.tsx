@@ -41,11 +41,11 @@ export function MetricInfo({ title, what, how, source, className }: MetricInfoPr
           aria-label={t("about", { name: title })}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full text-[var(--tessera-text-muted)] outline-none transition-colors hover:text-[var(--tessera-text)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+            "inline-flex h-6 w-6 shrink-0 cursor-help items-center justify-center rounded-full text-[var(--tessera-text-muted)] outline-none transition-colors hover:bg-[var(--tessera-muted)] hover:text-[var(--tessera-text)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
             className,
           )}
         >
-          <Info className="h-3.5 w-3.5" aria-hidden />
+          <Info className="h-4 w-4" aria-hidden />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -59,25 +59,25 @@ export function MetricInfo({ title, what, how, source, className }: MetricInfoPr
           )}
         >
           <p className="font-semibold text-[var(--tessera-tooltip-fg)] text-xs">{title}</p>
-          <p className="mt-1 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
+          <p className="mt-1 text-xs leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
             {what}
           </p>
           {how ? (
             <div className="mt-2 border-[var(--tessera-tooltip-border)] border-t pt-2">
-              <p className="font-medium text-[0.66rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
+              <p className="font-medium text-xs text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("calcul")}
               </p>
-              <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
+              <p className="mt-0.5 text-xs leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
                 {how}
               </p>
             </div>
           ) : null}
           {source ? (
             <div className="mt-2 border-[var(--tessera-tooltip-border)] border-t pt-2">
-              <p className="font-medium text-[0.66rem] text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
+              <p className="font-medium text-xs text-[var(--tessera-tooltip-fg-muted)] uppercase tracking-wide">
                 {t("source")}
               </p>
-              <p className="mt-0.5 text-[0.72rem] leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
+              <p className="mt-0.5 text-xs leading-relaxed text-[var(--tessera-tooltip-fg-muted)]">
                 {source}
               </p>
             </div>

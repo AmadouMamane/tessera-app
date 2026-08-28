@@ -66,10 +66,8 @@ export async function CaseRunDetail({
     <Card id="case-detail" className="scroll-mt-4">
       <CardContent className="flex flex-col gap-5 p-5">
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="font-mono text-[11px] text-[var(--muted-foreground)]">
-            {result.case_id}
-          </span>
-          <span className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-[10px] uppercase">
+          <span className="font-mono text-xs text-[var(--muted-foreground)]">{result.case_id}</span>
+          <span className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs uppercase">
             {result.language}
           </span>
           <span className="flex-1 font-medium text-sm">{result.title || evalCase?.title}</span>
@@ -135,7 +133,7 @@ export async function CaseRunDetail({
                       {outcome.decidedBy.map((v) => (
                         <code
                           key={v}
-                          className="rounded bg-danger-500/20 px-1 py-0.5 font-mono text-[11px]"
+                          className="rounded bg-danger-500/20 px-1 py-0.5 font-mono text-xs"
                         >
                           {v}
                         </code>
@@ -163,14 +161,14 @@ export async function CaseRunDetail({
           {/* The harness's own words, always available, always labelled as REPORTED. */}
           {result.reasons.length > 0 ? (
             <div className="mt-2 flex flex-col gap-1">
-              <span className="font-medium text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide">
+              <span className="font-medium text-xs text-[var(--muted-foreground)] uppercase tracking-wide">
                 {t("detail.harnessReasons")}
               </span>
               <ul className="flex flex-col gap-1">
                 {result.reasons.map((reason) => (
                   <li
                     key={reason}
-                    className="rounded bg-[var(--muted)]/40 px-2 py-1 font-mono text-[11px] text-[var(--muted-foreground)] leading-relaxed"
+                    className="rounded bg-[var(--muted)]/40 px-2 py-1 font-mono text-xs text-[var(--muted-foreground)] leading-relaxed"
                   >
                     {reason}
                   </li>
@@ -181,7 +179,7 @@ export async function CaseRunDetail({
 
           {notVerifiable.length > 0 ? (
             <div className="mt-2 flex flex-col gap-1.5">
-              <span className="font-medium text-[10px] text-[var(--muted-foreground)] uppercase tracking-wide">
+              <span className="font-medium text-xs text-[var(--muted-foreground)] uppercase tracking-wide">
                 {t("detail.notVerifiableHere")}
               </span>
               <ul className="flex flex-col gap-1">
@@ -193,7 +191,7 @@ export async function CaseRunDetail({
                   />
                 ))}
               </ul>
-              <p className="text-[11px] text-[var(--muted-foreground)] italic leading-relaxed">
+              <p className="text-xs text-[var(--muted-foreground)] italic leading-relaxed">
                 {t("detail.notVerifiableWhy")}
               </p>
             </div>
@@ -209,7 +207,7 @@ export async function CaseRunDetail({
                   {result.invoked_tools.map((tool) => (
                     <code
                       key={tool}
-                      className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-[11px]"
+                      className="rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs"
                     >
                       {tool}
                     </code>
@@ -308,7 +306,7 @@ function StateBadge({
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-1.5">
-      <h4 className="font-medium text-[11px] text-[var(--muted-foreground)] uppercase tracking-wide">
+      <h4 className="font-medium text-xs text-[var(--muted-foreground)] uppercase tracking-wide">
         {title}
       </h4>
       {children}

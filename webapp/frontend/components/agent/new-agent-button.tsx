@@ -37,14 +37,12 @@ export function NewAgentButton() {
         <Plus className="h-4 w-4" /> Nouvel agent
       </button>
       {state === "done" ? (
-        <span className="text-[0.72rem] text-[var(--tessera-fg-success)]">
+        <span className="text-xs text-[var(--tessera-fg-success)]">
           Proposition enregistrée (revue requise)
         </span>
       ) : null}
       {state === "error" ? (
-        <span className="text-[0.72rem] text-[var(--tessera-fg-danger)]">
-          Échec de la proposition
-        </span>
+        <span className="text-xs text-[var(--tessera-fg-danger)]">Échec de la proposition</span>
       ) : null}
     </div>
   );

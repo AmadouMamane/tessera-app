@@ -199,7 +199,7 @@ function AgentRail({
 
       {/* Contextual micro-line — the exact scoped claim of the active reading,
           and the single "Revenir au direct" (outline, SR-01 grammar). */}
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1.5 text-xs text-[var(--tessera-text-muted)]">
         {asOf ? (
           <span className="min-w-0">
             <span className="font-medium text-[var(--tessera-text)]">
@@ -276,7 +276,7 @@ function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
       <TooltipTrigger asChild>
         <div className="flex min-h-[112px] flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
           <div className="flex items-center gap-1">
-            <p className="truncate text-[0.66rem] text-[var(--tessera-text-muted)]">{kpi.label}</p>
+            <p className="truncate text-xs text-[var(--tessera-text-muted)]">{kpi.label}</p>
             <CardInfo ns="agentSynthese" k={`kpi.${kpi.key}`} title={kpi.full ?? kpi.label} />
           </div>
           <p className="mt-0.5 text-[1.35rem] font-semibold leading-none tabular-nums text-[var(--tessera-text)]">
@@ -284,7 +284,7 @@ function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
           </p>
           <span
             className={cn(
-              "mt-1 line-clamp-1 text-[0.6rem] tabular-nums",
+              "mt-1 line-clamp-1 text-xs tabular-nums",
               kpi.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
             )}
           >
@@ -298,7 +298,7 @@ function KpiTile({ kpi }: { kpi: NonNullable<Data["kpis"]>[number] }) {
       <TooltipContent side="top">
         <p className="font-medium">{kpi.full ?? kpi.label}</p>
         {hasInfo ? (
-          <p className="mt-1 text-[0.66rem] opacity-70">
+          <p className="mt-1 text-xs opacity-70">
             Cliquez sur <Info className="inline h-3 w-3 align-middle" aria-hidden /> pour en savoir
             plus
           </p>
@@ -338,9 +338,7 @@ function Card({
             <h2 className="text-[0.78rem] font-semibold text-[var(--tessera-text)]">{title}</h2>
             {info}
           </div>
-          {subtitle ? (
-            <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">{subtitle}</p>
-          ) : null}
+          {subtitle ? <p className="text-xs text-[var(--tessera-text-muted)]">{subtitle}</p> : null}
         </div>
       ) : null}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
@@ -351,14 +349,12 @@ function Card({
 
 function EmptyRow({ label }: { label?: string }) {
   const t = useTranslations("agentSynthese");
-  return (
-    <p className="py-2 text-[0.72rem] text-[var(--tessera-text-muted)]">{label ?? t("empty")}</p>
-  );
+  return <p className="py-2 text-xs text-[var(--tessera-text-muted)]">{label ?? t("empty")}</p>;
 }
 
 function CtaLink({ label, href }: { label: string; href?: string }) {
   const classes =
-    "mt-2.5 flex items-center gap-1 self-start text-[0.68rem] text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]";
+    "mt-2.5 flex items-center gap-1 self-start text-xs text-[var(--tessera-fg-accent)] hover:text-[var(--tessera-text-strong)]";
   if (href) {
     return (
       <Link href={href as never} className={classes}>
@@ -412,12 +408,12 @@ function Profile({ data, className }: { data: Data; className?: string }) {
           >
             {p.name}
           </p>
-          <span className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-[0.7rem] text-[var(--tessera-fg-success)]">
+          <span className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-xs text-[var(--tessera-fg-success)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> {p.status}
           </span>
         </div>
       </div>
-      <dl className="mt-4 flex flex-col gap-2 text-[0.72rem]">
+      <dl className="mt-4 flex flex-col gap-2 text-xs">
         {p.fields.map((f) => (
           <div key={f.label} className="flex items-start justify-between gap-3">
             <dt className="shrink-0 text-[var(--tessera-text-muted)]">{f.label}</dt>
@@ -444,10 +440,7 @@ function Capabilities({ data, className }: { data: Data; className?: string }) {
     >
       <ul className="flex flex-col gap-2">
         {c.items.map((it) => (
-          <li
-            key={it}
-            className="flex items-center gap-2 text-[0.74rem] text-[var(--tessera-text)]"
-          >
+          <li key={it} className="flex items-center gap-2 text-xs text-[var(--tessera-text)]">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--tessera-fg-success)]" />
             <span title={it} className="min-w-0 truncate">
               {it}
@@ -473,7 +466,7 @@ function Repartition({ data, className }: { data: Data; className?: string }) {
       <ul className="flex flex-col gap-2.5">
         {r.items.map((it) => (
           <li key={it.label} className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-[0.72rem]">
+            <div className="flex items-center justify-between text-xs">
               <span title={it.label} className="min-w-0 truncate text-[var(--tessera-text)]">
                 {it.label}
               </span>
@@ -503,7 +496,7 @@ function Performance({ data, className }: { data: Data; className?: string }) {
       ctaHref={pf.ctaHref}
       className={className}
     >
-      <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+      <ul className="flex flex-col gap-1.5 text-xs">
         {pf.rows.map((r) => (
           <li key={r.label} className="flex items-center justify-between gap-2">
             <span title={r.label} className="min-w-0 truncate text-[var(--tessera-text-muted)]">
@@ -513,7 +506,7 @@ function Performance({ data, className }: { data: Data; className?: string }) {
               <span className="font-medium tabular-nums text-[var(--tessera-text)]">{r.value}</span>
               <span
                 className={cn(
-                  "text-[0.6rem] tabular-nums",
+                  "text-xs tabular-nums",
                   r.good ? "text-[var(--tessera-fg-success)]" : "text-[var(--tessera-fg-danger)]",
                 )}
               >
@@ -546,22 +539,19 @@ function Conversations({ data, className }: { data: Data; className?: string }) 
             className="flex items-center justify-between gap-2 border-b border-[var(--tessera-border)]/50 pb-2 last:border-0 last:pb-0"
           >
             <span className="min-w-0">
-              <Truncate
-                full={r.title}
-                className="text-[0.74rem] font-medium text-[var(--tessera-text)]"
-              >
+              <Truncate full={r.title} className="text-xs font-medium text-[var(--tessera-text)]">
                 {r.title}
               </Truncate>
               <Truncate
                 full={`${r.user} - ${r.time}`}
-                className="text-[0.62rem] text-[var(--tessera-text-muted)]"
+                className="text-xs text-[var(--tessera-text-muted)]"
               >
                 {r.user} - {r.time}
               </Truncate>
             </span>
             <span
               className={cn(
-                "shrink-0 rounded-full border px-2 py-0.5 text-[0.6rem] font-medium",
+                "shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium",
                 STATUS_BADGE[r.status] ?? "",
               )}
             >
@@ -588,7 +578,7 @@ function Activity({ data, className }: { data: Data; className?: string }) {
       {a.rows.length === 0 ? <EmptyRow /> : null}
       <ul className="flex flex-col gap-2.5">
         {a.rows.map((r, i) => (
-          <li key={`${r.time}-${i}`} className="flex items-start gap-2 text-[0.72rem]">
+          <li key={`${r.time}-${i}`} className="flex items-start gap-2 text-xs">
             <span
               className={cn(
                 "mt-1 h-1.5 w-1.5 shrink-0 rounded-full",
@@ -604,14 +594,14 @@ function Activity({ data, className }: { data: Data; className?: string }) {
               </span>
               <span
                 title={r.detail}
-                className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+                className="block truncate text-xs text-[var(--tessera-text-muted)]"
               >
                 {r.detail}
               </span>
             </span>
             <span
               className={cn(
-                "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.55rem] font-medium",
+                "shrink-0 rounded-full border px-1.5 py-0.5 text-xs font-medium",
                 BADGE_STYLE[r.badge] ??
                   "border-[var(--tessera-border)] text-[var(--tessera-text-muted)]",
               )}
@@ -644,20 +634,20 @@ function Prompts({ data, className }: { data: Data; className?: string }) {
             className="flex items-center justify-between gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-2"
           >
             <span className="min-w-0">
-              <span className="flex items-center gap-2 text-[0.74rem] font-medium text-[var(--tessera-text)]">
+              <span className="flex items-center gap-2 text-xs font-medium text-[var(--tessera-text)]">
                 {r.name}
-                <span className="rounded border border-[var(--tessera-border)] px-1 text-[0.58rem] text-[var(--tessera-text-muted)]">
+                <span className="rounded border border-[var(--tessera-border)] px-1 text-xs text-[var(--tessera-text-muted)]">
                   {r.version}
                 </span>
               </span>
               <span
                 title={r.updated}
-                className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+                className="block truncate text-xs text-[var(--tessera-text-muted)]"
               >
                 {r.updated}
               </span>
             </span>
-            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.58rem] font-medium capitalize text-[var(--tessera-fg-success)]">
+            <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-medium capitalize text-[var(--tessera-fg-success)]">
               {r.status}
             </span>
           </li>
@@ -684,21 +674,21 @@ function Context({ data }: { data: Data }) {
           <span title={c.name} className="truncate">
             {c.name}
           </span>
-          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.55rem] font-medium capitalize text-[var(--tessera-fg-success)]">
+          <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-medium capitalize text-[var(--tessera-fg-success)]">
             {c.status}
           </span>
         </div>
         <span
           title={`ID : ${c.agentId}`}
-          className="truncate text-[0.65rem] text-[var(--tessera-text-muted)]"
+          className="truncate text-xs text-[var(--tessera-text-muted)]"
         >
           ID : {c.agentId}
         </span>
       </div>
-      <p className="mt-2.5 text-[0.7rem] leading-snug text-[var(--tessera-text-muted)]">
+      <p className="mt-2.5 text-xs leading-snug text-[var(--tessera-text-muted)]">
         {c.description}
       </p>
-      <dl className="mt-4 flex flex-col gap-2 text-[0.72rem]">
+      <dl className="mt-4 flex flex-col gap-2 text-xs">
         {c.fields.map((f) => (
           <div key={f.label} className="flex items-start justify-between gap-3">
             <dt className="shrink-0 text-[var(--tessera-text-muted)]">{f.label}</dt>
@@ -723,7 +713,7 @@ function OpAlerts({ data }: { data: Data }) {
       ctaHref={a.ctaHref}
     >
       {a.items.length === 0 ? (
-        <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-[0.72rem] text-[var(--tessera-fg-success)]">
+        <div className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5 text-xs text-[var(--tessera-fg-success)]">
           <CheckCircle2 className="h-4 w-4 shrink-0" /> Aucune alerte
         </div>
       ) : (
@@ -739,20 +729,20 @@ function OpAlerts({ data }: { data: Data }) {
               <span className="min-w-0">
                 <span
                   title={it.label}
-                  className="block truncate text-[0.72rem] font-medium text-[var(--tessera-text)]"
+                  className="block truncate text-xs font-medium text-[var(--tessera-text)]"
                 >
                   {it.label}
                 </span>
                 <span
                   title={it.detail}
-                  className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]"
+                  className="block truncate text-xs text-[var(--tessera-text-muted)]"
                 >
                   {it.detail}
                 </span>
               </span>
               <span
                 className={cn(
-                  "shrink-0 rounded-full border px-1.5 py-0.5 text-[0.55rem] font-medium",
+                  "shrink-0 rounded-full border px-1.5 py-0.5 text-xs font-medium",
                   ALERT_BADGE[it.tone] ?? "",
                 )}
               >
@@ -784,13 +774,13 @@ function QuickAccess({ data }: { data: Data }) {
               <Icon className="h-4 w-4 text-[var(--tessera-fg-accent)]" />
               <span
                 title={it.label}
-                className="truncate text-[0.74rem] font-medium text-[var(--tessera-text)]"
+                className="truncate text-xs font-medium text-[var(--tessera-text)]"
               >
                 {it.label}
               </span>
               <span
                 title={it.sublabel}
-                className="truncate text-[0.6rem] text-[var(--tessera-text-muted)]"
+                className="truncate text-xs text-[var(--tessera-text-muted)]"
               >
                 {it.sublabel}
               </span>

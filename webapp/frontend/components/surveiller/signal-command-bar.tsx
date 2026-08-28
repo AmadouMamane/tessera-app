@@ -493,7 +493,7 @@ export function SignalCommandBar({
           above), and repeating the SAME reading glyph here stacked two identical
           icons vertically and read as a second control. The line is a state
           summary, so its bold first segment carries the meaning. */}
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1 text-[0.7rem] text-[var(--tessera-text-muted)]">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-t border-[rgba(96,194,242,0.1)] px-3 py-1 text-xs text-[var(--tessera-text-muted)]">
         {microSegments.map((seg, i) => (
           <span key={seg.key} className="flex items-center gap-1.5">
             {i > 0 ? <span aria-hidden>·</span> : null}
@@ -647,9 +647,7 @@ function LectureMenu({
                     <Check className="h-3.5 w-3.5 text-gold-600 dark:text-gold-400" />
                   ) : null}
                 </span>
-                <span className="text-[0.7rem] text-[var(--tessera-text-muted)]">
-                  {t(r.descKey)}
-                </span>
+                <span className="text-xs text-[var(--tessera-text-muted)]">{t(r.descKey)}</span>
               </span>
             </DropdownMenuItem>
           );

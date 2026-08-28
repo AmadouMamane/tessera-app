@@ -88,7 +88,7 @@ export function InstrumentationCoverage() {
               {agents.map((agent) => (
                 <li
                   key={agent.agent_id}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-[var(--tessera-border)]/50 py-1 text-[0.72rem] last:border-0"
+                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-[var(--tessera-border)]/50 py-1 text-xs last:border-0"
                 >
                   <span className="w-[8rem] shrink-0 truncate font-medium text-[var(--foreground)]">
                     {agent.agent_id}
@@ -121,7 +121,7 @@ export function InstrumentationCoverage() {
                   )}
                   {agent.missing_attributes.length > 0 ? (
                     <span
-                      className="truncate text-[0.64rem] text-[var(--tessera-fg-warning)]"
+                      className="truncate text-xs text-[var(--tessera-fg-warning)]"
                       title={agent.missing_attributes.join(", ")}
                     >
                       {t("missing", { list: agent.missing_attributes.join(", ") })}
@@ -132,7 +132,7 @@ export function InstrumentationCoverage() {
             </ul>
             {/* Named on the card, not only in the tooltip: "instrumentation coverage" with no
                 source reads as a claim about spans, and this measures event fields. */}
-            <p className="mt-1.5 text-[0.62rem] text-[var(--muted-foreground)]">
+            <p className="mt-1.5 text-xs text-[var(--muted-foreground)]">
               {t("proxy", { n: query.data.required_attributes.length })}
               {inapplicable > 0 ? ` ${t("inapplicable", { n: inapplicable })}` : ""}
             </p>

@@ -39,7 +39,7 @@ const CHIP: Record<string, { icon: typeof Gavel; short: string; full: string; ac
 };
 
 const CHIP_BASE =
-  "inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-[var(--tessera-surface)] px-2.5 py-1 text-[0.64rem] font-medium";
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-[var(--tessera-surface)] px-2.5 py-1 text-xs font-medium";
 
 export function RatingMethodChip({ agentId }: { agentId: string }) {
   const t = useTranslations("qualityRegimes");

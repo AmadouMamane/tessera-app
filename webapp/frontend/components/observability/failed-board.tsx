@@ -147,12 +147,12 @@ function KpiTile({
   return (
     <Card className="flex flex-col gap-1 p-2.5">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1 text-[0.65rem] text-[var(--muted-foreground)]">
+        <span className="flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
           <span className="opacity-70">{icon}</span>
           {label}
           {explainKey ? <QInfo title={label} k={explainKey} /> : null}
         </span>
-        {sub ? <span className="text-[0.6rem] text-[var(--muted-foreground)]">{sub}</span> : null}
+        {sub ? <span className="text-xs text-[var(--muted-foreground)]">{sub}</span> : null}
       </div>
       <div className="flex items-end justify-between gap-2">
         <span className={`text-2xl font-semibold leading-none tabular-nums ${tone ?? ""}`}>
@@ -232,7 +232,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[0.7rem] text-[var(--foreground)]"
+      className="rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs text-[var(--foreground)]"
     >
       {children}
     </select>
@@ -251,7 +251,7 @@ function MiniDonut({
   label: string;
 }) {
   const total = items.reduce((a, b) => a + b.value, 0);
-  if (total === 0) return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
+  if (total === 0) return <p className="text-xs text-[var(--muted-foreground)]">{DASH}</p>;
   const r = 35;
   const c = 2 * Math.PI * r;
   let offset = 0;
@@ -282,12 +282,12 @@ function MiniDonut({
           <span className="max-w-[38px] truncate text-sm font-semibold leading-none tabular-nums">
             {center}
           </span>
-          <span className="line-clamp-2 max-w-[38px] break-words text-center text-[0.55rem] leading-tight text-[var(--muted-foreground)]">
+          <span className="line-clamp-2 max-w-[38px] break-words text-center text-xs leading-tight text-[var(--muted-foreground)]">
             {label}
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.6rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {items.slice(0, 5).map((it, i) => (
           <li key={it.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
@@ -319,15 +319,14 @@ type TrendPt = { date: string; n: number; by_severity: Record<string, number> };
  *  bar so volume, composition and the count are all visible at once. */
 function TrendStacked({ points }: { points: TrendPt[] }) {
   const tq = useTranslations("quality");
-  if (points.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
+  if (points.length === 0) return <p className="text-xs text-[var(--muted-foreground)]">{DASH}</p>;
   const max = Math.max(...points.map((p) => p.n), 1);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex h-20 items-end justify-around gap-3">
         {points.map((p) => (
           <div key={p.date} className="flex w-12 flex-col items-center gap-0.5">
-            <span className="text-[0.6rem] font-medium tabular-nums">{p.n}</span>
+            <span className="text-xs font-medium tabular-nums">{p.n}</span>
             <div
               className="flex w-7 flex-col justify-end overflow-hidden rounded-sm"
               style={{ height: `${Math.max(4, (p.n / max) * 56)}px` }}
@@ -341,13 +340,13 @@ function TrendStacked({ points }: { points: TrendPt[] }) {
                 );
               })}
             </div>
-            <span className="text-[0.5rem] tabular-nums text-[var(--muted-foreground)]">
+            <span className="text-xs tabular-nums text-[var(--muted-foreground)]">
               {fmtDay(p.date)}
             </span>
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[0.5rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-[var(--muted-foreground)]">
         {SEV_STACK.map((s) => (
           <span key={s.key} className="flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.color }} />
@@ -362,13 +361,12 @@ function TrendStacked({ points }: { points: TrendPt[] }) {
 /** Top root causes — bars share the donut's per-category colours so a category
  *  keeps the same identity colour across "Répartition" and "Top causes". */
 function CauseBars({ items }: { items: { key: string; label: string; value: number }[] }) {
-  if (items.length === 0)
-    return <p className="text-[0.7rem] text-[var(--muted-foreground)]">{DASH}</p>;
+  if (items.length === 0) return <p className="text-xs text-[var(--muted-foreground)]">{DASH}</p>;
   const max = Math.max(...items.map((i) => i.value), 1);
   return (
     <div className="flex flex-col gap-1">
       {items.map((it, i) => (
-        <div key={it.key} className="flex items-center gap-1.5 text-[0.6rem]">
+        <div key={it.key} className="flex items-center gap-1.5 text-xs">
           <span className="flex w-24 shrink-0 items-center gap-1 truncate text-[var(--muted-foreground)]">
             <span
               className="h-1.5 w-1.5 shrink-0 rounded-full"
@@ -512,13 +510,13 @@ export function FailedBoard({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={tq("failed.filters.search")}
-            className="min-w-[12rem] flex-1 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-[0.7rem]"
+            className="min-w-[12rem] flex-1 rounded-md border border-[var(--border)] bg-[var(--card)] px-2 py-1 text-xs"
           />
-          <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+          <span className="text-xs text-[var(--muted-foreground)]">
             {tq("failed.count", { shown: filtered.length, total })}
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-2 text-[0.68rem]">
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--border)] pt-2 text-xs">
           <span className="text-[var(--muted-foreground)]">
             {tq("failed.bulk.selected", { n: picked.size })}
           </span>
@@ -574,7 +572,7 @@ export function FailedBoard({
                 data-premium-table="true"
                 className="w-full min-w-[940px] table-fixed text-left text-xs"
               >
-                <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+                <thead className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                   <tr className="border-b border-[var(--border)]">
                     <th className="w-9 py-1.5 pl-4" />
                     <th className="w-[8%] px-2 py-1.5 font-medium">{tq("failed.cols.id")}</th>
@@ -627,11 +625,11 @@ export function FailedBoard({
                             aria-label={c.id}
                           />
                         </td>
-                        <td className="px-2 py-2 font-mono text-[0.65rem] text-[var(--muted-foreground)]">
+                        <td className="px-2 py-2 font-mono text-xs text-[var(--muted-foreground)]">
                           <Truncate>{c.id}</Truncate>
                         </td>
                         <td className="px-2 py-2">
-                          <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-[0.6rem]">
+                          <Badge tone={SEV_TONE[c.severity] ?? "neutral"} className="text-xs">
                             {tq(`failed.sev.${c.severity}`)}
                           </Badge>
                         </td>
@@ -644,7 +642,7 @@ export function FailedBoard({
                         <td className="px-2 py-2 text-right tabular-nums text-[var(--muted-foreground)]">
                           {DASH}
                         </td>
-                        <td className="px-2 py-2 font-mono text-[0.62rem] text-[var(--muted-foreground)]">
+                        <td className="px-2 py-2 font-mono text-xs text-[var(--muted-foreground)]">
                           {c.catalogue_version ? `v${c.catalogue_version.split("-")[0]}` : DASH}
                         </td>
                         <td className="px-2 py-2">
@@ -655,7 +653,7 @@ export function FailedBoard({
                         </td>
                         <td className="px-2 py-2">
                           <span
-                            className={`inline-flex items-center gap-1 text-[0.62rem] ${
+                            className={`inline-flex items-center gap-1 text-xs ${
                               c.status === "new"
                                 ? "text-amber-600 dark:text-amber-400"
                                 : "text-violet-600 dark:text-violet-400"
@@ -670,7 +668,7 @@ export function FailedBoard({
                           </span>
                         </td>
                         <td className="py-2 pr-4 pl-2">
-                          <span className="flex items-center justify-end gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
+                          <span className="flex items-center justify-end gap-1 text-xs text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
                             <span className="opacity-0 transition-opacity group-hover:opacity-100">
                               {tt("rowOpen")}
                             </span>
@@ -686,7 +684,7 @@ export function FailedBoard({
           )}
         </CardContent>
         {filtered.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-3 py-1.5 text-[0.65rem] text-[var(--muted-foreground)]">
+          <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted-foreground)]">
             <span>
               {tq("failed.page.range", {
                 from: safePage * PAGE_SIZE + 1,
@@ -720,7 +718,7 @@ export function FailedBoard({
       <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
               {tq("failed.distribution")}
               <QInfo title={tq("failed.distribution")} k="failDistribution" />
             </CardTitle>
@@ -731,7 +729,7 @@ export function FailedBoard({
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
               {tq("failed.charts.evolution")}
               <QInfo title={tq("failed.charts.evolution")} k="failEvolution" />
             </CardTitle>
@@ -742,7 +740,7 @@ export function FailedBoard({
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
               {tq("failed.charts.causes")}
               <QInfo title={tq("failed.charts.causes")} k="failCauses" />
             </CardTitle>
@@ -753,12 +751,12 @@ export function FailedBoard({
         </Card>
         <Card>
           <CardHeader className="pb-1">
-            <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+            <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
               {tq("failed.charts.sla")}
               <QInfo title={tq("failed.charts.sla")} k="failSla" />
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1 pt-1 text-[0.7rem]">
+          <CardContent className="flex flex-col gap-1 pt-1 text-xs">
             <SlaRow label={tq("failed.sla.meanLatency")} value={fmtLatency(locale, meanLatency)} />
             <SlaRow label={tq("failed.sla.critical")} value={pct(report?.n_critical ?? 0, total)} />
             <SlaRow label={tq("failed.sla.new")} value={pct(report?.n_new ?? 0, total)} />
@@ -842,13 +840,13 @@ export function FailedRail({
       <Card>
         <CardHeader className="pb-1">
           <CardTitle className="flex items-center justify-between gap-2 text-[0.8rem]">
-            <span className="flex items-center gap-1.5 font-mono text-[0.72rem]">
+            <span className="flex items-center gap-1.5 font-mono text-xs">
               {failedCase?.id ?? tq("failed.rail.none")}
               <QInfo title={tq("failed.rail.fiche")} k="failFiche" />
             </span>
             <span className="flex items-center gap-1.5">
               {failedCase ? (
-                <Badge tone={SEV_TONE[failedCase.severity] ?? "neutral"} className="text-[0.6rem]">
+                <Badge tone={SEV_TONE[failedCase.severity] ?? "neutral"} className="text-xs">
                   {tq(`failed.sev.${failedCase.severity}`)}
                 </Badge>
               ) : null}
@@ -877,11 +875,11 @@ export function FailedRail({
         </CardHeader>
         <CardContent className="pt-1">
           {failedCase == null ? (
-            <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+            <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
               {tq("failed.rail.empty")}
             </p>
           ) : (
-            <div className="flex flex-col gap-2 text-[0.7rem]">
+            <div className="flex flex-col gap-2 text-xs">
               <RailKV k={tq("failed.rail.category")} v={catLabel(failedCase.category)} />
               <RailKV k={tq("failed.rail.model")} v={failedCase.model} />
               <RailKV k={tq("failed.rail.lang")} v={failedCase.language.toUpperCase()} />
@@ -895,14 +893,14 @@ export function FailedRail({
               </Section>
               {failedCase.reasons.length ? (
                 <div>
-                  <p className="mb-0.5 text-[0.62rem] font-medium uppercase text-[var(--muted-foreground)]">
+                  <p className="mb-0.5 text-xs font-medium uppercase text-[var(--muted-foreground)]">
                     {tq("failed.rail.rootCause")}
                   </p>
                   <ul className="flex flex-col gap-1">
                     {failedCase.reasons.map((r) => (
                       <li
                         key={r}
-                        className="flex items-start gap-1 rounded bg-red-500/10 px-1.5 py-1 text-[0.65rem] text-red-700 dark:text-red-300"
+                        className="flex items-start gap-1 rounded bg-red-500/10 px-1.5 py-1 text-xs text-red-700 dark:text-red-300"
                       >
                         <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
                         <span>{r}</span>
@@ -913,18 +911,18 @@ export function FailedRail({
               ) : null}
 
               <div className="flex flex-col gap-1 border-t border-[var(--border)] pt-2">
-                <span className="inline-flex items-center justify-between gap-2 text-[0.65rem] text-[var(--muted-foreground)]">
+                <span className="inline-flex items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
                   <span className="flex items-center gap-1">
                     <GitBranch className="h-3 w-3" />
                     {tq("failed.rail.run")}
                   </span>
-                  <span className="font-mono text-[0.62rem] text-[var(--foreground)]">
+                  <span className="font-mono text-xs text-[var(--foreground)]">
                     {failedCase.run_id}
                   </span>
                 </span>
-                <span className="inline-flex items-center justify-between gap-2 text-[0.65rem] text-[var(--muted-foreground)]">
+                <span className="inline-flex items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
                   <span>{tq("failed.rail.release")}</span>
-                  <span className="text-[0.62rem] text-[var(--foreground)]">
+                  <span className="text-xs text-[var(--foreground)]">
                     {release?.current?.version ?? DASH}
                   </span>
                 </span>
@@ -933,7 +931,7 @@ export function FailedRail({
               {/* Governed actions — every button produces a real artifact; applying
                   to the repo requires the stated role (no fake success state). */}
               <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-2">
-                <p className="text-[0.62rem] font-medium uppercase text-[var(--muted-foreground)]">
+                <p className="text-xs font-medium uppercase text-[var(--muted-foreground)]">
                   {tq("failed.rail.actions")}
                 </p>
                 <ActionButton
@@ -964,7 +962,7 @@ export function FailedRail({
                   tone="accent"
                   onClick={onEvidence}
                 />
-                <p className="flex items-center gap-1 pt-0.5 text-[0.58rem] text-[var(--muted-foreground)]">
+                <p className="flex items-center gap-1 pt-0.5 text-xs text-[var(--muted-foreground)]">
                   <ShieldCheck className="h-3 w-3" />
                   {tq("failed.rail.safety")}
                 </p>
@@ -1001,13 +999,13 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[0.7rem] font-medium transition-colors hover:brightness-110 ${ACTION_TONE[tone]}`}
+      className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:brightness-110 ${ACTION_TONE[tone]}`}
     >
       <span className="flex items-center gap-1.5">
         {icon}
         {label}
       </span>
-      <Badge tone="neutral" className="text-[0.55rem]">
+      <Badge tone="neutral" className="text-xs">
         <AuthorityLabel authority={requiredRole} />
       </Badge>
     </button>
@@ -1034,11 +1032,9 @@ function Section({
 }) {
   return (
     <div>
-      <p className="mb-0.5 text-[0.62rem] font-medium uppercase text-[var(--muted-foreground)]">
-        {title}
-      </p>
+      <p className="mb-0.5 text-xs font-medium uppercase text-[var(--muted-foreground)]">{title}</p>
       <p
-        className={`line-clamp-4 rounded px-1.5 py-1 text-[0.65rem] ${
+        className={`line-clamp-4 rounded px-1.5 py-1 text-xs ${
           tone === "bad"
             ? "bg-red-500/5 text-[var(--foreground)]"
             : "bg-[var(--muted)]/30 text-[var(--muted-foreground)]"

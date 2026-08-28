@@ -268,11 +268,13 @@ function TitleBlock({ title, description }: { title?: string; description?: stri
   const t = useTranslations("app");
   return (
     <div className="min-w-0">
-      <h1 className="truncate font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)]">
+      <h1 className="line-clamp-2 font-sans text-[1.45rem] font-semibold leading-tight tracking-normal text-[var(--tessera-text)] sm:truncate">
         {title ?? t("tagline")}
       </h1>
       {description ? (
-        <p className="mt-1 truncate text-sm text-[var(--tessera-text-muted)]">{description}</p>
+        <p className="mt-1 line-clamp-2 text-sm text-[var(--tessera-text-muted)] sm:truncate">
+          {description}
+        </p>
       ) : null}
     </div>
   );
@@ -505,7 +507,7 @@ function NotificationsPanel({
                     />
                   </span>
                   {deadlineSummary ? (
-                    <span className="mt-1.5 flex items-start gap-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+                    <span className="mt-1.5 flex items-start gap-2 text-xs leading-snug text-[var(--tessera-text-muted)]">
                       <span
                         aria-hidden
                         className={cn(
@@ -520,7 +522,7 @@ function NotificationsPanel({
                       {group.items.map((item) => (
                         <span
                           key={item.id}
-                          className="flex items-start gap-2 text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]"
+                          className="flex items-start gap-2 text-xs leading-snug text-[var(--tessera-text-muted)]"
                         >
                           <span
                             aria-hidden
@@ -660,7 +662,7 @@ function HelpLinkInner({
 
   return (
     <div className="relative h-9 w-9 shrink-0">
-      <Tooltip open={coachmarkVisible && !suppressCoachmark ? false : undefined}>
+      <Tooltip>
         <TooltipTrigger asChild>
           <Link
             href={href}
@@ -690,13 +692,13 @@ function HelpLinkInner({
             <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
           </button>
           <p className="pr-8 text-[0.78rem] font-semibold">{t("coachmark.title")}</p>
-          <p className="mt-1.5 pr-5 text-[0.72rem] leading-5 text-[var(--tessera-text-muted)]">
+          <p className="mt-1.5 pr-5 text-xs leading-5 text-[var(--tessera-text-muted)]">
             {t("coachmark.body")}
           </p>
           <Link
             href={href}
             onClick={openGuide}
-            className="mt-3 inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--tessera-fg-teal)] transition-colors hover:text-[var(--tessera-text-strong)]"
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--tessera-fg-teal)] transition-colors hover:text-[var(--tessera-text-strong)]"
           >
             {t("coachmark.open")}
             <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden />
@@ -765,7 +767,7 @@ function OperatorProductPanel({
           />
           <span className="min-w-0 flex-1">
             <span className="block text-[0.8rem] font-medium">{t("business")}</span>
-            <span className="mt-0.5 block text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+            <span className="mt-0.5 block text-xs leading-snug text-[var(--tessera-text-muted)]">
               {t("spacesMenu.businessDescription")}
             </span>
           </span>
@@ -790,7 +792,7 @@ function OperatorProductPanel({
           />
           <span className="min-w-0 flex-1">
             <span className="block text-[0.8rem] font-medium">{t("clientSpace")}</span>
-            <span className="mt-0.5 block text-[0.72rem] leading-snug text-[var(--tessera-text-muted)]">
+            <span className="mt-0.5 block text-xs leading-snug text-[var(--tessera-text-muted)]">
               {t("spacesMenu.clientDescription")}
             </span>
           </span>
@@ -860,7 +862,7 @@ function ControlBox({
         interactive && "cursor-pointer transition-colors hover:bg-[var(--tessera-muted)]",
       )}
     >
-      <p className="text-[0.65rem] leading-none text-[var(--tessera-text-muted)]">{label}</p>
+      <p className="text-xs leading-none text-[var(--tessera-text-muted)]">{label}</p>
       <div className="relative mt-1.5 flex w-full items-center justify-center text-xs font-semibold text-[var(--tessera-text)]">
         <span className="flex min-w-0 items-center justify-center gap-2">
           {leading === "status" || tone === "success" ? (
@@ -920,7 +922,7 @@ function StaticControl({ item }: { item: HeaderContextItem }) {
   const LeadingIcon = getLeadingIcon(item.leading);
   return (
     <div className="flex h-[46px] min-w-[132px] flex-col items-center justify-center rounded-md border border-[var(--tessera-border-strong)] bg-[var(--tessera-surface)] px-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-      <p className="text-[0.65rem] leading-none text-[var(--tessera-text-muted)]">{item.label}</p>
+      <p className="text-xs leading-none text-[var(--tessera-text-muted)]">{item.label}</p>
       <div className="relative mt-1.5 flex w-full items-center justify-center text-xs font-semibold text-[var(--tessera-text)]">
         <span className="flex min-w-0 items-center justify-center gap-2">
           {item.leading === "status" || item.tone === "success" ? (

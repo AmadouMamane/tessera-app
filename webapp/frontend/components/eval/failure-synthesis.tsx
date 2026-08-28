@@ -45,7 +45,7 @@ function CaseChip({ caseId }: { caseId: string }) {
   return (
     <code
       title={caseId}
-      className="rounded bg-[var(--muted)]/60 px-1.5 py-0.5 font-mono text-[0.7rem] text-[var(--foreground)]"
+      className="rounded bg-[var(--muted)]/60 px-1.5 py-0.5 font-mono text-xs text-[var(--foreground)]"
     >
       {short}
     </code>
@@ -161,7 +161,7 @@ export async function FailureSynthesis({
           <CardTitle>{t("failureSynthesis.title")}</CardTitle>
           <Badge tone="navy">{t("failureSynthesis.badge")}</Badge>
           {hasSynthesis ? (
-            <span className="ml-auto flex items-center gap-1 text-[0.7rem] text-[var(--muted-foreground)]">
+            <span className="ml-auto flex items-center gap-1 text-xs text-[var(--muted-foreground)]">
               <Sparkles className="h-3 w-3 text-[var(--tessera-fg-gold)]" />
               {synthesis?.model && synthesis.model !== "manual"
                 ? t("failureSynthesis.generatedBy", { model: synthesis.model })
@@ -230,7 +230,7 @@ export async function FailureSynthesis({
             {/* The remedy is said ONCE. It used to be printed in every empty root-cause cell —
                 six identical parentheses in one column read as noise, not as an instruction. */}
             {rows.some((row) => !row.note.trim()) ? (
-              <p className="mt-2 text-[0.7rem] text-[var(--muted-foreground)]">
+              <p className="mt-2 text-xs text-[var(--muted-foreground)]">
                 {t("failureSynthesis.noRootCauseHint", {
                   count: rows.filter((row) => !row.note.trim()).length,
                 })}

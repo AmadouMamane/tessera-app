@@ -167,7 +167,7 @@ function GaugeRibbon({
   return (
     <RibbonShell
       severity={severity}
-      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-4 pt-3.5 pb-1.5 sm:px-5"
+      className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <span className="relative grid h-7 w-7 shrink-0 place-items-center" aria-hidden>
@@ -185,17 +185,14 @@ function GaugeRibbon({
           </span>
         </span>
         <div className="min-w-0 flex-1">
-          {/* Eyebrow + statement on ONE line, so the band stays thin. */}
-          <div className="flex min-w-0 items-baseline gap-2">
-            <span
-              className={cn(
-                "shrink-0 text-[9.5px] font-medium uppercase tracking-[0.14em]",
-                s.eyebrow,
-              )}
-            >
+          <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-baseline sm:gap-2">
+            <span className={cn("text-xs font-medium uppercase tracking-[0.12em]", s.eyebrow)}>
               {eyebrow}
             </span>
-            <Truncate className={cn("min-w-0 text-[0.85rem] font-semibold leading-tight", s.title)}>
+            <Truncate
+              lines={2}
+              className={cn("min-w-0 text-sm font-semibold leading-snug", s.title)}
+            >
               {title}
             </Truncate>
           </div>
@@ -235,7 +232,7 @@ function GaugeRibbon({
                   style={{ left: `${clampPct(gauge.threshold)}%` }}
                 >
                   {showThresholdValue ? (
-                    <span className="mb-1 whitespace-nowrap text-[9px] font-semibold leading-none tabular-nums text-[var(--tessera-fg-success)]">
+                    <span className="mb-1 whitespace-nowrap text-xs font-semibold leading-none tabular-nums text-[var(--tessera-fg-success)]">
                       {gauge.thresholdLabel}
                     </span>
                   ) : null}
@@ -243,7 +240,7 @@ function GaugeRibbon({
                 </div>
               </div>
               {gauge.caption ? (
-                <span className="min-w-0 text-[11px] tabular-nums text-[var(--tessera-text-muted)]">
+                <span className="min-w-0 text-xs tabular-nums text-[var(--tessera-text-muted)]">
                   {gauge.caption}
                 </span>
               ) : null}
@@ -265,7 +262,7 @@ function GaugeRibbon({
               type="button"
               onClick={() => setPulsing(false)}
               title={pulseStopLabel}
-              className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--ribbon-hover)] hover:text-[var(--tessera-text)]"
+              className="inline-flex h-11 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-[var(--tessera-text-muted)] transition-colors hover:bg-[var(--ribbon-hover)] hover:text-[var(--tessera-text)] sm:h-8"
             >
               <BellOff className="h-3.5 w-3.5" />
               {pulseStopLabel}
@@ -282,7 +279,10 @@ function GaugeRibbon({
 function SlimRibbon({ severity, title, action, meta }: BaseProps & { meta?: ReactNode }) {
   const s = RIBBON;
   return (
-    <RibbonShell severity={severity} className="flex items-center gap-3 px-4 py-2 sm:px-5">
+    <RibbonShell
+      severity={severity}
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:flex-nowrap sm:px-5"
+    >
       <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
         <span
           className={cn(
@@ -292,14 +292,19 @@ function SlimRibbon({ severity, title, action, meta }: BaseProps & { meta?: Reac
         />
         <span className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", s.dot)} />
       </span>
-      <Truncate className={cn("min-w-0 text-[0.85rem] font-semibold", s.title)}>{title}</Truncate>
+      <Truncate
+        lines={2}
+        className={cn("min-w-0 flex-1 text-sm font-semibold leading-snug", s.title)}
+      >
+        {title}
+      </Truncate>
       {meta ? (
-        <span className="hidden shrink-0 items-center gap-1.5 text-[11px] text-[var(--tessera-text-muted)] sm:flex">
+        <span className="hidden shrink-0 items-center gap-1.5 text-xs text-[var(--tessera-text-muted)] sm:flex">
           <span aria-hidden>·</span>
           {meta}
         </span>
       ) : null}
-      {action ? <div className="ml-auto shrink-0">{action}</div> : null}
+      {action ? <div className="ml-auto min-w-0 shrink-0 max-sm:w-full">{action}</div> : null}
     </RibbonShell>
   );
 }
@@ -327,7 +332,7 @@ export function RibbonChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10.5px] font-medium tabular-nums",
+        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs font-medium tabular-nums",
         toneClass,
       )}
     >

@@ -129,7 +129,7 @@ export function CalendarPopover({
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-1 text-center text-[0.68rem] font-medium uppercase text-[var(--tessera-text-muted)]">
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase text-[var(--tessera-text-muted)]">
         {weekdayLabels.map((day) => (
           <span key={day.key}>{day.label}</span>
         ))}

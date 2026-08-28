@@ -399,7 +399,7 @@ function BaselinesPanel({ t, data }: { t: T; data: Data }) {
               <Truncate full={b.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {b.label}
               </Truncate>
-              <span className="shrink-0 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+              <span className="shrink-0 font-mono text-xs text-[var(--tessera-text-muted)]">
                 {b.value}
               </span>
             </li>
@@ -433,7 +433,7 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
     >
       <div className="flex flex-col gap-1">
         <div className="flex gap-1">
-          <div className="flex w-7 flex-col justify-between py-[5px] text-right text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
+          <div className="flex w-7 flex-col justify-between py-[5px] text-right text-xs tabular-nums text-[var(--tessera-text-muted)]">
             {fracs.map((f) => (
               <span key={f}>{Math.round(f * reqMax)}</span>
             ))}
@@ -481,18 +481,18 @@ function TrafficChart({ t, data, className }: { t: T; data: Data; className?: st
               vectorEffect="non-scaling-stroke"
             />
           </svg>
-          <div className="flex w-7 flex-col justify-between py-[5px] text-left text-[0.5rem] tabular-nums text-[var(--tessera-text-muted)]">
+          <div className="flex w-7 flex-col justify-between py-[5px] text-left text-xs tabular-nums text-[var(--tessera-text-muted)]">
             {fracs.map((f) => (
               <span key={f}>{Math.round(f * tokMax)}</span>
             ))}
           </div>
         </div>
-        <div className="flex justify-between pl-8 pr-8 text-[0.55rem] tabular-nums text-[var(--tessera-text-muted)]">
+        <div className="flex justify-between pl-8 pr-8 text-xs tabular-nums text-[var(--tessera-text-muted)]">
           {tr.labels.map((l) => (
             <span key={l}>{l}</span>
           ))}
         </div>
-        <div className="flex items-center gap-3 pl-8 text-[0.6rem] text-[var(--tessera-text-muted)]">
+        <div className="flex items-center gap-3 pl-8 text-xs text-[var(--tessera-text-muted)]">
           <Legend color="var(--tessera-fg-info)" label={t("legend.requests")} />
           <Legend color="var(--tessera-fg-success)" label={t("legend.tokens")} />
         </div>
@@ -517,9 +517,9 @@ function RecentSessions({
       {/* A table whose min-content beats the card overflows it and paints under
           the neighbouring cards — wide content scrolls in its OWN container. */}
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
               <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
               <th className="px-1.5 py-1 font-medium">{t("col.model")}</th>
@@ -564,9 +564,9 @@ function TopDeviations({
       action={<ViewAll label={t("viewAll.deviations")} onClick={onViewAll} />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("col.id")}</th>
               <th className="px-1.5 py-1 font-medium">{t("col.service")}</th>
               <th className="px-1.5 py-1 font-medium">{t("col.type")}</th>
@@ -586,7 +586,7 @@ function TopDeviations({
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">
                   {t(`type.${d.type}`)}
                 </td>
-                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text-muted)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-text-muted)]">
                   {d.baseline}
                 </td>
                 <td className={cn("px-1.5 py-1 font-medium", SEV_TEXT[d.severity])}>
@@ -618,9 +618,9 @@ function Comparisons({
       action={<ViewAll label={t("viewAll.comparisons")} onClick={onViewAll} />}
     >
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("col.comparison")}</th>
               <th className="px-1.5 py-1 text-right font-medium">{t("col.sessions")}</th>
               <th className="px-1.5 py-1 text-right font-medium">{t("col.deviations")}</th>
@@ -632,7 +632,7 @@ function Comparisons({
                 key={c.label}
                 className="border-b border-[var(--tessera-border)]/60 last:border-0"
               >
-                <td className="px-1.5 py-1 font-mono text-[0.64rem] text-[var(--tessera-text)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-text)]">
                   {c.label}
                 </td>
                 <td className="px-1.5 py-1 text-right tabular-nums text-[var(--tessera-text-muted)]">
@@ -659,7 +659,7 @@ function Regressions({ t, data, className }: { t: T; data: Data; className?: str
       action={
         <Link
           href="/surveiller/fiabilite-cout"
-          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[0.62rem] text-[var(--tessera-green)] hover:underline"
+          className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-xs text-[var(--tessera-green)] hover:underline"
         >
           {t("viewAll.regressions")}
           <ChevronRight className="h-3 w-3" />
@@ -668,7 +668,7 @@ function Regressions({ t, data, className }: { t: T; data: Data; className?: str
     >
       <ul className="flex flex-col gap-1.5">
         {data.top_regressions.map((r) => (
-          <li key={r.service} className="flex items-center gap-2 text-[0.7rem]">
+          <li key={r.service} className="flex items-center gap-2 text-xs">
             <Truncate full={r.service} className="min-w-0 flex-1 text-[var(--tessera-text)]">
               {r.service}
             </Truncate>
@@ -704,7 +704,7 @@ function EvalsByCategory({
     >
       <ul className="flex flex-col gap-2">
         {data.evals_by_category.map((c) => (
-          <li key={c.key} className="flex items-center gap-2 text-[0.68rem]">
+          <li key={c.key} className="flex items-center gap-2 text-xs">
             <Truncate
               full={t(`type.${c.key}`)}
               className="w-24 shrink-0 text-[var(--tessera-text)]"
@@ -750,7 +750,7 @@ function ProofsExports({
       action={<ViewAll label={t("exportBtn.all")} onClick={onViewAll} />}
     >
       <ProvenanceNotice signalId="shadow_traffic" compact />
-      <dl className="flex flex-col gap-1.5 text-[0.7rem]">
+      <dl className="flex flex-col gap-1.5 text-xs">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between gap-2">
             <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
@@ -823,7 +823,7 @@ function ReplayRail({
     <aside className="flex min-w-0 flex-col gap-3">
       <Panel title={t("rail.shadowTitle")}>
         <div className="flex flex-col gap-2">
-          <p className="text-[0.62rem] leading-relaxed text-[var(--tessera-text-muted)]">
+          <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">
             {t("rail.shadowNote")}
           </p>
           <div className="relative">
@@ -851,7 +851,7 @@ function ReplayRail({
             {shadow.isPending ? t("rail.running") : t("rail.run")}
           </Button>
           {shadow.data ? (
-            <output className="text-[0.64rem] text-[var(--tessera-text)]">
+            <output className="text-xs text-[var(--tessera-text)]">
               {shadow.data.n_compared === 0
                 ? t("rail.noBundles")
                 : t("rail.resultLine", {
@@ -865,14 +865,12 @@ function ReplayRail({
           {shadow.isError ? (
             // A failed mirror must SAY so (e.g. a candidate the local serving
             // path cannot serve) — a silent error reads as "still running".
-            <output className="text-[0.64rem] text-[var(--tessera-fg-danger)]">
-              {t("rail.error")}
-            </output>
+            <output className="text-xs text-[var(--tessera-fg-danger)]">{t("rail.error")}</output>
           ) : null}
           <button
             type="button"
             onClick={onOpenComparisons}
-            className="self-start text-[0.62rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
+            className="self-start text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]"
           >
             {t("rail.openComparisons")} →
           </button>
@@ -886,7 +884,7 @@ function ReplayRail({
       >
         <ul className="flex flex-col gap-1.5">
           {data.activity_feed.map((a) => (
-            <li key={`${a.id}-${a.time}`} className="flex items-center gap-2 text-[0.7rem]">
+            <li key={`${a.id}-${a.time}`} className="flex items-center gap-2 text-xs">
               <span
                 className={cn(
                   "h-1.5 w-1.5 shrink-0 rounded-full",
@@ -897,7 +895,7 @@ function ReplayRail({
                       : "bg-sky-400",
                 )}
               />
-              <span className="font-mono text-[0.66rem] text-[var(--tessera-fg-info)]">{a.id}</span>
+              <span className="font-mono text-xs text-[var(--tessera-fg-info)]">{a.id}</span>
               <span className="ml-auto tabular-nums text-[var(--tessera-text-muted)]">
                 {a.time}
               </span>
@@ -915,7 +913,7 @@ function ReplayRail({
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <Chip
         icon={Activity}
         tone="text-[var(--tessera-green)]"
@@ -943,7 +941,7 @@ function Zone({ label, info, children }: { label: string; info?: ReactNode; chil
       data-slot="card"
       className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
     >
-      <h2 className="mb-2 flex items-center gap-1.5 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         {label}
         {info}
       </h2>
@@ -1006,7 +1004,7 @@ function KpiTile({
       data-slot="card"
       className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <Truncate full={label} className="min-w-0">
           {label}
         </Truncate>
@@ -1022,7 +1020,7 @@ function KpiTile({
           tone={kpi.good_is_up ? "success" : "danger"}
         />
       </div>
-      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-xs font-medium">
         <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
@@ -1085,12 +1083,12 @@ function Donut({
           <span className="max-w-[52px] truncate text-sm font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
-          <span className="line-clamp-2 max-w-[52px] break-words px-1 text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+          <span className="line-clamp-2 max-w-[52px] break-words px-1 text-xs uppercase leading-tight text-[var(--tessera-text-muted)]">
             {caption}
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
@@ -1114,7 +1112,7 @@ function StatusBadge({ status, t }: { status: string; t: T }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         STATUS_BADGE[status],
       )}
     >
@@ -1137,7 +1135,7 @@ function RailButton({
   disabledTitle?: string;
 }) {
   const cls =
-    "flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.68rem] transition-colors";
+    "flex w-full items-center gap-2 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs transition-colors";
   const inner = (
     <>
       <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
@@ -1186,7 +1184,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
+    "flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>

@@ -176,7 +176,7 @@ function Kpi({
 }) {
   const content = (
     <>
-      <div className="flex items-center gap-1 text-[0.65rem] leading-tight text-[var(--muted-foreground)]">
+      <div className="flex items-center gap-1 text-xs leading-tight text-[var(--muted-foreground)]">
         <span className="opacity-70">{icon}</span>
         {label}
         {explainKey ? <QInfo title={label} k={explainKey} className="ml-auto" /> : null}
@@ -190,7 +190,7 @@ function Kpi({
         {value}
       </div>
       {sub ? (
-        <div className="text-[0.6rem] leading-tight text-[var(--muted-foreground)]">{sub}</div>
+        <div className="text-xs leading-tight text-[var(--muted-foreground)]">{sub}</div>
       ) : null}
     </>
   );
@@ -328,15 +328,13 @@ function EmbeddingSkewDrawer({
                 {report.corpus_rows === 0 ? t("empty") : t(`severity.${report.severity}`)}
               </Badge>
               {query.isFetching ? (
-                <span className="inline-flex items-center gap-1 text-[0.65rem] text-[var(--tessera-text-muted)]">
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--tessera-text-muted)]">
                   <LoaderCircle className="h-3 w-3 animate-spin motion-reduce:animate-none" />
                   {t("refreshing")}
                 </span>
               ) : null}
               {query.isStale && !query.isFetching ? (
-                <span className="text-[0.65rem] text-[var(--tessera-fg-warning)]">
-                  {t("stale")}
-                </span>
+                <span className="text-xs text-[var(--tessera-fg-warning)]">{t("stale")}</span>
               ) : null}
             </div>
             <p className="mt-2 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
@@ -346,7 +344,7 @@ function EmbeddingSkewDrawer({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-3">
-              <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {t("query")}
               </p>
               <p className="mt-1 text-sm font-semibold">{report.query_model}</p>
@@ -355,7 +353,7 @@ function EmbeddingSkewDrawer({
               </p>
             </div>
             <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)]/40 p-3">
-              <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
                 {t("corpus")}
               </p>
               <p className="mt-1 text-sm font-semibold">
@@ -394,7 +392,7 @@ function EmbeddingSkewDrawer({
             </div>
             {report.spaces.length > 0 ? (
               <div className="mt-3 space-y-1 border-t border-[var(--tessera-border)] pt-2">
-                <p className="text-[0.62rem] font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--tessera-text-muted)]">
                   {t("spaces")}
                 </p>
                 {report.spaces.map((space) => (
@@ -422,7 +420,7 @@ function EmbeddingSkewDrawer({
       ) : null}
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-[var(--tessera-border)] pt-3">
-        <span className="text-[0.65rem] text-[var(--tessera-text-muted)]">
+        <span className="text-xs text-[var(--tessera-text-muted)]">
           {updated ? t("lastUpdated", { time: updated }) : t("neverUpdated")}
         </span>
         <div className="flex flex-wrap gap-2">
@@ -636,7 +634,7 @@ export function RunsEvalTable({
           {tq("runs.table.title")}
           <QInfo title={tq("runs.table.title")} k="runTable" />
         </CardTitle>
-        <Badge tone="neutral" className="text-[0.65rem]">
+        <Badge tone="neutral" className="text-xs">
           {tq("runs.count", { n: registry?.n ?? 0 })}
           {/*
             A run re-graded after the fact exists on disk twice — the latest_<agent> pointer
@@ -660,7 +658,7 @@ export function RunsEvalTable({
               data-premium-table="true"
               className="w-full min-w-[760px] table-fixed text-left text-xs"
             >
-              <thead className="sticky top-0 z-10 bg-[var(--card)] text-[0.62rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+              <thead className="sticky top-0 z-10 bg-[var(--card)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                 <tr className="border-b border-[var(--border)]">
                   <th className="w-[16%] py-1 pr-2 pl-5 font-medium">{tq("runs.table.model")}</th>
                   <th className="w-[9%] px-2 py-1 font-medium">{tq("runs.table.catalogue")}</th>
@@ -744,7 +742,7 @@ export function RunsEvalTable({
                               r.regraded_at ? "bg-sky-500" : "bg-emerald-500"
                             }`}
                           />
-                          <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+                          <span className="text-xs text-[var(--muted-foreground)]">
                             {r.regraded_at
                               ? tq("runs.regradedOn", { date: fmtDate(r.regraded_at) })
                               : tq("runs.done")}
@@ -752,7 +750,7 @@ export function RunsEvalTable({
                         </span>
                       </td>
                       <td className="py-1.5 pr-4 pl-2">
-                        <span className="flex items-center justify-end gap-1 text-[0.64rem] text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
+                        <span className="flex items-center justify-end gap-1 text-xs text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-success)]">
                           <span className="opacity-0 transition-opacity group-hover:opacity-100">
                             {tt("rowOpen")}
                           </span>
@@ -776,10 +774,8 @@ export function RunsEvalTable({
 function CtxRow({ k, children }: { k: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-0.5">
-      <span className="shrink-0 text-[0.65rem] text-[var(--muted-foreground)]">{k}</span>
-      <span className="text-right text-[0.72rem] font-medium text-[var(--foreground)]">
-        {children}
-      </span>
+      <span className="shrink-0 text-xs text-[var(--muted-foreground)]">{k}</span>
+      <span className="text-right text-xs font-medium text-[var(--foreground)]">{children}</span>
     </div>
   );
 }
@@ -814,7 +810,7 @@ export function RunContextPanel({
         ) : (
           <div className="divide-y divide-[var(--border)]/50">
             <CtxRow k={tq("runs.ctx.runId")}>
-              <span className="font-mono text-[0.68rem]">{run.run_id}</span>
+              <span className="font-mono text-xs">{run.run_id}</span>
             </CtxRow>
             <CtxRow k={tq("runs.ctx.model")}>{run.model}</CtxRow>
             <CtxRow k={tq("runs.ctx.catalogue")}>{run.catalogue_version ?? DASH}</CtxRow>
@@ -838,9 +834,9 @@ export function RunContextPanel({
               measured — the count of carried runs is what makes the difference visible.
             */}
             <CtxRow k={tq("runs.ctx.ruler")}>
-              <span className="font-mono text-[0.68rem]">{run.grader_criteria_sha ?? DASH}</span>
+              <span className="font-mono text-xs">{run.grader_criteria_sha ?? DASH}</span>
               {run.grader_blind_runs.length > 0 ? (
-                <span className="ml-1.5 text-[0.68rem] text-amber-600 dark:text-amber-400">
+                <span className="ml-1.5 text-xs text-amber-600 dark:text-amber-400">
                   {tq("runs.ctx.carried", { n: run.grader_blind_runs.length })}
                 </span>
               ) : null}
@@ -867,13 +863,13 @@ export function RunContextPanel({
               </span>
             </CtxRow>
             <div className="flex items-center justify-between gap-3 pt-1.5">
-              <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+              <span className="text-xs text-[var(--muted-foreground)]">
                 {tq("runs.ctx.evidence")}
               </span>
               <button
                 type="button"
                 onClick={onEvidence}
-                className="inline-flex items-center gap-1 text-[0.7rem] font-medium text-[var(--primary)] hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--primary)] hover:underline"
               >
                 <FileDown className="h-3 w-3" />
                 {tq("runs.ctx.openEvidence")}
@@ -936,7 +932,7 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
           {tq("runs.qdatasets.title")}
           <QInfo title={tq("runs.qdatasets.title")} k="runDatasets" />
         </CardTitle>
-        <Badge tone="neutral" className="text-[0.65rem]">
+        <Badge tone="neutral" className="text-xs">
           {tq("runs.qdatasets.count", { n: report?.n ?? 0 })}
         </Badge>
       </CardHeader>
@@ -951,7 +947,7 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
               data-premium-table="true"
               className="w-full min-w-[860px] table-fixed text-left text-xs"
             >
-              <thead className="text-[0.6rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+              <thead className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
                 <tr className="border-b border-[var(--border)]">
                   <th className="w-[13%] py-1 pr-2 pl-5 font-medium">
                     {tq("runs.qdatasets.dataset")}
@@ -1012,7 +1008,7 @@ export function DatasetsTable({ report }: { report: QualityDatasetsReport | unde
                       <td className="px-2 py-1.5">
                         <span className="inline-flex items-center gap-1">
                           <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[status]}`} />
-                          <span className="text-[0.65rem] text-[var(--muted-foreground)]">
+                          <span className="text-xs text-[var(--muted-foreground)]">
                             {tq(`runs.qdatasets.st_${status}`)}
                           </span>
                         </span>
@@ -1124,7 +1120,7 @@ function MiniBars({
       <div className="flex h-11 gap-1">
         {items.map((it) => (
           <div key={it.label} className="relative min-w-0 flex-1">
-            <span className="absolute top-0.5 right-1/2 origin-top-right -rotate-45 whitespace-nowrap text-[0.55rem] leading-none text-[var(--muted-foreground)]">
+            <span className="absolute top-0.5 right-1/2 origin-top-right -rotate-45 whitespace-nowrap text-xs leading-none text-[var(--muted-foreground)]">
               {it.label}
             </span>
           </div>
@@ -1154,7 +1150,7 @@ function CoverageBars({ items }: { items: { label: string; value: number }[] }) 
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[0.55rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: BAND_FILL.good }} />
           {tq("runs.charts.bandGood")}
@@ -1182,7 +1178,7 @@ function DriftBars({ items }: { items: { label: string; value: number }[] }) {
       {items.map((it) => {
         const abs = Math.abs(it.value);
         return (
-          <div key={it.label} className="flex items-center gap-1.5 text-[0.6rem] leading-tight">
+          <div key={it.label} className="flex items-center gap-1.5 text-xs leading-tight">
             <Truncate className="min-w-0 flex-1 text-[var(--muted-foreground)]" full={it.label}>
               {it.label}
             </Truncate>
@@ -1260,7 +1256,7 @@ function DualLine({
           strokeLinejoin="round"
         />
       </svg>
-      <div className="flex gap-2 text-[0.55rem] text-[var(--muted-foreground)]">
+      <div className="flex gap-2 text-xs text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-[var(--tessera-fg-teal)]" />
           {tq("runs.charts.legendCost")}
@@ -1332,12 +1328,12 @@ function MiniDonut({
           x="32"
           y="35"
           textAnchor="middle"
-          className="fill-[var(--foreground)] text-[0.6rem] font-semibold tabular-nums"
+          className="fill-[var(--foreground)] text-xs font-semibold tabular-nums"
         >
           {center}
         </text>
       </svg>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.6rem] leading-none">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs leading-none">
         {items.map((it, i) => (
           <li key={it.label} className="flex items-center gap-1">
             <span
@@ -1363,7 +1359,7 @@ function MiniDonut({
 function ChartEmpty() {
   const tq = useTranslations("quality");
   return (
-    <div className="flex h-14 items-center justify-center text-[0.62rem] text-[var(--muted-foreground)]">
+    <div className="flex h-14 items-center justify-center text-xs text-[var(--muted-foreground)]">
       {tq("runs.charts.noData")}
     </div>
   );
@@ -1381,7 +1377,7 @@ function ChartCard({
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="flex items-center gap-1.5 text-[0.72rem] font-medium text-[var(--muted-foreground)]">
+        <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
           {title}
           {explainKey ? <QInfo title={title} k={explainKey} /> : null}
         </CardTitle>
@@ -1480,11 +1476,11 @@ function HealthRow({
   const tq = useTranslations("quality");
   const tone = ok == null ? MUTED : ok ? GOOD : WARN;
   return (
-    <div className="flex items-center justify-between gap-2 py-0.5 text-[0.7rem]">
+    <div className="flex items-center justify-between gap-2 py-0.5 text-xs">
       <span className="text-[var(--muted-foreground)]">{label}</span>
       <span className="flex items-center gap-1.5">
         <span className="tabular-nums text-[var(--foreground)]">{value}</span>
-        <span className={`text-[0.6rem] font-medium ${tone}`}>
+        <span className={`text-xs font-medium ${tone}`}>
           {ok == null ? DASH : ok ? tq("runs.rail.pOk") : tq("runs.rail.pWatch")}
         </span>
       </span>
@@ -1526,19 +1522,17 @@ export function RunsRail({
         </CardHeader>
         <CardContent className="pt-1">
           {rel == null ? (
-            <p className="text-[0.7rem] text-[var(--muted-foreground)]">
-              {tq("runs.rail.noRelease")}
-            </p>
+            <p className="text-xs text-[var(--muted-foreground)]">{tq("runs.rail.noRelease")}</p>
           ) : (
             <>
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-[var(--foreground)]">{rel.version}</span>
-                <Badge tone="neutral" className={`text-[0.62rem] ${relTone}`}>
+                <Badge tone="neutral" className={`text-xs ${relTone}`}>
                   {regOpen != null && regOpen > 0 ? tq("runs.kpi.regOpen", { n: regOpen }) : "OK"}
                 </Badge>
               </div>
               {rel.date ? (
-                <p className="mt-0.5 text-[0.65rem] text-[var(--muted-foreground)]">
+                <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
                   {tq("runs.rail.releaseDate", { d: rel.date })}
                 </p>
               ) : null}
@@ -1560,11 +1554,9 @@ export function RunsRail({
             <span className="text-xl font-semibold tabular-nums text-[var(--foreground)]">
               {monitored}
             </span>
-            <span className="text-[0.65rem] text-[var(--muted-foreground)]">
-              {tq("runs.rail.active")}
-            </span>
+            <span className="text-xs text-[var(--muted-foreground)]">{tq("runs.rail.active")}</span>
           </div>
-          <p className="text-[0.65rem] text-[var(--muted-foreground)]">
+          <p className="text-xs text-[var(--muted-foreground)]">
             {coveragePct == null
               ? DASH
               : tq("runs.rail.covered", { p: Math.round(coveragePct * 100) })}
@@ -1582,19 +1574,17 @@ export function RunsRail({
         </CardHeader>
         <CardContent className="pt-1">
           {activity.length === 0 ? (
-            <p className="text-[0.7rem] text-[var(--muted-foreground)]">{tq("runs.empty")}</p>
+            <p className="text-xs text-[var(--muted-foreground)]">{tq("runs.empty")}</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {activity.map((r) => (
-                <li key={r.run_id} className="flex items-start gap-1.5 text-[0.68rem]">
+                <li key={r.run_id} className="flex items-start gap-1.5 text-xs">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
                   <div className="min-w-0">
                     <Truncate as="p" className="text-[var(--foreground)]">
                       {tq("runs.rail.runDone", { model: r.model, rate: fmtPct(r.pass_rate) })}
                     </Truncate>
-                    <p className="text-[0.6rem] text-[var(--muted-foreground)]">
-                      {fmtDate(r.run_at)}
-                    </p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{fmtDate(r.run_at)}</p>
                   </div>
                 </li>
               ))}

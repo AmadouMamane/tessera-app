@@ -210,7 +210,7 @@ export function EvalDashboard({ tab }: { tab: EvalDashboardTab }) {
           legend. Three models score 90-92 % on the sweep and 52-87 % across the archive; the
           two statements are both true and neither is wrong, so the only thing that can go
           wrong is a reader who does not know which one they are looking at. */}
-      <p className="text-[0.74rem] leading-relaxed text-[var(--tessera-text-muted)]">{te(tab)}</p>
+      <p className="text-xs leading-relaxed text-[var(--tessera-text-muted)]">{te(tab)}</p>
 
       <div className={`grid gap-2 ${rail ? "lg:grid-cols-[minmax(0,1fr)_340px]" : ""}`}>
         <div className="flex min-w-0 flex-col gap-2">

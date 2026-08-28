@@ -31,7 +31,7 @@ export function AppFooter() {
   const sealVerified = data?.seal_state === "verified";
   const sealedAt = data?.sealed_at ?? null;
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-4 py-1.5 text-[0.62rem] text-[var(--tessera-text-muted)]">
+    <footer className="hidden shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-t border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-4 py-2 text-xs text-[var(--tessera-text-muted)] sm:flex">
       <span className="inline-flex items-center gap-1.5">
         <GitBranch className="h-3 w-3" />
         {t("sourceOfTruth")}

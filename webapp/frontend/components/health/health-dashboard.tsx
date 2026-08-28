@@ -301,7 +301,7 @@ function ServiceCard() {
         </CardTitle>
         <Link
           href="/surveiller/fiabilite-cout"
-          className="flex items-center gap-1 text-[0.66rem] text-[var(--muted-foreground)] transition-colors hover:text-[var(--tessera-green)]"
+          className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] transition-colors hover:text-[var(--tessera-green)]"
         >
           {t("service.reliability")}
           <ArrowUpRight className="h-3 w-3" />
@@ -369,7 +369,7 @@ function ServiceCard() {
                 <span className="font-mono text-xs font-medium">
                   {euro(budget.data.estimated_cost_eur)}
                 </span>
-                <span className="text-[0.66rem] text-[var(--muted-foreground)]">
+                <span className="text-xs text-[var(--muted-foreground)]">
                   {fmtInt(budget.data.input_tokens)} in · {fmtInt(budget.data.output_tokens)} out
                 </span>
                 <CircleDollarSign
@@ -396,7 +396,7 @@ function ServiceRow({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-b border-[var(--tessera-border)]/50 py-1 last:border-0">
-      <dt className="flex items-center gap-1 text-[0.72rem] font-medium text-[var(--foreground)]">
+      <dt className="flex items-center gap-1 text-xs font-medium text-[var(--foreground)]">
         {label}
         {info}
       </dt>
@@ -474,7 +474,7 @@ function TailSamplingCard() {
 function TailStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <dt className="truncate text-[0.66rem] uppercase tracking-wide text-[var(--muted-foreground)]">
+      <dt className="truncate text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
         {label}
       </dt>
       <dd className="font-mono text-sm font-medium text-[var(--foreground)]">{value}</dd>

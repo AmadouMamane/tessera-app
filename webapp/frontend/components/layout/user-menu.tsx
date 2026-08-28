@@ -114,7 +114,7 @@ export function UserMenu({ role, compact = false, className }: UserMenuProps) {
         >
           <span
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[0.68rem] font-semibold",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
               IDENTITY_AVATAR_CLASS,
             )}
           >
@@ -126,7 +126,7 @@ export function UserMenu({ role, compact = false, className }: UserMenuProps) {
                 <span className="truncate text-[0.78rem] font-medium text-[var(--tessera-text)]">
                   {roleLabel}
                 </span>
-                <span className="truncate text-[0.62rem] leading-tight text-[var(--tessera-text-muted)]">
+                <span className="truncate text-xs leading-tight text-[var(--tessera-text-muted)]">
                   {t("operatorAccount")}
                 </span>
               </span>
@@ -159,7 +159,7 @@ export function UserMenu({ role, compact = false, className }: UserMenuProps) {
             >
               <span
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.56rem] font-semibold",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
                   IDENTITY_AVATAR_CLASS,
                 )}
               >
@@ -167,7 +167,7 @@ export function UserMenu({ role, compact = false, className }: UserMenuProps) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-medium">{roleLabel}</span>
-                <span className="block truncate text-[0.62rem] text-[var(--tessera-text-muted)]">
+                <span className="block truncate text-xs text-[var(--tessera-text-muted)]">
                   {t("currentAccount")}
                 </span>
               </span>

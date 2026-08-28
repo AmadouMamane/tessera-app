@@ -67,7 +67,7 @@ export async function BenchHonesty({
                 {weak.map((c) => (
                   <li
                     key={c.id}
-                    className="rounded bg-warning-500/15 px-1.5 py-0.5 font-mono text-[10px] text-warning-800 dark:text-warning-200"
+                    className="rounded bg-warning-500/15 px-1.5 py-0.5 font-mono text-xs text-warning-800 dark:text-warning-200"
                   >
                     {c.id}
                   </li>

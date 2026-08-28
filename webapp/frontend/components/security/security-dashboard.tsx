@@ -115,7 +115,7 @@ function usePct(): (v: number | null | undefined, digits?: number) => string {
 
 function Sec({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mt-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+    <h2 className="mt-1 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
       {children}
     </h2>
   );
@@ -241,9 +241,7 @@ function Kpi({
         {value}
       </div>
       {showDelta ? (
-        <div
-          className={`flex items-center gap-1 text-[0.65rem] tabular-nums ${deltaGood ? GOOD : BAD}`}
-        >
+        <div className={`flex items-center gap-1 text-xs tabular-nums ${deltaGood ? GOOD : BAD}`}>
           <span>{up ? "↗" : "↘"}</span>
           <span>
             {dec1(Math.abs((delta as number) * 100))} pts {ts("kpi.vs7d")}
@@ -251,9 +249,7 @@ function Kpi({
         </div>
       ) : null}
       {series && series.length > 1 ? <Spark values={series} /> : null}
-      {hint ? (
-        <div className="truncate text-[0.65rem] text-[var(--muted-foreground)]">{hint}</div>
-      ) : null}
+      {hint ? <div className="truncate text-xs text-[var(--muted-foreground)]">{hint}</div> : null}
       {href ? (
         <ArrowUpRight className="pointer-events-none absolute right-2 bottom-2 z-20 h-3 w-3 text-[var(--muted-foreground)] opacity-30 transition-opacity group-hover:opacity-70" />
       ) : null}
@@ -324,9 +320,7 @@ function Gauge({ value, label, tone }: { value: number; label?: string; tone: st
           {Math.round(clamped * 100)}%
         </text>
       </svg>
-      {label ? (
-        <span className="text-[0.65rem] text-[var(--muted-foreground)]">{label}</span>
-      ) : null}
+      {label ? <span className="text-xs text-[var(--muted-foreground)]">{label}</span> : null}
     </div>
   );
 }
@@ -341,7 +335,7 @@ function RiskBar({ label, value, sub }: { label: string; value: number; sub?: st
         ? "var(--tessera-fg-warning)"
         : "var(--tessera-fg-success)";
   return (
-    <div className="flex items-center gap-2 text-[0.72rem]">
+    <div className="flex items-center gap-2 text-xs">
       <span className="w-24 shrink-0 truncate">{label}</span>
       <div className="h-[4px] flex-1 overflow-hidden rounded-sm bg-[var(--tessera-border)]">
         <div
@@ -405,12 +399,12 @@ function FailureDonut({
           <span className="max-w-[49px] truncate text-base font-semibold leading-none tabular-nums">
             {measuredTotal}
           </span>
-          <span className="line-clamp-2 max-w-[49px] break-words text-center text-[0.5rem] uppercase leading-tight text-[var(--muted-foreground)]">
+          <span className="line-clamp-2 max-w-[49px] break-words text-center text-xs uppercase leading-tight text-[var(--muted-foreground)]">
             {label}
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-[0.68rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-1 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
@@ -441,7 +435,7 @@ function LineChart({
 }) {
   const all = [...a, ...b];
   if (all.length < 2)
-    return <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">—</p>;
+    return <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">—</p>;
   const max = Math.max(0.01, ...all);
   const W = 220;
   const H = 60;
@@ -479,7 +473,7 @@ function LineChart({
           />
         ) : null}
       </svg>
-      <div className="flex gap-3 text-[0.6rem] text-[var(--muted-foreground)]">
+      <div className="flex gap-3 text-xs text-[var(--muted-foreground)]">
         <span className="flex items-center gap-1">
           <span className="h-1 w-3 rounded-full bg-[var(--tessera-fg-warning)]" /> {aLabel}
         </span>
@@ -517,19 +511,14 @@ function ActionCard({
         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tessera-fg-warning)]" />
         <span className="min-w-0 text-[0.78rem] font-medium leading-snug">{title}</span>
       </div>
-      <p className="text-[0.68rem] leading-snug text-[var(--muted-foreground)]">{desc}</p>
+      <p className="text-xs leading-snug text-[var(--muted-foreground)]">{desc}</p>
       <div className="flex flex-wrap items-center gap-1">
         <Badge tone="warning">
           <AuthorityLabel authority={roleLabel} />
         </Badge>
         <Badge tone="danger">{ts("dualControl")}</Badge>
       </div>
-      <Button
-        asChild
-        size="sm"
-        variant="outline"
-        className="mt-auto h-7 justify-center text-[0.7rem]"
-      >
+      <Button asChild size="sm" variant="outline" className="mt-auto h-7 justify-center text-xs">
         <Link href={href}>{cta}</Link>
       </Button>
     </Card>
@@ -913,7 +902,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 {/* The one column that MAY wrap: it holds a sentence. */}
                 <td className="px-3 py-2 text-[var(--muted-foreground)]">{c.action}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{c.role}</td>
-                <td className="px-3 py-2 font-mono text-[0.7rem] text-[var(--tessera-green)]">
+                <td className="px-3 py-2 font-mono text-xs text-[var(--tessera-green)]">
                   {c.case}
                 </td>
               </tr>
@@ -937,21 +926,21 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
         info={<SecInfo k="domainCases" title={ts("tabx.domainCases")} />}
       >
         {rows.length === 0 ? (
-          <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+          <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">
             {ts("tabx.noCases")}
           </p>
         ) : (
-          <ul className="flex flex-col gap-1 text-[0.72rem]">
+          <ul className="flex flex-col gap-1 text-xs">
             {rows.slice(0, max).map((c) => (
               <li key={`${c.case_id}.${c.language}`} className="flex items-center gap-1.5">
                 <span
                   className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
                 />
                 <Truncate className="min-w-0 flex-1">{c.title}</Truncate>
-                <span className="shrink-0 font-mono text-[0.6rem] uppercase text-[var(--muted-foreground)]">
+                <span className="shrink-0 font-mono text-xs uppercase text-[var(--muted-foreground)]">
                   {c.language}
                 </span>
-                <span className="shrink-0 font-mono text-[0.6rem] text-[var(--tessera-green)]">
+                <span className="shrink-0 font-mono text-xs text-[var(--tessera-green)]">
                   {c.case_id}
                 </span>
               </li>
@@ -964,7 +953,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
 
   const redteamPanel = (
     <Panel title={ts("panel.redteam")} info={<SecInfo k="redteam" title={ts("panel.redteam")} />}>
-      <div className="flex flex-col gap-1.5 text-[0.72rem]">
+      <div className="flex flex-col gap-1.5 text-xs">
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-semibold tabular-nums">{blocked}</span>
           <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
@@ -1014,7 +1003,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           label={ts("panel.completeness")}
           tone="var(--tessera-fg-success)"
         />
-        <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
+        <div className="flex min-w-0 flex-col gap-0.5 text-xs">
           <KV
             label={ts("panel.conversations")}
             value={`${showNumber(erasure.data?.n_conversations)}`}
@@ -1039,11 +1028,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           while `capabilities.py` said true; a test now refuses that disagreement. */}
       <ProvenanceNotice signalId="embedding_inversion" compact />
       {inversion.data?.available === false || inversion.isLoading ? (
-        <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+        <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
           {ts("panel.computing")}
         </p>
       ) : (
-        <div className="flex flex-col gap-1 text-[0.72rem]">
+        <div className="flex flex-col gap-1 text-xs">
           <KV
             label={ts("panel.recoverable")}
             value={`${showNumber(inversion.data?.n_recoverable)}/${showNumber(inversion.data?.n_memories)}`}
@@ -1067,7 +1056,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
   const riskScore = regression.data?.risk_score;
   const regressionBody =
     riskScore === null || riskScore === undefined ? (
-      <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+      <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
         {ts("panel.regressionUnread")}
       </p>
     ) : (
@@ -1076,7 +1065,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
           value={riskScore}
           tone={riskScore >= 0.5 ? "var(--tessera-fg-danger)" : "var(--tessera-fg-warning)"}
         />
-        <div className="flex flex-col gap-0.5 text-[0.7rem]">
+        <div className="flex flex-col gap-0.5 text-xs">
           <span className={`text-base font-semibold ${riskScore >= 0.5 ? BAD : WARN}`}>
             {ts(`level.${regression.data?.level ?? "low"}`)}
           </span>
@@ -1271,7 +1260,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   label={ts("panel.overRefusal")}
                   tone="var(--tessera-fg-warning)"
                 />
-                <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
+                <div className="flex min-w-0 flex-col gap-1 text-xs">
                   <KV
                     label={ts("panel.underRefusal")}
                     value={pct(refusal.data?.under_refusal_rate)}
@@ -1289,14 +1278,14 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               title={ts("panel.whatChanged")}
               info={<SecInfo k="whatChanged" title={ts("panel.whatChanged")} />}
             >
-              <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+              <ul className="flex flex-col gap-1.5 text-xs">
                 {(whatChanged.data?.changes ?? []).length === 0 ? (
                   <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
                 ) : (
                   (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
                     <li key={c.field} className="flex items-center gap-2">
                       <Truncate className="min-w-0 flex-1">{c.field}</Truncate>
-                      <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                      <span className="shrink-0 font-mono text-xs text-[var(--muted-foreground)]">
                         {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
                       </span>
                     </li>
@@ -1305,7 +1294,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               </ul>
             </Panel>
             <Panel title={ts("tabx.guardLinks")}>
-              <div className="flex flex-col gap-1.5 text-[0.72rem]">
+              <div className="flex flex-col gap-1.5 text-xs">
                 <Link
                   href="/configurer/politiques"
                   className="flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] px-2 py-1.5 hover:border-[var(--tessera-green)] hover:text-[var(--tessera-green)]"
@@ -1384,7 +1373,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               title={ts("panel.overPriv")}
               info={<SecInfo k="overPriv" title={ts("panel.overPriv")} />}
             >
-              <ul className="flex flex-col gap-1 text-[0.72rem]">
+              <ul className="flex flex-col gap-1 text-xs">
                 {(lp.data?.usage ?? []).slice(0, 8).map((u) => {
                   const over = lp.data?.over_provisioned.includes(u.tool);
                   return (
@@ -1499,14 +1488,14 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               title={ts("tabx.isolationTitle")}
               info={<SecInfo k="isolationFacts" title={ts("tabx.isolationTitle")} />}
             >
-              <ul className="flex flex-col gap-1.5 text-[0.72rem] text-[var(--muted-foreground)]">
+              <ul className="flex flex-col gap-1.5 text-xs text-[var(--muted-foreground)]">
                 <li>{ts("tabx.isolationFactEnv")}</li>
                 <li>{ts("tabx.isolationFactSchema")}</li>
                 <li>{ts("tabx.isolationFactState")}</li>
               </ul>
               <Link
                 href="/admin/profil-systeme"
-                className="mt-2 inline-flex items-center gap-1 text-[0.7rem] text-[var(--tessera-green)] hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--tessera-green)] hover:underline"
               >
                 {ts("tabx.linkSystem")} <ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -1565,7 +1554,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
               {/* One of the six slices (`inversion`) counts the demonstration corpus. */}
               <ProvenanceNotice signalId="embedding_inversion" compact />
               {failureSlices.length === 0 ? (
-                <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">
                   {ts("panel.noFailures")}
                 </p>
               ) : (
@@ -1737,7 +1726,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                 >
                   <ProvenanceNotice signalId="embedding_inversion" compact />
                   {failureSlices.length === 0 ? (
-                    <p className="py-6 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                    <p className="py-6 text-center text-xs text-[var(--muted-foreground)]">
                       {ts("panel.noFailures")}
                     </p>
                   ) : (
@@ -1748,14 +1737,14 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.whatChanged")}
                   info={<SecInfo k="whatChanged" title={ts("panel.whatChanged")} />}
                 >
-                  <ul className="flex flex-col gap-1.5 text-[0.72rem]">
+                  <ul className="flex flex-col gap-1.5 text-xs">
                     {(whatChanged.data?.changes ?? []).length === 0 ? (
                       <li className="text-[var(--muted-foreground)]">{ts("panel.noChanges")}</li>
                     ) : (
                       (whatChanged.data?.changes ?? []).slice(0, 4).map((c) => (
                         <li key={c.field} className="flex items-center gap-2">
                           <Truncate className="min-w-0 flex-1">{c.field}</Truncate>
-                          <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                          <span className="shrink-0 font-mono text-xs text-[var(--muted-foreground)]">
                             {c.before.slice(0, 8)} → {c.after.slice(0, 8)}
                           </span>
                         </li>
@@ -1773,7 +1762,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                       label={ts("panel.overRefusal")}
                       tone="var(--tessera-fg-warning)"
                     />
-                    <div className="flex min-w-0 flex-col gap-1 text-[0.7rem]">
+                    <div className="flex min-w-0 flex-col gap-1 text-xs">
                       <KV
                         label={ts("panel.underRefusal")}
                         value={pct(refusal.data?.under_refusal_rate)}
@@ -1794,14 +1783,14 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.priorityCases")}
                   info={<SecInfo k="priorityCases" title={ts("panel.priorityCases")} />}
                 >
-                  <ul className="flex flex-col gap-1 text-[0.72rem]">
+                  <ul className="flex flex-col gap-1 text-xs">
                     {(failed.data?.cases ?? []).slice(0, 4).map((c) => (
                       <li key={c.case_id} className="flex items-center gap-1.5">
                         <span
                           className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.severity === "critical" ? "bg-red-500" : c.severity === "high" ? "bg-amber-500" : "bg-[var(--muted-foreground)]"}`}
                         />
                         <Truncate className="min-w-0 flex-1">{c.title}</Truncate>
-                        <span className="shrink-0 font-mono text-[0.6rem] text-[var(--muted-foreground)]">
+                        <span className="shrink-0 font-mono text-xs text-[var(--muted-foreground)]">
                           {c.case_id}
                         </span>
                       </li>
@@ -1850,7 +1839,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.overPriv")}
                   info={<SecInfo k="overPriv" title={ts("panel.overPriv")} />}
                 >
-                  <ul className="flex flex-col gap-1 text-[0.72rem]">
+                  <ul className="flex flex-col gap-1 text-xs">
                     {(lp.data?.usage ?? []).slice(0, 5).map((u) => {
                       const over = lp.data?.over_provisioned.includes(u.tool);
                       return (
@@ -1877,7 +1866,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   title={ts("panel.redteam")}
                   info={<SecInfo k="redteam" title={ts("panel.redteam")} />}
                 >
-                  <div className="flex flex-col gap-1.5 text-[0.72rem]">
+                  <div className="flex flex-col gap-1.5 text-xs">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xl font-semibold tabular-nums">{blocked}</span>
                       <span className="text-[var(--muted-foreground)]">{ts("panel.blocked")}</span>
@@ -1911,7 +1900,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                       label={ts("panel.completeness")}
                       tone="var(--tessera-fg-success)"
                     />
-                    <div className="flex min-w-0 flex-col gap-0.5 text-[0.7rem]">
+                    <div className="flex min-w-0 flex-col gap-0.5 text-xs">
                       <KV
                         label={ts("panel.conversations")}
                         value={`${showNumber(erasure.data?.n_conversations)}`}
@@ -1930,7 +1919,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                     asChild
                     size="sm"
                     variant="outline"
-                    className="mt-2 h-7 w-full justify-center text-[0.7rem]"
+                    className="mt-2 h-7 w-full justify-center text-xs"
                   >
                     <Link href="/configurer/sources-memoire">{ts("panel.purgeCta")}</Link>
                   </Button>
@@ -1940,11 +1929,11 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
                   info={<SecInfo k="inversion" title={ts("panel.inversion")} />}
                 >
                   {inversion.data?.available === false || inversion.isLoading ? (
-                    <p className="py-4 text-center text-[0.7rem] text-[var(--muted-foreground)]">
+                    <p className="py-4 text-center text-xs text-[var(--muted-foreground)]">
                       {ts("panel.computing")}
                     </p>
                   ) : (
-                    <div className="flex flex-col gap-1 text-[0.72rem]">
+                    <div className="flex flex-col gap-1 text-xs">
                       <KV
                         label={ts("panel.recoverable")}
                         value={`${showNumber(inversion.data?.n_recoverable)}/${showNumber(inversion.data?.n_memories)}`}
@@ -2011,7 +2000,7 @@ export function SecurityDashboard({ agentScope }: { agentScope?: ReactNode }) {
       )}
 
       {/* footer status */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--muted-foreground)]">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--muted-foreground)]">
         <Chip icon={Radio} label={ts("status.realtime")} tone="text-[var(--tessera-green)]" />
         <Chip icon={ShieldCheck} label={ts("status.chain")} tone="text-[var(--tessera-green)]" />
         <Chip icon={AlertTriangle} label={ts("status.signals", { n: 200 })} />
@@ -2088,12 +2077,10 @@ function SecurityRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {incidents.length === 0 ? (
-              <p className="text-[0.7rem] text-[var(--muted-foreground)]">
-                {ts("rail.noIncidents")}
-              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">{ts("rail.noIncidents")}</p>
             ) : (
               incidents.map((c) => (
-                <div key={c.case_id} className="flex items-center gap-1.5 text-[0.72rem]">
+                <div key={c.case_id} className="flex items-center gap-1.5 text-xs">
                   <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sevDot(c.severity)}`} />
                   <Truncate className="min-w-0 flex-1">{c.title}</Truncate>
                   <Badge
@@ -2126,7 +2113,7 @@ function SecurityRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1.5">
             {gates.map((g) => (
-              <div key={g.label} className="flex items-center justify-between gap-2 text-[0.72rem]">
+              <div key={g.label} className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-[var(--muted-foreground)]">{g.label}</span>
                 <Badge
                   tone={g.pass === true ? "success" : g.pass === "watch" ? "warning" : "danger"}
@@ -2161,7 +2148,7 @@ function SecurityRail({
                 <Link
                   key={a.key}
                   href={a.href}
-                  className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
+                  className="flex items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs text-[var(--tessera-green)] transition-colors hover:bg-[var(--tessera-muted)]"
                 >
                   <a.icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{ts(`rail.${a.key}`)}</span>
@@ -2173,7 +2160,7 @@ function SecurityRail({
                   type="button"
                   disabled
                   title={ts("rail.notWired")}
-                  className="flex cursor-not-allowed items-center gap-2 rounded-md px-1.5 py-1 text-left text-[0.72rem] text-[var(--muted-foreground)] opacity-60"
+                  className="flex cursor-not-allowed items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs text-[var(--muted-foreground)] opacity-60"
                 >
                   <a.icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{ts(`rail.${a.key}`)}</span>
@@ -2194,7 +2181,7 @@ function SecurityRail({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-[0.7rem]">
+              <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-[var(--muted-foreground)]">
                     <th className="pb-1 font-medium">{ts("rail.tool")}</th>
@@ -2232,10 +2219,7 @@ function SecurityRail({
           </CardHeader>
           <CardContent className="flex flex-col gap-1">
             {incidents.slice(0, 3).map((c) => (
-              <div
-                key={c.case_id}
-                className="flex items-center justify-between gap-2 text-[0.7rem]"
-              >
+              <div key={c.case_id} className="flex items-center justify-between gap-2 text-xs">
                 {/* Real case id + real severity (was a fabricated "CASE-02xx" id and a
                   hardcoded "High" badge — honest data only: never invent an id/severity). */}
                 <span className="shrink-0 font-mono text-[var(--tessera-green)]">{c.case_id}</span>
@@ -2261,12 +2245,12 @@ function SecurityRail({
               size="sm"
               variant="outline"
               onClick={onExportIncidents}
-              className="mt-1 h-7 justify-center text-[0.7rem]"
+              className="mt-1 h-7 justify-center text-xs"
             >
               {ts("rail.exportSiem")}
             </Button>
             {anomalies?.n_anomalous ? (
-              <p className="text-[0.62rem] text-[var(--muted-foreground)]">
+              <p className="text-xs text-[var(--muted-foreground)]">
                 {ts("rail.anomalies", { n: anomalies.n_anomalous })}
               </p>
             ) : null}

@@ -252,7 +252,7 @@ function CompactKpi({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: stri
   const te = useTranslations("inbox.explain");
   return (
     <div className="flex h-[96px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3">
-      <p className="flex items-center gap-1 text-[0.64rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="truncate">{label}</span>
         {te.has(`${kpi.key}.what`) ? (
           <MetricInfo
@@ -269,7 +269,7 @@ function CompactKpi({ kpi, label, vs }: { kpi: Data["kpis"][number]; label: stri
       </p>
       <p
         className={cn(
-          "mt-0.5 text-[0.58rem] font-medium",
+          "mt-0.5 text-xs font-medium",
           good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]",
         )}
       >
@@ -403,7 +403,7 @@ function FilterStrip({
           onChange={setFAgent}
         />
       ) : null}
-      <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-[0.7rem] tabular-nums text-[var(--tessera-text-muted)]">
+      <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2.5 py-1.5 text-xs tabular-nums text-[var(--tessera-text-muted)]">
         <Layers className="h-3.5 w-3.5" /> {count} / {data.total_items}
       </span>
     </section>
@@ -462,13 +462,14 @@ function TaskTable({
 
   return (
     <section className="flex min-w-0 flex-col rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)]">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-sm:overflow-visible">
         <table
           data-premium-table="true"
+          data-mobile-table="cards"
           className="w-full min-w-[760px] table-fixed border-collapse text-left text-xs"
         >
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.56rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {COLS.map((c, i) => (
                 <th
                   key={c}
@@ -488,7 +489,7 @@ function TaskTable({
                   >
                     {t(`col.${c}`)}
                     {sortCol === i ? (
-                      <span className="text-[0.7rem]">{sortDir === "asc" ? "▲" : "▼"}</span>
+                      <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>
                     ) : (
                       <ChevronsUpDown className="h-3 w-3 opacity-40" />
                     )}
@@ -522,42 +523,60 @@ function TaskTable({
                     active && "bg-[#0b3157] shadow-[inset_3px_0_0_#2e72d2]",
                   )}
                 >
-                  <td className="py-2 pl-5 pr-2">
+                  <td data-label={t(`col.${COLS[0]}`)} className="py-2 pl-5 pr-2">
                     <Badge className={PRIORITY[it.priority]}>{t(`priority.${it.priority}`)}</Badge>
                   </td>
-                  <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
+                  <td
+                    data-label={t(`col.${COLS[1]}`)}
+                    className="px-2 py-2 text-[var(--tessera-text-muted)]"
+                  >
                     <span className="block truncate" title={t(`type.${it.type}`)}>
                       {t(`type.${it.type}`)}
                     </span>
                   </td>
-                  <td className="px-2 py-2 text-[var(--tessera-text)]">
+                  <td
+                    data-label={t(`col.${COLS[2]}`)}
+                    className="px-2 py-2 text-[var(--tessera-text)]"
+                  >
                     <Truncate full={it.title}>
                       {it.title}
                       {it.agent ? (
-                        <span className="ml-1.5 rounded bg-[var(--tessera-muted)] px-1 py-px text-[0.52rem] text-[var(--tessera-text-muted)]">
+                        <span className="ml-1.5 rounded bg-[var(--tessera-muted)] px-1 py-px text-xs text-[var(--tessera-text-muted)]">
                           {it.agent}
                         </span>
                       ) : null}
                     </Truncate>
                   </td>
-                  <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
+                  <td
+                    data-label={t(`col.${COLS[3]}`)}
+                    className="px-2 py-2 text-[var(--tessera-text-muted)]"
+                  >
                     <Truncate>{it.source}</Truncate>
                   </td>
-                  <td className="px-2 py-2 text-[var(--tessera-text-muted)]">
+                  <td
+                    data-label={t(`col.${COLS[4]}`)}
+                    className="px-2 py-2 text-[var(--tessera-text-muted)]"
+                  >
                     <Truncate>{it.assignee}</Truncate>
                   </td>
-                  <td className={cn("px-2 py-2 font-medium tabular-nums", SLA_TONE[it.sla_tone])}>
+                  <td
+                    data-label={t(`col.${COLS[5]}`)}
+                    className={cn("px-2 py-2 font-medium tabular-nums", SLA_TONE[it.sla_tone])}
+                  >
                     {it.sla}
                   </td>
-                  <td className="px-2 py-2 font-mono text-[0.62rem] text-[var(--tessera-text-muted)]">
+                  <td
+                    data-label={t(`col.${COLS[6]}`)}
+                    className="px-2 py-2 font-mono text-xs text-[var(--tessera-text-muted)]"
+                  >
                     {it.due}
                   </td>
-                  <td className="px-2 py-2">
+                  <td data-label={t(`col.${COLS[7]}`)} className="px-2 py-2">
                     <Badge className={STATUS[it.status]}>{t(`status.${it.status}`)}</Badge>
                   </td>
-                  <td className="px-2 py-2">
+                  <td data-label={t("rowOpen")} className="px-2 py-2">
                     <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-                      <span className="text-[0.66rem] text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
+                      <span className="text-xs text-[var(--tessera-fg-info)] opacity-0 transition-opacity group-hover:opacity-100">
                         {t("rowOpen")}
                       </span>
                       <ChevronRight className="h-3.5 w-3.5 text-[var(--tessera-text-muted)]/40 transition-colors group-hover:text-[var(--tessera-fg-info)]" />
@@ -623,7 +642,7 @@ function Pagination({
   onPerPage: (n: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-[0.7rem] text-[var(--tessera-text-muted)]">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--tessera-border)] px-3 py-2 text-xs text-[var(--tessera-text-muted)]">
       <span className="tabular-nums" aria-live="polite">
         {t("page.summary", { start, end, total })}
       </span>
@@ -644,7 +663,7 @@ function Pagination({
             aria-current={n === page ? "page" : undefined}
             onClick={() => onPage(n)}
             className={cn(
-              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-[0.72rem] tabular-nums",
+              "flex h-7 min-w-7 items-center justify-center rounded-md border px-1.5 text-xs tabular-nums",
               n === page
                 ? "border-[#87bfff]/60 bg-[#87bfff]/15 font-medium text-[var(--tessera-text-strong)]"
                 : "border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)] hover:text-[var(--tessera-text)]",
@@ -668,7 +687,7 @@ function Pagination({
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-[0.72rem] text-[var(--tessera-text)] focus:outline-none"
+          className="h-7 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-1.5 text-xs text-[var(--tessera-text)] focus:outline-none"
         >
           {ROWS_PER_PAGE_OPTS.map((n) => (
             <option key={n} value={n}>
@@ -714,7 +733,7 @@ function InboxDrawer({
     <DetailDrawer onClose={onClose} title={item.title} subtitle={item.id} width="max-w-[440px]">
       <Badge className={PRIORITY[item.priority]}>{t(`priority.${item.priority}`)}</Badge>
       <div className="flex min-w-0 flex-col gap-3 text-[var(--tessera-text)]">
-        <dl className="flex flex-col gap-2.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-[0.74rem]">
+        <dl className="flex flex-col gap-2.5 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3 text-xs">
           {fields.map(([label, value]) => (
             <div
               key={label}
@@ -729,11 +748,11 @@ function InboxDrawer({
         {/* WF-01 — the journaled transitions of this case, each naming its
               verified author (ADR 0024). Honest empty when it never moved. */}
         <div className="rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-          <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("drawer.transitions")}
           </p>
           {item.transitions.length > 0 ? (
-            <ol className="mt-1.5 flex flex-col gap-1.5 text-[0.68rem]">
+            <ol className="mt-1.5 flex flex-col gap-1.5 text-xs">
               {item.transitions.map((r, i) => (
                 <li
                   key={`${r.at}-${r.label}-${i}`}
@@ -750,14 +769,14 @@ function InboxDrawer({
               ))}
             </ol>
           ) : (
-            <p className="mt-1.5 text-[0.62rem] leading-snug text-[var(--tessera-text-muted)]">
+            <p className="mt-1.5 text-xs leading-snug text-[var(--tessera-text-muted)]">
               {t("drawer.transitionsEmpty")}
             </p>
           )}
         </div>
 
         <div className="mt-auto rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-bg)] p-3">
-          <p className="text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+          <p className="text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
             {t("col.status")}
           </p>
           <span className="mt-1 inline-flex">
@@ -767,14 +786,14 @@ function InboxDrawer({
             type="button"
             onClick={onCycle}
             disabled={busy}
-            className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-[0.7rem] font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
+            className="mt-3 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[#7c5cf5] bg-[#6d4aed] px-3 text-xs font-medium text-white hover:bg-[#7c5cf5] disabled:opacity-50"
           >
             <RefreshCcw className="h-3.5 w-3.5" /> {t("cycleStatus")}
           </button>
           {item.href ? (
             <Link
               href={item.href}
-              className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-[0.7rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
+              className="mt-2 flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-text-strong)]"
             >
               {t("openBusinessRun")} <ChevronRight className="h-3.5 w-3.5" />
             </Link>
@@ -828,10 +847,10 @@ function ByType({ t, data }: { t: T; data: Data }) {
             <span className="text-base font-semibold tabular-nums text-[var(--tessera-text-strong)]">
               {data.by_type_total}
             </span>
-            <span className="text-[0.46rem] uppercase text-[var(--tessera-text-muted)]">Total</span>
+            <span className="text-xs uppercase text-[var(--tessera-text-muted)]">Total</span>
           </div>
         </div>
-        <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+        <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
           {data.by_type.map((s) => (
             <li key={s.key} className="flex items-center gap-1.5">
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -855,7 +874,7 @@ function Sla({ t, data }: { t: T; data: Data }) {
     <Panel title={t("zone.sla")}>
       <ul className="flex flex-col gap-2">
         {data.sla_buckets.map((b) => (
-          <li key={b.key} className="flex items-center gap-2 text-[0.68rem]">
+          <li key={b.key} className="flex items-center gap-2 text-xs">
             <span className="w-16 shrink-0 text-[var(--tessera-text)]">{t(`sla.${b.key}`)}</span>
             <div className="h-[4px] overflow-hidden flex-1 rounded-full bg-[var(--tessera-border)]">
               <div
@@ -878,7 +897,7 @@ function Activity({ t, data }: { t: T; data: Data }) {
     <Panel title={t("zone.activity")}>
       <ul className="flex flex-col gap-1.5">
         {data.recent_activity.map((a, i) => (
-          <li key={`${a.time}-${a.action}-${i}`} className="flex items-center gap-2 text-[0.66rem]">
+          <li key={`${a.time}-${a.action}-${i}`} className="flex items-center gap-2 text-xs">
             <CheckCircle2 className="h-3 w-3 shrink-0 text-[var(--tessera-fg-success)]" />
             <span className="font-medium text-[var(--tessera-text)]">{a.actor}</span>
             <Truncate className="min-w-0 flex-1 text-[var(--tessera-text-muted)]">
@@ -919,7 +938,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.56rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -934,7 +953,7 @@ function Sep() {
 
 function Footer({ t, data }: { t: T; data: Data }) {
   return (
-    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="mt-1 flex shrink-0 flex-wrap items-center gap-x-5 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <span>{t("footer.total", { n: data.footer.total })}</span>
       <span>{t("footer.source", { src: data.footer.source })}</span>
     </footer>

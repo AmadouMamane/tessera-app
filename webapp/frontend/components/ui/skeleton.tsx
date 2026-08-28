@@ -20,6 +20,7 @@ import { cn } from "@/lib/cn";
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      data-slot="skeleton"
       className={cn(
         "rounded-md bg-[var(--tessera-skeleton)]",
         "bg-[linear-gradient(110deg,var(--tessera-skeleton)_8%,var(--tessera-skeleton-sheen)_18%,var(--tessera-skeleton)_33%)]",

@@ -76,7 +76,7 @@ export function StretchChart({
         ))}
       </svg>
       {ticks.length > 0 ? (
-        <div className="grid grid-cols-4 gap-1 text-[0.62rem] text-[var(--tessera-text-muted)]">
+        <div className="grid grid-cols-4 gap-1 text-xs text-[var(--tessera-text-muted)]">
           {ticks.map((label, index) => (
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: axis tick labels are positional and the row is regenerated wholesale per window

@@ -90,7 +90,7 @@ const figure = (chunks: ReactNode) => (
 
 /** Shared chip chrome — every chip is a Link (Métier view or agent page). */
 const CHIP_CLASS =
-  "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-[0.66rem] text-[var(--tessera-text)]";
+  "inline-flex items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-1.5 py-0.5 text-xs text-[var(--tessera-text)]";
 
 /**
  * "Last spoke: N days ago" — the liveness line every counting card carries (ADR 0052:
@@ -184,7 +184,7 @@ export function QualityRegimeBand() {
     // The zone stays, its content names the blindness (ADR 0026) — never a silent gap.
     return (
       <section aria-label={t("title")} className="py-0.5">
-        <p role="alert" className="text-[0.68rem] text-[var(--tessera-fg-danger)]">
+        <p role="alert" className="text-xs text-[var(--tessera-fg-danger)]">
           {t("unreadable")}
         </p>
       </section>
@@ -309,10 +309,10 @@ export function QualityRegimeBand() {
             >
               <div className="flex items-center gap-2">
                 <Icon className={cn("h-3.5 w-3.5 shrink-0", accent)} aria-hidden />
-                <span className="min-w-0 flex-1 text-[0.7rem] font-semibold leading-snug">
+                <span className="min-w-0 flex-1 text-xs font-semibold leading-snug">
                   {t(`${regime}.label`)}
                 </span>
-                <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.66rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
+                <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--tessera-text-muted)]">
                   {t("agentCount", { count: entries.length })}
                 </span>
               </div>
@@ -345,12 +345,12 @@ export function QualityRegimeBand() {
                   </Link>
                 ))}
                 {hiddenNames > 0 ? (
-                  <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+                  <span className="text-xs text-[var(--tessera-text-muted)]">
                     {t("moreNames", { count: hiddenNames })}
                   </span>
                 ) : null}
               </div>
-              <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+              <div className="mt-auto space-y-1 text-xs text-[var(--tessera-text-muted)]">
                 {regime === "llm_judged" ? (
                   <p className="tabular-nums">
                     {t.rich("llm_judged.counts", {
@@ -467,10 +467,10 @@ function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
     <article className="flex flex-col gap-2 rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] px-3.5 py-3">
       <div className="flex items-center gap-2">
         <Brain className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-fg-info)]" aria-hidden />
-        <span className="min-w-0 flex-1 text-[0.7rem] font-semibold leading-snug">
+        <span className="min-w-0 flex-1 text-xs font-semibold leading-snug">
           {t("understanding.label")}
         </span>
-        <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-[0.66rem] font-medium tabular-nums text-[var(--tessera-text-muted)]">
+        <span className="shrink-0 rounded-full border border-[var(--tessera-border)] bg-[var(--tessera-muted)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--tessera-text-muted)]">
           {t("agentCount", { count: entries.length })}
         </span>
       </div>
@@ -490,12 +490,12 @@ function ReadingPlaneCard({ entries }: { entries: QualityRegimeEntry[] }) {
           </Link>
         ))}
         {entries.length > MAX_NAMES ? (
-          <span className="text-[0.66rem] text-[var(--tessera-text-muted)]">
+          <span className="text-xs text-[var(--tessera-text-muted)]">
             {t("moreNames", { count: entries.length - MAX_NAMES })}
           </span>
         ) : null}
       </div>
-      <div className="mt-auto space-y-1 text-[0.66rem] text-[var(--tessera-text-muted)]">
+      <div className="mt-auto space-y-1 text-xs text-[var(--tessera-text-muted)]">
         {summaries.length === 0 ? (
           // Declared but nothing read yet — an honest empty, never an invented zero rate.
           <p>{t("understanding.empty")}</p>

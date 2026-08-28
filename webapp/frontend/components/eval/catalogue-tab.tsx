@@ -156,7 +156,7 @@ async function CaseSheet({
     <details className="group/case rounded-md border border-[var(--border)] bg-[var(--muted)]/20">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 p-3">
         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)] transition-transform group-open/case:rotate-90" />
-        <span className="font-mono text-[11px] text-[var(--muted-foreground)]">{evalCase.id}</span>
+        <span className="font-mono text-xs text-[var(--muted-foreground)]">{evalCase.id}</span>
         <span className="flex-1 text-sm">{evalCase.title}</span>
         {evalCase.severity === "critical" ? (
           <Badge tone="danger" className="gap-1">
@@ -176,7 +176,7 @@ async function CaseSheet({
             {t("catalogue.atFloor")}
           </Badge>
         ) : null}
-        <span className="flex items-center gap-1 font-mono text-[10px] text-[var(--muted-foreground)] uppercase">
+        <span className="flex items-center gap-1 font-mono text-xs text-[var(--muted-foreground)] uppercase">
           {evalCase.languages.join(" · ")}
         </span>
       </summary>
@@ -209,7 +209,7 @@ async function CaseSheet({
               if (!prompt) return null;
               return (
                 <li key={lang} className="flex gap-2.5">
-                  <span className="mt-0.5 shrink-0 rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--muted-foreground)] uppercase">
+                  <span className="mt-0.5 shrink-0 rounded bg-[var(--muted)] px-1.5 py-0.5 font-mono text-xs text-[var(--muted-foreground)] uppercase">
                     {lang}
                   </span>
                   <span className="text-[var(--muted-foreground)] text-xs leading-relaxed">
@@ -239,7 +239,7 @@ async function CaseSheet({
             )}
           </p>
           {source.notes ? (
-            <p className="mt-1 text-[11px] text-[var(--muted-foreground)] italic leading-relaxed">
+            <p className="mt-1 text-xs text-[var(--muted-foreground)] italic leading-relaxed">
               {source.notes}
             </p>
           ) : null}
@@ -250,7 +250,7 @@ async function CaseSheet({
             {evalCase.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-[var(--muted)] px-2 py-0.5 font-mono text-[10px] text-[var(--muted-foreground)]"
+                className="rounded-full bg-[var(--muted)] px-2 py-0.5 font-mono text-xs text-[var(--muted-foreground)]"
               >
                 {tag}
               </span>
@@ -265,7 +265,7 @@ async function CaseSheet({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <h4 className="font-medium text-[11px] text-[var(--muted-foreground)] uppercase tracking-wide">
+      <h4 className="font-medium text-xs text-[var(--muted-foreground)] uppercase tracking-wide">
         {title}
       </h4>
       {children}

@@ -182,7 +182,7 @@ export function RecouvrementConsole() {
           {/* Récents — full list only when the panel is expanded. */}
           {collapsed ? null : (
             <>
-              <div className="mt-3 px-2 text-[0.66rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+              <div className="mt-3 px-2 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
                 {t("recents")}
               </div>
               <nav className="mt-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
@@ -194,7 +194,7 @@ export function RecouvrementConsole() {
                     className="border-0 bg-transparent shadow-none"
                   />
                 ) : shown.length === 0 ? (
-                  <p className="py-1.5 pr-2 pl-3 text-[0.72rem] leading-relaxed text-[var(--tessera-text-muted)]">
+                  <p className="py-1.5 pr-2 pl-3 text-xs leading-relaxed text-[var(--tessera-text-muted)]">
                     {q ? t("searchEmpty") : t("recentsEmpty")}
                   </p>
                 ) : (

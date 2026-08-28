@@ -123,9 +123,7 @@ export function AutomationsOverview() {
           signal scrubber (SR-01) this page wrongly rendered before lot 5. */}
       <AgirRail />
       {frozen ? (
-        <output className="text-[0.66rem] text-[var(--tessera-fg-warning)]">
-          {tr("frozenTitle")}
-        </output>
+        <output className="text-xs text-[var(--tessera-fg-warning)]">{tr("frozenTitle")}</output>
       ) : null}
 
       <div id="automations-tabpanel" role="tabpanel" className="flex min-w-0 flex-col gap-3">
@@ -185,7 +183,7 @@ export function AutomationsOverview() {
             <div className="mt-2">
               <Link
                 href="/prouver/audit-logs"
-                className="inline-flex items-center gap-1 text-[0.7rem] text-[var(--tessera-green)] hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-[var(--tessera-green)] hover:underline"
               >
                 {t("tabx.auditLink")}
               </Link>
@@ -414,7 +412,7 @@ function Catalogue({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {cols.map((c) => (
                 <th key={c} className="whitespace-nowrap px-2 py-1.5 font-medium">
                   {t(`col.${c}`)}
@@ -447,7 +445,7 @@ function Catalogue({
                     {t(`mode.${row.mode}`)}
                   </Badge>
                 </td>
-                <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[0.66rem] text-[var(--tessera-text-muted)]">
+                <td className="whitespace-nowrap px-2 py-1.5 font-mono text-xs text-[var(--tessera-text-muted)]">
                   {row.last_run}
                 </td>
                 <td className="px-2 py-1.5 tabular-nums text-[var(--tessera-fg-success)]">
@@ -462,7 +460,7 @@ function Catalogue({
                     aria-label={`${row.name} — ${t(`status.${row.status}`)}`}
                     disabled={toggling}
                     onClick={() => onToggle(row.id, row.status !== "active")}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-[0.7rem] transition-colors hover:border-[var(--tessera-border)] hover:bg-[var(--tessera-muted)] disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-xs transition-colors hover:border-[var(--tessera-border)] hover:bg-[var(--tessera-muted)] disabled:opacity-60"
                   >
                     <span
                       className={cn(
@@ -492,13 +490,13 @@ function Pipeline({ t, data }: { t: T; data: Data }) {
           {data.pipeline.map((step, i) => (
             <li key={step.key} className="flex min-w-0 flex-1 items-center gap-1">
               <div className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-2 text-center">
-                <span className="truncate text-[0.64rem] text-[var(--tessera-text-muted)]">
+                <span className="truncate text-xs text-[var(--tessera-text-muted)]">
                   {t(`pipeline.${step.key}`)}
                 </span>
                 <span className="text-[0.95rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                   {step.count}
                 </span>
-                <span className="text-[0.6rem] tabular-nums text-[var(--tessera-fg-info)]">
+                <span className="text-xs tabular-nums text-[var(--tessera-fg-info)]">
                   {step.pct}%
                 </span>
               </div>
@@ -508,7 +506,7 @@ function Pipeline({ t, data }: { t: T; data: Data }) {
             </li>
           ))}
         </ol>
-        <p className="text-[0.7rem] text-[var(--tessera-text-muted)]">
+        <p className="text-xs text-[var(--tessera-text-muted)]">
           {t("pipeline.completion")} :{" "}
           <span className="font-semibold text-[var(--tessera-green)]">{data.completion}</span>
         </p>
@@ -524,16 +522,14 @@ function EnvBars({ t, data }: { t: T; data: Data }) {
       <div className="flex h-[120px] items-end justify-around gap-3">
         {data.by_env.map((e) => (
           <div key={e.key} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-            <span className="text-[0.7rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
+            <span className="text-xs font-semibold tabular-nums text-[var(--tessera-text-strong)]">
               {e.count}
             </span>
             <div
               className="w-full max-w-[42px] rounded-t-sm"
               style={{ height: `${(e.count / max) * 100}%`, background: e.color }}
             />
-            <span className="text-[0.6rem] text-[var(--tessera-text-muted)]">
-              {t(`env.${e.key}`)}
-            </span>
+            <span className="text-xs text-[var(--tessera-text-muted)]">{t(`env.${e.key}`)}</span>
           </div>
         ))}
       </div>
@@ -545,9 +541,9 @@ function Journal({ t, data }: { t: T; data: Data }) {
   return (
     <Panel title="" action={<ViewAll label={t("viewAll.journal")} href="/prouver/audit-logs" />}>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-[0.7rem]">
+        <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-[var(--tessera-border)] text-[0.6rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <tr className="border-b border-[var(--tessera-border)] text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               <th className="px-1.5 py-1 font-medium">{t("jCol.time")}</th>
               <th className="px-1.5 py-1 font-medium">{t("jCol.automation")}</th>
               <th className="px-1.5 py-1 font-medium">{t("jCol.trigger")}</th>
@@ -571,7 +567,7 @@ function Journal({ t, data }: { t: T; data: Data }) {
                 </td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.trigger}</td>
                 <td className="px-1.5 py-1 text-[var(--tessera-text-muted)]">{r.actor}</td>
-                <td className="px-1.5 py-1 font-mono text-[0.62rem] text-[var(--tessera-fg-info)]">
+                <td className="px-1.5 py-1 font-mono text-xs text-[var(--tessera-fg-info)]">
                   {r.evidence}
                 </td>
                 <td className="px-1.5 py-1 tabular-nums text-[var(--tessera-text-muted)]">
@@ -614,11 +610,9 @@ function AutomationsRail({
       >
         <ul className="flex flex-col gap-1.5">
           {data.recent_incidents.map((inc, i) => (
-            <li key={`${inc.id}-${i}`} className="flex items-center gap-2 text-[0.72rem]">
+            <li key={`${inc.id}-${i}`} className="flex items-center gap-2 text-xs">
               <Badge className={SEV_BADGE[inc.severity]}>{t(`severity.${inc.severity}`)}</Badge>
-              <span className="font-mono text-[0.64rem] text-[var(--tessera-fg-info)]">
-                {inc.id}
-              </span>
+              <span className="font-mono text-xs text-[var(--tessera-fg-info)]">{inc.id}</span>
               <Truncate full={inc.label} className="min-w-0 flex-1 text-[var(--tessera-text)]">
                 {inc.label}
               </Truncate>
@@ -649,7 +643,7 @@ function AutomationsRail({
             }[]
           ).map((q) => {
             const cls =
-              "flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-[0.66rem] transition-colors hover:bg-[var(--tessera-muted)] disabled:opacity-60";
+              "flex items-center gap-1.5 rounded-md border border-[var(--tessera-border)] bg-[var(--tessera-bg)] px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--tessera-muted)] disabled:opacity-60";
             const body = (
               <>
                 <q.icon className="h-3.5 w-3.5 shrink-0 text-[var(--tessera-green)]" />
@@ -684,12 +678,12 @@ function AutomationsRail({
         title={t("zone.governance").replace(/^G · /, "")}
         info={<KpiInfo k="zone.governance" title={t("zone.governance").replace(/^G · /, "")} />}
       >
-        <div className="flex flex-col gap-2 text-[0.7rem]">
-          <span className="inline-flex w-fit items-center gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[0.62rem] text-[var(--tessera-fg-success)]">
+        <div className="flex flex-col gap-2 text-xs">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs text-[var(--tessera-fg-success)]">
             <ShieldCheck className="h-3 w-3" /> {t("gov.dualControl")}
           </span>
           <div>
-            <p className="mb-1 text-[0.62rem] uppercase tracking-wide text-[var(--tessera-text-muted)]">
+            <p className="mb-1 text-xs uppercase tracking-wide text-[var(--tessera-text-muted)]">
               {t("gov.rolesByMode")}
             </p>
             <ul className="flex flex-col gap-1">
@@ -698,7 +692,7 @@ function AutomationsRail({
                   <Badge className="border-[var(--tessera-border)] bg-[var(--tessera-bg)] text-[var(--tessera-text-muted)]">
                     <AuthorityLabel authority={r.mode} />
                   </Badge>
-                  <span className="min-w-0 flex-1 text-[0.66rem] text-[var(--tessera-text)]">
+                  <span className="min-w-0 flex-1 text-xs text-[var(--tessera-text)]">
                     {r.scope}
                   </span>
                 </li>
@@ -706,12 +700,10 @@ function AutomationsRail({
             </ul>
           </div>
           <div className="border-t border-[var(--tessera-border)] pt-1.5">
-            <p className="text-[0.62rem] text-[var(--tessera-text-muted)]">
-              {t("gov.defaultScope")}
-            </p>
-            <p className="text-[0.66rem] text-[var(--tessera-text)]">{g.default_scope}</p>
+            <p className="text-xs text-[var(--tessera-text-muted)]">{t("gov.defaultScope")}</p>
+            <p className="text-xs text-[var(--tessera-text)]">{g.default_scope}</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 text-[0.64rem] text-[var(--tessera-green)]">
+          <span className="inline-flex items-center gap-1.5 text-xs text-[var(--tessera-green)]">
             <ShieldCheck className="h-3 w-3" /> {t("gov.chain")}
           </span>
         </div>
@@ -747,18 +739,18 @@ function Approvals({
       action={<ViewAll label={t("viewAll.all")} onClick={onViewAll} />}
     >
       {data.approvals.length === 0 ? (
-        <p className="py-4 text-center text-[0.68rem] text-[var(--tessera-text-muted)]">
+        <p className="py-4 text-center text-xs text-[var(--tessera-text-muted)]">
           {t("tabx.noApprovals")}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {data.approvals.map((a) => (
-            <li key={a.id} className="flex items-center gap-2 text-[0.7rem]">
+            <li key={a.id} className="flex items-center gap-2 text-xs">
               <div className="min-w-0 flex-1">
                 <Truncate as="p" full={a.name} className="text-[var(--tessera-text)]">
                   {a.name}
                 </Truncate>
-                <p className="truncate text-[0.6rem] text-[var(--tessera-text-muted)]">
+                <p className="truncate text-xs text-[var(--tessera-text-muted)]">
                   {t("approve.since", { t: a.since })} · {a.observed}
                 </p>
               </div>
@@ -766,7 +758,7 @@ function Approvals({
                 size="sm"
                 disabled={deciding}
                 onClick={() => onDecide(a.id, true)}
-                className="h-7 shrink-0 border border-[#007a55] bg-[#005c42] px-2.5 text-[0.66rem] text-[#d6f0e3] hover:bg-[#006d4e]"
+                className="h-7 shrink-0 border border-[#007a55] bg-[#005c42] px-2.5 text-xs text-[#d6f0e3] hover:bg-[#006d4e]"
               >
                 {t("approve.cta")}
               </Button>
@@ -774,7 +766,7 @@ function Approvals({
                 type="button"
                 disabled={deciding}
                 onClick={() => onDecide(a.id, false)}
-                className="shrink-0 text-[0.62rem] font-medium text-[var(--tessera-fg-danger)] hover:text-[var(--tessera-fg-danger)] disabled:opacity-50"
+                className="shrink-0 text-xs font-medium text-[var(--tessera-fg-danger)] hover:text-[var(--tessera-fg-danger)] disabled:opacity-50"
               >
                 {t("approve.reject")}
               </button>
@@ -797,7 +789,7 @@ function Guardrails({ t, data, className }: { t: T; data: Data; className?: stri
     >
       <ul className="flex flex-col gap-2">
         {data.guardrails.map((g) => (
-          <li key={g.key} className="flex flex-col gap-0.5 text-[0.66rem]">
+          <li key={g.key} className="flex flex-col gap-0.5 text-xs">
             <div className="flex items-center justify-between gap-1.5">
               <span className="min-w-0 truncate text-[var(--tessera-text)]">
                 {t(`gr.${g.key}`)}
@@ -843,7 +835,7 @@ function Performance({
           ticks={p.labels}
         />
       </div>
-      <div className="mt-1 flex gap-3 text-[0.6rem] text-[var(--tessera-text-muted)]">
+      <div className="mt-1 flex gap-3 text-xs text-[var(--tessera-text-muted)]">
         <Legend color="var(--tessera-fg-success)" label={t("perf.success")} />
         <Legend color="var(--tessera-fg-info)" label={t("perf.average")} />
       </div>
@@ -862,16 +854,12 @@ function Savings({ t, data, className }: { t: T; data: Data; className?: string 
       <dl className="flex flex-col gap-2">
         {data.savings.map((s) => (
           <div key={s.key} className="flex items-center justify-between gap-2">
-            <dt className="text-[0.66rem] text-[var(--tessera-text-muted)]">
-              {t(`savings.${s.key}`)}
-            </dt>
+            <dt className="text-xs text-[var(--tessera-text-muted)]">{t(`savings.${s.key}`)}</dt>
             <dd className="flex items-baseline gap-1.5">
               <span className="text-[0.82rem] font-semibold tabular-nums text-[var(--tessera-text-strong)]">
                 {s.value}
               </span>
-              <span className="text-[0.6rem] font-medium text-[var(--tessera-green)]">
-                {s.delta}
-              </span>
+              <span className="text-xs font-medium text-[var(--tessera-green)]">{s.delta}</span>
             </dd>
           </div>
         ))}
@@ -896,15 +884,11 @@ function ContextPanel({ t, data, className }: { t: T; data: Data; className?: st
       info={<KpiInfo k="zone.context" title={t("zone.context").replace(/^L · /, "")} />}
       action={<ViewAll label={t("ctx.history")} href="/prouver/audit-logs" />}
     >
-      <dl className="flex flex-col gap-1 text-[0.68rem]">
+      <dl className="flex flex-col gap-1 text-xs">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between gap-2">
             <dt className="text-[var(--tessera-text-muted)]">{k}</dt>
-            <Truncate
-              as="dd"
-              full={v}
-              className="font-mono text-[0.64rem] text-[var(--tessera-text)]"
-            >
+            <Truncate as="dd" full={v} className="font-mono text-xs text-[var(--tessera-text)]">
               {v}
             </Truncate>
           </div>
@@ -917,7 +901,7 @@ function ContextPanel({ t, data, className }: { t: T; data: Data; className?: st
 function Footer({ t, data }: { t: T; data: Data }) {
   const f = data.footer;
   return (
-    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-[0.68rem] text-[var(--tessera-text-muted)]">
+    <footer className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-[var(--tessera-border)] pt-2 text-xs text-[var(--tessera-text-muted)]">
       <Chip icon={GitBranch} label={t("footer.source", { src: f.source })} />
       <Chip
         icon={ShieldCheck}
@@ -958,7 +942,7 @@ function Zone({
       data-slot="card"
       className="shrink-0 rounded-xl border border-[var(--tessera-border)]/60 bg-[var(--tessera-surface)]/20 p-2.5"
     >
-      <h2 className="mb-2 flex items-center gap-1 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
+      <h2 className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </h2>
@@ -1016,7 +1000,7 @@ function KpiTile({
       data-slot="card"
       className="flex h-[104px] flex-col overflow-hidden rounded-lg border border-[var(--tessera-border)] bg-[var(--tessera-surface)] p-3"
     >
-      <p className="flex items-center gap-1 text-[0.7rem] font-medium text-[var(--tessera-text-muted)]">
+      <p className="flex items-center gap-1 text-xs font-medium text-[var(--tessera-text-muted)]">
         <span className="min-w-0 truncate">{label}</span>
         {info}
       </p>
@@ -1030,7 +1014,7 @@ function KpiTile({
           tone={kpi.good_is_up ? "success" : "danger"}
         />
       </div>
-      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-[0.62rem] font-medium">
+      <div className="mt-auto flex items-center gap-1 whitespace-nowrap text-xs font-medium">
         <span className={good ? "text-[var(--tessera-green)]" : "text-[var(--tessera-fg-danger)]"}>
           {up ? "▲" : "▼"} {magnitude}
         </span>
@@ -1092,12 +1076,12 @@ function Donut({
           <span className="max-w-[52px] truncate text-base font-semibold leading-none tabular-nums text-[var(--tessera-text-strong)]">
             {total}
           </span>
-          <span className="line-clamp-2 max-w-[52px] break-words text-center text-[0.46rem] uppercase leading-tight text-[var(--tessera-text-muted)]">
+          <span className="line-clamp-2 max-w-[52px] break-words text-center text-xs uppercase leading-tight text-[var(--tessera-text-muted)]">
             {caption}
           </span>
         </div>
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-[0.64rem]">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5 text-xs">
         {slices.map((s) => (
           <li key={s.key} className="flex flex-col gap-0.5">
             <span className="flex min-w-0 items-center gap-1">
@@ -1119,7 +1103,7 @@ function Badge({ children, className }: { children: ReactNode; className?: strin
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-[0.58rem] font-medium",
+        "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-medium",
         className,
       )}
     >
@@ -1140,7 +1124,7 @@ function Legend({ color, label }: { color: string; label: string }) {
  *  handler, nothing otherwise — never a dead button. */
 function ViewAll({ label, href, onClick }: { label: string; href?: Route; onClick?: () => void }) {
   const cls =
-    "flex shrink-0 items-center gap-0.5 text-[0.66rem] font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
+    "flex shrink-0 items-center gap-0.5 text-xs font-medium text-[var(--tessera-fg-info)] hover:text-[var(--tessera-fg-info)]";
   if (href) {
     return (
       <Link href={href} className={cls}>
