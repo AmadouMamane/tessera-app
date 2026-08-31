@@ -23,6 +23,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/structure.md` (public canonical tree + conventions).
 
 ### Changed
+- **License: Apache-2.0 → AGPL-3.0-only** (ADR 0057, superseding ADR 0002). The
+  2026-07-12 publication decision finally lands: the §13 network clause deters a
+  rival hosted offering of the engine while unmodified internal self-hosting
+  stays untouched. Single copyright holder, nothing ever distributed under
+  Apache terms, so the relicense is clean. The separate `limes` guard package
+  stays Apache-2.0.
 - **Dependency upgrades to remediate known CVEs** (pip-audit 11 → 0): langgraph
   0.2 → 1.x (graph adapted to the new `CompiledStateGraph` generics),
   langgraph-checkpoint → 4.x, starlette → 0.52 (pinned <1.0 to avoid the 1.x

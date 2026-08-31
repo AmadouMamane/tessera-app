@@ -54,7 +54,7 @@ _TR: dict[str, tuple[str, str, str]] = {
     "sub_apiproc": ("Processus API", "API-Prozess", "API process"),
     "started": ("Démarré {d}", "Gestartet {d}", "Started {d}"),
     "u_day": ("j", "T", "d"),
-    "edition_ref": ("Référence (Apache-2.0)", "Referenz (Apache-2.0)", "Reference (Apache-2.0)"),
+    "edition_ref": ("Référence (AGPL-3.0)", "Referenz (AGPL-3.0)", "Reference (AGPL-3.0)"),
     "default_lang": (
         "{lang} (langue par défaut)",
         "{lang} (Standardsprache)",
@@ -375,7 +375,7 @@ def compute_system_profile(lang: str = "fr") -> dict[str, object]:
     ]
 
     licenses = {
-        "edition": "Apache-2.0",
+        "edition": "AGPL-3.0-only",
         "seats": _t("edition_ref", lang),
         "expiry": "FR / DE / EN",
         "quota_calls": profile,

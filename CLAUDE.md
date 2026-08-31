@@ -49,7 +49,7 @@ tessera/
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md
-├── LICENSE                                        # Apache-2.0
+├── LICENSE                                        # AGPL-3.0-only (ADR 0057)
 ├── CLAUDE.md                                      # this file
 ├── pyproject.toml
 ├── uv.lock
@@ -364,7 +364,7 @@ to what was actually changed. Verify with `git diff --stat` before committing.
 Read these before making any architecture-shaping change. They are short and binding.
 
 - `docs/decisions/0001-record-architecture-decisions.md` — why and how we record decisions
-- `docs/decisions/0002-license-apache-2.md` — Apache-2.0 license choice
+- `docs/decisions/0002-license-apache-2.md` — Apache-2.0 license choice (superseded by ADR 0057)
 - `docs/decisions/0003-ci-github-actions.md` — GitHub Actions over GitLab CI and Cloud Build
 - `docs/decisions/0004-package-layout-src.md` — `src/` layout over flat layout
 - `docs/decisions/0005-tools-vs-workers-separation.md` — LangGraph nodes versus LLM-callable tools
@@ -374,6 +374,7 @@ Read these before making any architecture-shaping change. They are short and bin
 - `docs/decisions/0026-a-witness-interrogates-the-thing.md` — **a witness interrogates the thing, never its neighbourhood.** A gate reports its own exit code; a guard is what refuses a stranger; a server states which code it loaded; a contract is what it honours. And: a witness that cannot see reports a blind spot — it may never report "ok". Read it before writing any check, ratchet or status command: three guard-rails have already reported success over a hole because they asked an adjacent question
 - `docs/decisions/0051-served-surfaces-are-declared-and-checked.md` — **landing is not serving, and it does not fail to serve uniformly.** Some paths are baked into an image and frozen at the commit that built it (`src/`, `eval/` incl. the baselines and the grader, the whole front); others are bind-mounted and move the instant the file changes (`eval/reports`, the obs configs). Touch both and the stack is a **chimera** — old code reading new data — which is how a re-grade landed without a rebuild put the deployed cockpit into `CannotSay`. `infra/deploy/served-surfaces.yaml` declares each path's medium and why; **`make served-check`** asks the running stack which commit it serves and refuses when a served surface has moved. **Read the printed line, not the exit code**: the SCRIPT speaks 0 ok · 1 refused · 2 blind, but make exits **2 on any failed recipe**, so through the target a refusal and a blind spot are the same number — opposite instructions, one integer (measured in `tests/unit/test_make_flattens_exit_codes.py`; same caveat on `make preflight` and `make deploy-diff`). Call `scripts/served_check.py` directly when you need the verdict as a number. Run it after every land, before believing any surface
 - `docs/decisions/0052-a-monitoring-surface-names-the-consequence.md` — **a page called « observabilité » answered « est-ce que ça tourne ».** Twenty flat rows cannot say that ONE dead node explains three of them, and the assembly a reader performs unaided is wrong here: metrics reach Prometheus by TWO routes (a dead collector does not blind them) and business events never cross the collector at all. So the chain is declared with the file that wires each edge, read as a PATH from the emitter; each store names what its silence costs (declared capability, **computed** state, `cannot_say` when a dependency could not be interrogated); and verdicts are journalled over time — where **a gap is a hole, never uptime**: a phase absorbs an observation only within 120 s, every percentage travels with `observed_ratio`, and availability divides by DECIDABLE time, because blind minutes decide nothing and dividing by watched time printed **0.0 % available** over « nobody could ask »
+- `docs/decisions/0057-license-agpl-3-0-only.md` — the repository license is **AGPL-3.0-only**, superseding ADR 0002 (Apache-2.0); the separate `limes` package stays Apache-2.0. §13 deters a rival hosted service of the engine; a CLA is required before any external contribution is merged
 
 ## Communication rules (permanent, no exception)
 

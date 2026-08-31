@@ -49,7 +49,7 @@ tessera/
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md
-├── LICENSE                                        # Apache-2.0
+├── LICENSE                                        # AGPL-3.0-only (ADR 0057)
 ├── AGENTS.md                                      # this file
 ├── pyproject.toml
 ├── uv.lock
@@ -296,13 +296,14 @@ refuses to start if the port is already in use. Full rationale:
 Read these before making any architecture-shaping change. They are short and binding.
 
 - `docs/decisions/0001-record-architecture-decisions.md` — why and how we record decisions
-- `docs/decisions/0002-license-apache-2.md` — Apache-2.0 license choice
+- `docs/decisions/0002-license-apache-2.md` — Apache-2.0 license choice (superseded by ADR 0057)
 - `docs/decisions/0003-ci-github-actions.md` — GitHub Actions over GitLab CI and Cloud Build
 - `docs/decisions/0004-package-layout-src.md` — `src/` layout over flat layout
 - `docs/decisions/0005-tools-vs-workers-separation.md` — LangGraph nodes versus LLM-callable tools
 - `docs/decisions/0006-locale-prefixed-routing.md` — dashboard pages live under `app/[locale]/`, supersedes the single-locale `app/page.tsx` shape in the canonical tree above
 - `docs/decisions/0007-agent-memory-architecture.md` — agent memory: durable conversation transcript (Mechanism A) + pluggable `MemoryBackend` (window/summary/persistent tiers on pgvector, with langmem/mem0/zep adapters); adds the `src/tessera/memory/` package to the canonical tree
 - `docs/decisions/0016-business-events-fanout-contract.md` — business events fan out to ADR 0015 sinks; no application JSONL store
+- `docs/decisions/0057-license-agpl-3-0-only.md` — the repository license is **AGPL-3.0-only**, superseding ADR 0002 (Apache-2.0); the separate `limes` package stays Apache-2.0. §13 deters a rival hosted service of the engine; a CLA is required before any external contribution is merged
 
 ## Communication rules (permanent, no exception)
 

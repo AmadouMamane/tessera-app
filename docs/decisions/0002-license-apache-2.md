@@ -4,7 +4,7 @@ Date: 2026-05-27
 
 ## Status
 
-Accepted
+Accepted (2026-05-27). **Superseded by [ADR 0057](0057-license-agpl-3-0-only.md)** (2026-08-31): the repository license is AGPL-3.0-only. The body below is the dated record of the original choice and its rationale — annotated, not rewritten. Note for the record: the claim below that `mcp-firewall` is Apache-2.0 was false (it is AGPL-3.0-or-later; caught in [ADR 0028](0028-the-firewall-that-never-ran.md)).
 
 ## Context
 

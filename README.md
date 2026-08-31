@@ -12,7 +12,7 @@ Deployed on Google Cloud Run with an alternate on-premises mode running Llama 3.
 [![CI](https://github.com/AmadouMamane/tessera-app/actions/workflows/ci.yml/badge.svg)](https://github.com/AmadouMamane/tessera-app/actions/workflows/ci.yml)
 [![Eval](https://github.com/AmadouMamane/tessera-app/actions/workflows/eval.yml/badge.svg)](https://github.com/AmadouMamane/tessera-app/actions/workflows/eval.yml)
 [![Security](https://github.com/AmadouMamane/tessera-app/actions/workflows/security.yml/badge.svg)](https://github.com/AmadouMamane/tessera-app/actions/workflows/security.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](./LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![mypy: strict](https://img.shields.io/badge/mypy-strict-2A6DB2.svg)](https://mypy.readthedocs.io/)
 [![ruff](https://img.shields.io/badge/ruff-checked-261230.svg)](https://docs.astral.sh/ruff/)
@@ -411,7 +411,7 @@ Stated here rather than left to be discovered, because a posture that is only tr
 
 ## License
 
-Apache-2.0 — see [`LICENSE`](./LICENSE). Choice justified in [ADR 0002](./docs/decisions/0002-license-apache-2.md).
+AGPL-3.0-only — see [`LICENSE`](./LICENSE). Chosen in [ADR 0057](./docs/decisions/0057-license-agpl-3-0-only.md), superseding the original Apache-2.0 choice ([ADR 0002](./docs/decisions/0002-license-apache-2.md)). The separate [`limes`](https://github.com/AmadouMamane/limes) guard package stays Apache-2.0 — the permissive adoption wedge.
 
 ---
 

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Tessera dashboard — Next.js 15 + Tailwind v4 + shadcn/ui",
-  "license": "Apache-2.0",
+  "license": "AGPL-3.0-only",
   "engines": {
     "node": ">=20.11.0",
     "pnpm": ">=9.12.0"

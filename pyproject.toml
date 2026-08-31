@@ -7,7 +7,7 @@ name = "tessera"
 version = "0.3.0"
 description = "Multilingual (FR/DE/EN) banking support LLM agent for the European retail market, grounded in EU regulatory corpora, with a first-party runtime guard on every tool call."
 readme = "README.md"
-license = "Apache-2.0"
+license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.13"
 authors = [
@@ -29,7 +29,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: GNU Affero General Public License v3 (AGPLv3)",
     "Natural Language :: English",
     "Natural Language :: French",
     "Natural Language :: German",

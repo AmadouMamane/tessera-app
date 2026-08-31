@@ -30,7 +30,7 @@ tessera/
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md
-├── LICENSE                                        # Apache-2.0
+├── LICENSE                                        # AGPL-3.0-only (ADR 0057)
 ├── pyproject.toml
 ├── uv.lock
 ├── .pre-commit-config.yaml
@@ -100,10 +100,11 @@ tessera/
 Architecture-shaping decisions are recorded as ADRs under `docs/decisions/`:
 
 - `0001-record-architecture-decisions.md` — why and how decisions are recorded
-- `0002-license-apache-2.md` — Apache-2.0 license choice
+- `0002-license-apache-2.md` — Apache-2.0 license choice (superseded by 0057)
 - `0003-ci-github-actions.md` — GitHub Actions over GitLab CI and Cloud Build
 - `0004-package-layout-src.md` — `src/` layout over flat layout
 - `0005-tools-vs-workers-separation.md` — LangGraph nodes versus LLM-callable tools
 - `0006-locale-prefixed-routing.md` — dashboard pages under `app/[locale]/`
 - `0007-agent-memory-architecture.md` — agent memory architecture and the `memory/` package
 - `0020-security-hardening.md` — security hardening for deployment
+- `0057-license-agpl-3-0-only.md` — AGPL-3.0-only license, superseding 0002 (Apache-2.0)
