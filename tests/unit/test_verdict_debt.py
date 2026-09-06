@@ -123,6 +123,10 @@ _BOOL_FUNCTIONS: dict[str, str] = {
     # `dispatch`: it PRINTS the CannotSay and tells its caller to stop. The verdict is the
     # rendered `CannotSay` — this boolean only says whether one was emitted.
     "scripts/check_discrimination.py::_refuse_stale_grader": "dispatch",
+    # Same shape for the gold partition (ADR 0058): it PRINTS the stranger refusal and tells
+    # its caller to stop; the verdict is the script's exit code, registered as an exit
+    # witness, and every branch is driven in tests/unit/test_demo_gold_partition.py.
+    "scripts/demo_gold.py::_refuse_strangers": "dispatch",
     # A route-existence LOOKUP inside the orphan-link probe: it answers "is this path in the
     # app tree", which selects what to report. Nothing passes or fails on it.
     "scripts/audit/scan_ui_invariants.py::known": "filter",

@@ -120,6 +120,16 @@ _EXIT_WITNESSES: dict[str, str] = {
     "Makefile::ci": "VERDICT",
     "Makefile::memory-check": "VERDICT",
     "Makefile::precommit": "VERDICT",
+    # ── l'état d'or (ADR 0058): the script speaks 0 ok · 1 refused/drift · 2 cannot say, every
+    # branch driven in tests/unit/test_demo_gold_partition.py. The make targets carry the
+    # script's code to the recipe (`exit $$rc`) but make itself flattens any failure to 2
+    # (ADR 0051) — a refusal and a blind spot read the same through them; call the script
+    # directly when the number matters. snapshot/reset stop the agent first, so their exit
+    # also depends on compose being able to stop/start it.
+    "scripts/demo_gold.py": "VERDICT",
+    "Makefile::demo-gold-snapshot": "VERDICT",
+    "Makefile::demo-gold-verify": "VERDICT",
+    "Makefile::demo-reset": "VERDICT",
     # ── quality: each is one tool's own exit code, unpiped ─────────────────────────────────────
     "Makefile::lint": "VERDICT",
     "Makefile::format-check": "VERDICT",
