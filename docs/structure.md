@@ -27,6 +27,7 @@ they say so explicitly and this file should be read together with them.
 tessera/
 ├── README.md
 ├── CONTRIBUTING.md
+├── CLA.md                                         # signed before any external patch lands (ADR 0057)
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md

@@ -46,6 +46,7 @@ This is the canonical tree. Codex must scaffold to this layout and refuse to int
 tessera/
 ├── README.md
 ├── CONTRIBUTING.md
+├── CLA.md                                         # signed before any external patch lands (ADR 0057)
 ├── SECURITY.md
 ├── CODE_OF_CONDUCT.md
 ├── CHANGELOG.md

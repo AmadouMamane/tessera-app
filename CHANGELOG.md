@@ -9,6 +9,9 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Contributor License Agreement** (`CLA.md`) + a real `CONTRIBUTING.md`: no
+  external contribution is merged unsigned — the condition ADR 0057 makes
+  binding, protecting the dual-licensing option.
 - **Selectable on-prem models.** Five Ollama models choosable per request
   (Llama 3.2 3B default, Mistral 7B, DeepSeek-R1 7B, Gemma 3 27B, Llama 3.3 70B);
   the `model` threads `ChatRequest → AgentState → reporter → backend`. Surfaced
