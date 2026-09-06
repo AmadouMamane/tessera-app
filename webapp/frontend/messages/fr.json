@@ -1737,7 +1737,8 @@
     },
     "demo": {
       "title": "Choisir un profil de démonstration",
-      "hint": "Un clic remplit les identifiants ; vous gardez la main sur la connexion.",
+      "hint": "Accès de démonstration ouvert : un clic remplit les identifiants, vous lancez la connexion.",
+      "enter": "Un clic pour entrer",
       "ephemeral": "Les gestes des visiteurs sont éphémères : l'état de démonstration revient périodiquement à sa référence. Chaque acte reste journalisé, nommé et daté."
     },
     "adminOnly": "Réservé à l’administrateur",

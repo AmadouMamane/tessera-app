@@ -86,13 +86,15 @@ export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCr
                 </span>
               </span>
               <span className="mt-2.5 min-w-0">
-                <span className="block min-h-[28px] text-xs font-medium leading-[1.25] text-[var(--text-primary)]">
+                <span className="block text-xs font-medium leading-[1.25] text-[var(--text-primary)]">
                   {tRoles(account.role)}
                 </span>
-                <span className="mt-1 block truncate font-mono text-xs leading-4 text-[var(--text-secondary)]">
-                  {account.username}
-                  <br />
-                  {account.password}
+                {/* The role label already names the profile — the raw username/password
+                    were three near-duplicate identity strings per card, and the longest
+                    (`tessera-collections`) truncated. The click fills the form (which shows
+                    what it filled); the full pair stays in aria-label for screen readers. */}
+                <span className="mt-1 block text-[11px] leading-4 text-[var(--tessera-text-muted)]">
+                  {t("demo.enter")}
                 </span>
               </span>
             </button>

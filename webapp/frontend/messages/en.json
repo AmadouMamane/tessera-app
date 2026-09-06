@@ -1737,7 +1737,8 @@
     },
     "demo": {
       "title": "Choose a demo profile",
-      "hint": "One click fills the credentials; you stay in control of sign-in.",
+      "hint": "Open demo access: one click fills the credentials, you launch the sign-in.",
+      "enter": "One click to enter",
       "ephemeral": "Visitor actions are ephemeral: the demo state periodically returns to its reference. Every act stays journaled, named and dated."
     },
     "adminOnly": "Administrator only",

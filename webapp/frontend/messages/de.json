@@ -1737,7 +1737,8 @@
     },
     "demo": {
       "title": "Demo-Profil auswählen",
-      "hint": "Ein Klick füllt die Zugangsdaten aus; Sie starten die Anmeldung selbst.",
+      "hint": "Offener Demozugang: Ein Klick füllt die Zugangsdaten aus, Sie starten die Anmeldung selbst.",
+      "enter": "Ein Klick zum Eintreten",
       "ephemeral": "Besucheraktionen sind vergänglich: Der Demozustand kehrt regelmäßig zu seiner Referenz zurück. Jede Handlung bleibt protokolliert, benannt und datiert."
     },
     "adminOnly": "Nur für Administratoren",
