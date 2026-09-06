@@ -41,6 +41,9 @@ export function DemoCredentials({ accounts, selectedUsername, onSelect }: DemoCr
           <p className="mt-1.5 text-xs leading-[1.45] text-[var(--text-secondary)]">
             {t("demo.hint")}
           </p>
+          <p className="mt-1 text-[11px] leading-[1.45] text-[var(--tessera-text-muted)]">
+            {t("demo.ephemeral")}
+          </p>
         </div>
       </div>
       <fieldset className="grid grid-cols-3 gap-2">

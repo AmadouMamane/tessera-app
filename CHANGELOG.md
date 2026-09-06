@@ -9,6 +9,13 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **« L'état d'or »** (ADR 0058): the demo's operational state can return to a
+  blessed reference without rewriting history — `scripts/demo_gold.py`
+  (snapshot / verify / reset; the state partition is declared file by file and
+  a stranger file is refused, never guessed), `make demo-reset REASON=…` (the
+  agent is stopped for the verdict; the act is journaled in
+  `demo_resets.jsonl`), and the login banner now says visitor actions are
+  ephemeral while every act stays journaled.
 - **Contributor License Agreement** (`CLA.md`) + a real `CONTRIBUTING.md`: no
   external contribution is merged unsigned — the condition ADR 0057 makes
   binding, protecting the dual-licensing option.
