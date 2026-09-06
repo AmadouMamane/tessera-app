@@ -1372,19 +1372,25 @@ help:
 # ── L'état d'or (ADR 0058) — the demo state returns to a blessed reference ───
 # The verdict belongs to scripts/demo_gold.py (0 ok · 1 refused/drift · 2 cannot
 # say); make flattens every failing recipe to 2 (ADR 0051) — call the script
-# directly when the number matters. snapshot/reset stop the agent first: a
+# directly when the number matters. snapshot/reset quiesce the agent first: a
 # verdict taken on a tree someone is writing in is VOID. demo-gold-verify reads
 # the LIVE tree — treat a drift there as a hint and re-check on a stopped agent
 # before acting on it.
+#
+# The agent is brought back with `up -d --no-deps agent`, NOT `start agent`.
+# `compose start` refused the stopped container ("agent is missing dependency
+# postgres") and left it exited — served-check then read CannotSay. `up
+# --no-deps` is the same invocation fulllocal-up uses to (re)create it, and it
+# recovers the container reliably. Measured on the served stack, 2026-09-06.
 .PHONY: demo-gold-snapshot demo-gold-verify demo-reset
 demo-gold-snapshot:
 	@$(FL_COMPOSE) stop agent
 	@rc=0; uv run python scripts/demo_gold.py snapshot || rc=$$?; \
-	  $(FL_COMPOSE) start agent; exit $$rc
+	  $(FL_COMPOSE) --profile full up -d --no-deps agent; exit $$rc
 demo-gold-verify:
 	@uv run python scripts/demo_gold.py verify
 demo-reset:
 	@test -n "$(REASON)" || { echo "REASON= is required — a governed act declares why (ADR 0024)"; exit 2; }
 	@$(FL_COMPOSE) stop agent
 	@rc=0; uv run python scripts/demo_gold.py reset --reason "$(REASON)" || rc=$$?; \
-	  $(FL_COMPOSE) start agent; exit $$rc
+	  $(FL_COMPOSE) --profile full up -d --no-deps agent; exit $$rc
