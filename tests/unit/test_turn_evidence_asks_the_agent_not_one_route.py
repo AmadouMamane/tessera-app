@@ -22,7 +22,10 @@ if TYPE_CHECKING:
     import pytest
 
 _AGENT = "recouvrement"
-_NOW = datetime(2026, 8, 6, 12, 0, tzinfo=UTC)
+# Real time, never a frozen date: `resolve_level_state` and `fleet_ledger_facts` read their own
+# clock over a 30-day window, so rows stamped relative to a frozen _NOW age out of it — this file
+# went red 31 days after the freeze while testing code that had not changed.
+_NOW = datetime.now(UTC)
 
 
 def _row(
