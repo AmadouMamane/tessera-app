@@ -91,9 +91,9 @@ jobs:
       TESSERA_CLICKHOUSE_PASSWORD: clickhouse
       TESSERA_CLICKHOUSE_DATABASE: tessera
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: "3.12"
